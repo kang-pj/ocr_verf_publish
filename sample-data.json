@@ -1,0 +1,37 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "imageName": "OCR_20231115_001.jpg",
+      "status": "완료",
+      "imagePath": "http://ocr.server.co.kr/images/OCR_20231115_001.jpg",
+      "regUserName": "홍길동",
+      "regDate": "2023-11-15 09:30:25",
+      "procUserName": "김철수",
+      "procDate": "2023-11-15 14:20:10",
+      "remark": "정상 처리"
+    },
+    {
+      "id": 2,
+      "imageName": "OCR_20231115_002.jpg",
+      "status": "진행중",
+      "imagePath": "http://ocr.server.co.kr/images/OCR_20231115_002.jpg",
+      "regUserName": "이영희",
+      "regDate": "2023-11-15 10:15:30",
+      "procUserName": "박민수",
+      "procDate": "2023-11-15 15:00:00",
+      "remark": "검증 중"
+    },
+    {
+      "id": 3,
+      "imageName": "OCR_20231115_003.jpg",
+      "status": "대기",
+      "imagePath": "http://ocr.server.co.kr/images/OCR_20231115_003.jpg",
+      "regUserName": "최지훈",
+      "regDate": "2023-11-15 11:20:45",
+      "procUserName": "",
+      "procDate": "",
+      "remark": ""
+    }
+  ]
+}

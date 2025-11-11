@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title>이미지 전산화 검증</title>
+    <!-- Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.bootstrap4.min.css">
+    <!-- Select2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        #wrapper {
+            display: flex;
+        }
+        .sidebar {
+            min-height: 100vh;
+            width: 250px;
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        }
+        .sidebar-brand {
+            height: 80px;
+            text-decoration: none;
+            color: white !important;
+        }
+        .sidebar-brand-icon i {
+            color: white;
+        }
+        .sidebar-brand-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .sidebar .nav-item .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem;
+        }
+        .sidebar .nav-item .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 0;
+        }
+        #content-wrapper {
+            flex: 1;
+            background-color: #f8f9fc;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        #content {
+            flex: 1;
+        }
+        .topbar {
+            background-color: white;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        .custom-navbar-height {
+            height: 60px;
+        }
+        .sticky-footer {
+            background-color: white;
+            padding: 1rem 0;
+        }
+        .bg-gradient-primary {
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        }
+        .scroll-to-top {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            display: none;
+            width: 2.75rem;
+            height: 2.75rem;
+            text-align: center;
+            color: white;
+            background: rgba(90, 92, 105, 0.5);
+            line-height: 46px;
+            border-radius: 50%;
+        }
+        .scroll-to-top:hover {
+            background: rgba(90, 92, 105, 0.7);
+            color: white;
+            text-decoration: none;
+        }
+        /* DataTables 페이징 가운데 정렬 */
+        .dataTables_wrapper .dataTables_paginate {
+            text-align: center !important;
+            padding-top: 1rem;
+            display: flex !important;
+            justify-content: center !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination {
+            justify-content: center !important;
+            margin: 0 auto !important;
+        }
+        div.dataTables_wrapper div.dataTables_paginate ul.pagination {
+            justify-content: center !important;
+        }
+        /* 테이블 크기 조정 */
+        #ocrResultTable {
+            font-size: 0.85rem;
+        }
+        #ocrResultTable thead th {
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        #ocrResultTable tbody td {
+            padding: 0.5rem;
+            vertical-align: middle;
+        }
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<script type="text/javascript">
+    // 마우스 우클릭 방지, 드래그 방지, 선택 방지
+    /*$(document).ready(function() {
+        $(document).on('contextmenu dragstart selectstart', function() {
+            return false;
+        });
+    });*/
+</script>
+<body id="page-top">
+    <div id="wrapper">
+        <!-- Sidebar -->
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center">
+                <div class="sidebar-brand-icon">
+                    <i class="fas fa-file-image fa-2x"></i>
+                </div>
+                <div class="sidebar-brand-text mx-3 text-white">OCR 이미지 전산</div>
+            </a>
+            <hr class="sidebar-divider my-0">
+            <li class="nav-item">
+                <a class="nav-link" bgWhen="ocrRsltList" href="?pageChange=/ocrRsltList">
+                    <i class="fas fa-fw fa-sitemap"></i>
+                    <span>OCR 결과 보기</span>
+                </a>
+            </li>
+            <hr class="sidebar-divider my-0">
+        </ul>
+        
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+            <div id="content">
+                <!-- Topbar -->
+                <nav class="navbar navbar-expand navbar-light topbar mb-3 static-top custom-navbar-height" id="topNavbar">
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                    <div class="collapse navbar-collapse">
+                        <ul class="navbar-nav">
+                            <i class="nav-item fas fa-fw fa-home"></i>
+                        </ul>
+                        <ul class="navbar-nav" id="menuNav"></ul>
+                    </div>
+                    <hr />
+                    <ul class="navbar-nav ml-auto">
+                        <div class="topbar-divider d-none d-sm-block"></div>
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="modal" data-target="#logoutModal">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600"><strong>강진우</strong></span>
+                                <span class="mr-2 d-none d-lg-inline text-gray-600"><i class="fas fa-sign-out-alt text-gray-600"></i></span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                
+                <!-- Logout Modal -->
+                <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h6 class="modal-title" id="logoutModalLabel">로그아웃 하시겠습니까?</h6>
+                                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">×</span>
+                                </button>
+                            </div>
+                            <div class="modal-footer">
+                                <a class="btn btn-primary btn-sm" href="logout">확인</a>
+                                <button class="btn btn-secondary btn-sm" type="button" data-dismiss="modal">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="usrId" value="rf1666@refine.co.kr"/>
+                <input type="hidden" id="usrNm" value="강진우"/>
+                <input type="hidden" id="dptCd" value="XW1130"/>
+                <input type="hidden" id="dtyCd" value="45"/>
+                
+                <!-- Main Content -->
+                <div class="container-fluid">
+                    <!-- 검색 필터 -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">검색 조건</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-row align-items-center mb-2">
+                                <div class="col-auto" style="width: 120px;">
+                                    <label class="mb-0">관리번호</label>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="text" class="form-control form-control-sm" id="searchManagementNo" placeholder="관리번호 입력">
+                                </div>
+                            </div>
+                            <div class="form-row align-items-center mb-2">
+                                <div class="col-auto" style="width: 120px;">
+                                    <label class="mb-0">기간</label>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="input-group input-group-sm" style="width: 250px;">
+                                        <input type="date" class="form-control form-control-sm" id="startDate">
+                                        <div class="input-group-prepend input-group-append">
+                                            <span class="input-group-text">~</span>
+                                        </div>
+                                        <input type="date" class="form-control form-control-sm" id="endDate">
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-secondary period-btn active" data-period="all">전체</button>
+                                        <button type="button" class="btn btn-outline-secondary period-btn" data-period="today">오늘</button>
+                                        <button type="button" class="btn btn-outline-secondary period-btn" data-period="month">1개월</button>
+                                        <button type="button" class="btn btn-outline-secondary period-btn" data-period="3month">3개월</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-row align-items-center mb-3">
+                                <div class="col-auto" style="width: 120px;">
+                                    <label class="mb-0">기관(상품명)</label>
+                                </div>
+                                <div class="col">
+                                    <div class="custom-control custom-checkbox custom-control-inline">
+                                        <input type="checkbox" class="custom-control-input" id="org1" value="삼성생명">
+                                        <label class="custom-control-label" for="org1">삼성생명</label>
+                                    </div>
+                                    <div class="custom-control custom-checkbox custom-control-inline">
+                                        <input type="checkbox" class="custom-control-input" id="org2" value="한화생명">
+                                        <label class="custom-control-label" for="org2">한화생명</label>
+                                    </div>
+                                    <div class="custom-control custom-checkbox custom-control-inline">
+                                        <input type="checkbox" class="custom-control-input" id="org3" value="교보생명">
+                                        <label class="custom-control-label" for="org3">교보생명</label>
+                                    </div>
+                                    <div class="custom-control custom-checkbox custom-control-inline">
+                                        <input type="checkbox" class="custom-control-input" id="org4" value="KB손해보험">
+                                        <label class="custom-control-label" for="org4">KB손해보험</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="col-md-12 text-center">
+                                    <button type="button" class="btn btn-secondary btn-sm mr-2" id="btnReset">
+                                        <i class="fas fa-redo"></i> 초기화
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm" id="btnSearch">
+                                        <i class="fas fa-search"></i> 검색
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- OCR 결과 테이블 -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">OCR 결과 목록</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover" id="ocrResultTable" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>등록일시</th>
+                                            <th>관리번호</th>
+                                            <th>문서유형</th>
+                                            <th>페이지수</th>
+                                            <th>검증여부</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- 데이터는 JavaScript로 동적 로드 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <footer class="sticky-footer">
+                <div class="container-fluid">
+                    <div class="copyright text-center my-auto">
+                        <span class="text-gray-700">Copyright &copy; <strong style="color: #b85363;">REFINE</strong> 2023</span>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
+    
+    <!-- Bootstrap 4 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- Custom JS -->
+    <script src="resources/inc/js/ocrResult.js"></script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+package com.refine.ocr.service;
+
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.refine.ocr.dao.OcrDAO;
+import com.refine.ocr.vo.OcrInfoVO;
+
+/**
+ * OCR 문서 관리 서비스
+ */
+@Service
+@Transactional(readOnly = true)
+public class OcrService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(OcrService.class);
+    
+    @Autowired
+    private OcrDAO ocrDAO;
+    
+    /**
+     * OCR 문서 전체 건수 조회
+     * 
+     * @param params 검색 조건
+     * @return 전체 건수
+     */
+    public int getOcrDocumentCount(Map<String, Object> params) {
+        try {
+            return ocrDAO.getOcrDocumentCount(params);
+        } catch (Exception e) {
+            logger.error("OCR 문서 건수 조회 중 오류 발생", e);
+            return 0;
+        }
+    }
+    
+    /**
+     * OCR 문서 목록 조회
+     * 
+     * @param params 검색 조건
+     * @return OCR 문서 목록
+     */
+    public List<OcrInfoVO> getOcrDocumentList(Map<String, Object> params) {
+        logger.debug("OCR 문서 목록 조회 시작: {}", params);
+        
+        // 파라미터 검증 및 기본값 설정
+        validateAndSetDefaults(params);
+        
+        try {
+            List<OcrInfoVO> list = ocrDAO.getOcrDocumentList(params);
+            
+            logger.debug("OCR 문서 목록 조회 완료: {} 건", list != null ? list.size() : 0);
+            
+            return list;
+            
+        } catch (Exception e) {
+            logger.error("OCR 문서 목록 조회 중 오류 발생", e);
+            throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    /**
+     * 파라미터 검증 및 기본값 설정
+     */
+    private void validateAndSetDefaults(Map<String, Object> params) {
+        // 페이징 기본값
+        if (params.get("paging") == null) {
+            params.put("paging", 0);
+        }
+        if (params.get("num") == null) {
+            params.put("num", 50);
+        }
+        
+        // 정렬 기본값
+        if (params.get("sort") == null) {
+            params.put("sort", "DESC");
+        }
+        
+        // 빈 문자열을 null로 변환
+        params.forEach((key, value) -> {
+            if (value instanceof String && ((String) value).trim().isEmpty()) {
+                params.put(key, null);
+            }
+        });
+        
+        // 날짜 형식 검증
+        String startDate = (String) params.get("ins_dttm_st");
+        String endDate = (String) params.get("ins_dttm_en");
+        
+        if (startDate != null && !startDate.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            throw new IllegalArgumentException("시작일 형식이 올바르지 않습니다: " + startDate);
+        }
+        if (endDate != null && !endDate.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            throw new IllegalArgumentException("종료일 형식이 올바르지 않습니다: " + endDate);
+        }
+    }
+    
+    /**
+     * OCR 문서 상세 조회
+     * 
+     * @param ctrlNo 관리번호
+     * @return OCR 문서 상세
+     */
+    public OcrInfoVO getOcrDocumentDetail(String ctrlNo) {
+        logger.debug("OCR 문서 상세 조회: {}", ctrlNo);
+        
+        try {
+            OcrInfoVO detail = ocrDAO.getOcrDocumentDetail(ctrlNo);
+            
+            if (detail == null) {
+                throw new RuntimeException("해당 문서를 찾을 수 없습니다: " + ctrlNo);
+            }
+            
+            return detail;
+            
+        } catch (Exception e) {
+            logger.error("OCR 문서 상세 조회 중 오류 발생", e);
+            throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    /**
+     * OCR 문서 검증 상태 업데이트
+     * 
+     * @param params 업데이트 정보
+     * @return 업데이트 건수
+     */
+    @Transactional(readOnly = false)
+    public int updateVerificationStatus(Map<String, Object> params) {
+        logger.info("OCR 문서 검증 상태 업데이트: {}", params);
+        
+        try {
+            int result = ocrDAO.updateVerificationStatus(params);
+            
+            logger.info("OCR 문서 검증 상태 업데이트 완료: {} 건", result);
+            
+            return result;
+            
+        } catch (Exception e) {
+            logger.error("OCR 문서 검증 상태 업데이트 중 오류 발생", e);
+            throw new RuntimeException("데이터베이스 업데이트 중 오류가 발생했습니다.", e);
+        }
+    }
+}

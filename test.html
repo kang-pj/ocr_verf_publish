@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>JS 로드 테스트</h1>
+    <div id="result"></div>
+    
+    <script src="resources/inc/js/ocrResult.js"></script>
+    <script>
+        $(document).ready(function() {
+            if (typeof generateSampleData === 'function') {
+                $('#result').html('✅ JS 파일 로드 성공!');
+                console.log('샘플 데이터:', generateSampleData(3));
+            } else {
+                $('#result').html('❌ JS 파일 로드 실패!');
+            }
+        });
+    </script>
+</body>
+</html>

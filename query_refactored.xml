@@ -1,0 +1,264 @@
+<!-- OCR 문서 전체 건수 조회 -->
+<select id="getOcrDocumentCount" resultType="int">
+    WITH base_data AS (
+        SELECT 
+            INF.CTRL_YR,
+            INF.INST_CD,
+            INF.PRDT_CD,
+            INF.CTRL_NO,
+            INF.DOC_TP_CD,
+            MAX(INF.OCR_DOC_NO) AS OCR_DOC_NO,
+            MAX(INF.INS_DTTM) AS INS_DTTM,
+            MAX(INF.OCR_YN) AS OCR_YN,
+            MAX(RSLT.SAVE_YN) AS SAVE_YN,
+            MAX(RSLT.VERF_YN) AS VERF_YN,
+            MIN(NULLIF(NULLIF(RSLT.DOC_TITLE, ''), 'Undefined')) AS DOC_TITLE,
+            MIN(NULLIF(NULLIF(RSLT.SUB_TITLE, ''), 'Undefined')) AS SUB_TITLE
+        FROM RFDB.OCR_DOC_INF INF
+        LEFT JOIN RFDB.OCR_DOC_RSLT RSLT 
+            ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+        WHERE 1=1
+            <!-- 기본 검색 조건 -->
+            <if test="ctrl_yr != null">
+                AND INF.CTRL_YR = #{ctrl_yr}
+            </if>
+            <if test="inst_cd != null">
+                AND INF.INST_CD IN 
+                <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="prdt_cd != null and prdt_cd.size() > 0">
+                AND INF.PRDT_CD IN 
+                <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="ctrl_no != null">
+                AND INF.CTRL_NO = #{ctrl_no}
+            </if>
+            <!-- 날짜 범위 검색 -->
+            <choose>
+                <when test="ins_dttm_st != null and ins_dttm_en != null">
+                    AND INF.INS_DTTM BETWEEN #{ins_dttm_st}::TIMESTAMP AND #{ins_dttm_en}::TIMESTAMP
+                </when>
+                <when test="ins_dttm_st != null">
+                    AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
+                </when>
+                <when test="ins_dttm_en != null">
+                    AND INF.INS_DTTM &lt;= #{ins_dttm_en}::TIMESTAMP
+                </when>
+            </choose>
+        GROUP BY 
+            INF.CTRL_YR, 
+            INF.INST_CD, 
+            INF.PRDT_CD, 
+            INF.CTRL_NO, 
+            INF.DOC_TP_CD, 
+            DATE_TRUNC('MINUTES', INF.INS_DTTM)
+    ),
+    filtered_data AS (
+        SELECT *
+        FROM base_data
+        WHERE 1=1
+            <!-- 후처리 필터 -->
+            <if test="ocr_yn != null and ocr_yn.size() > 0">
+                AND OCR_YN IN 
+                <foreach collection="ocr_yn" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="save_yn != null">
+                AND (
+                    SAVE_YN IN 
+                    <foreach collection="save_yn" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                    <if test='P01 == "Y"'>
+                        OR SAVE_YN IS NULL
+                    </if>
+                )
+            </if>
+            <if test="verf_yn != null">
+                AND (
+                    VERF_YN IN 
+                    <foreach collection="verf_yn" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                    <if test='P01 == "Y"'>
+                        OR VERF_YN IS NULL
+                    </if>
+                )
+            </if>
+            <!-- 문서 타입 및 서브타이틀 필터 -->
+            <choose>
+                <when test="doc_tp_cd != null and doc_tp_cd.size() > 0 and sub_title != null">
+                    AND (
+                        DOC_TP_CD IN 
+                        <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                        OR SUB_TITLE IN 
+                        <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                    )
+                </when>
+                <when test="doc_tp_cd != null and doc_tp_cd.size() > 0">
+                    AND DOC_TP_CD IN 
+                    <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="sub_title != null">
+                    AND SUB_TITLE IN 
+                    <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="doc_tp_cd != null and doc_tp_cd.size() == 0">
+                    AND DOC_TP_CD = ''
+                </when>
+            </choose>
+    )
+    SELECT COUNT(*) FROM filtered_data
+</select>
+
+<!-- 리팩토링된 OCR 문서 조회 쿼리 -->
+<select id="getOcrDocumentList" resultType="OcrInfoVO">
+    WITH base_data AS (
+        SELECT 
+            INF.CTRL_YR,
+            INF.INST_CD,
+            INF.PRDT_CD,
+            INF.CTRL_NO,
+            INF.DOC_TP_CD,
+            MAX(INF.OCR_DOC_NO) AS OCR_DOC_NO,
+            MAX(INF.INS_DTTM) AS INS_DTTM,
+            COUNT(INF.OCR_DOC_NO) AS DOC_PAGE,
+            MIN(NULLIF(NULLIF(RSLT.DOC_TITLE, ''), 'Undefined')) AS DOC_TITLE,
+            MIN(NULLIF(NULLIF(RSLT.SUB_TITLE, ''), 'Undefined')) AS SUB_TITLE,
+            MAX(INF.OCR_YN) AS OCR_YN,
+            MAX(RSLT.SAVE_YN) AS SAVE_YN,
+            MAX(RSLT.VERF_YN) AS VERF_YN
+        FROM RFDB.OCR_DOC_INF INF
+        LEFT JOIN RFDB.OCR_DOC_RSLT RSLT 
+            ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+        WHERE 1=1
+            <!-- 기본 검색 조건 -->
+            <if test="ctrl_yr != null">
+                AND INF.CTRL_YR = #{ctrl_yr}
+            </if>
+            <if test="inst_cd != null">
+                AND INF.INST_CD IN 
+                <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="prdt_cd != null and prdt_cd.size() > 0">
+                AND INF.PRDT_CD IN 
+                <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="ctrl_no != null">
+                AND INF.CTRL_NO = #{ctrl_no}
+            </if>
+            <!-- 날짜 범위 검색 -->
+            <choose>
+                <when test="ins_dttm_st != null and ins_dttm_en != null">
+                    AND INF.INS_DTTM BETWEEN #{ins_dttm_st}::TIMESTAMP AND #{ins_dttm_en}::TIMESTAMP
+                </when>
+                <when test="ins_dttm_st != null">
+                    AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
+                </when>
+                <when test="ins_dttm_en != null">
+                    AND INF.INS_DTTM &lt;= #{ins_dttm_en}::TIMESTAMP
+                </when>
+            </choose>
+        GROUP BY 
+            INF.CTRL_YR, 
+            INF.INST_CD, 
+            INF.PRDT_CD, 
+            INF.CTRL_NO, 
+            INF.DOC_TP_CD, 
+            DATE_TRUNC('MINUTES', INF.INS_DTTM)
+        ORDER BY MAX(INF.INS_DTTM) 
+            <choose>
+                <when test='sort == "ASC"'>ASC</when>
+                <otherwise>DESC</otherwise>
+            </choose>
+    ),
+    filtered_data AS (
+        SELECT *
+        FROM base_data
+        WHERE 1=1
+            <!-- 후처리 필터 -->
+            <if test="ocr_yn != null and ocr_yn.size() > 0">
+                AND OCR_YN IN 
+                <foreach collection="ocr_yn" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="save_yn != null">
+                AND (
+                    SAVE_YN IN 
+                    <foreach collection="save_yn" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                    <if test='P01 == "Y"'>
+                        OR SAVE_YN IS NULL
+                    </if>
+                )
+            </if>
+            <if test="verf_yn != null">
+                AND (
+                    VERF_YN IN 
+                    <foreach collection="verf_yn" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                    <if test='P01 == "Y"'>
+                        OR VERF_YN IS NULL
+                    </if>
+                )
+            </if>
+            <!-- 문서 타입 및 서브타이틀 필터 -->
+            <choose>
+                <when test="doc_tp_cd != null and doc_tp_cd.size() > 0 and sub_title != null">
+                    AND (
+                        DOC_TP_CD IN 
+                        <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                        OR SUB_TITLE IN 
+                        <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                    )
+                </when>
+                <when test="doc_tp_cd != null and doc_tp_cd.size() > 0">
+                    AND DOC_TP_CD IN 
+                    <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="sub_title != null">
+                    AND SUB_TITLE IN 
+                    <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="doc_tp_cd != null and doc_tp_cd.size() == 0">
+                    AND DOC_TP_CD = ''
+                </when>
+            </choose>
+    )
+    SELECT 
+        ROW_NUMBER() OVER() AS ROW_NUMBER,
+        *
+    FROM filtered_data
+    <if test="paging != null">
+        LIMIT #{num}::INTEGER 
+        OFFSET (#{paging}::INTEGER * #{num}::INTEGER)
+    </if>
+</select>
