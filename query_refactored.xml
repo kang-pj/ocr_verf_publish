@@ -23,16 +23,10 @@
                 AND INF.CTRL_YR = #{ctrl_yr}
             </if>
             <if test="inst_cd != null">
-                AND INF.INST_CD IN 
-                <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
-                    #{item}
-                </foreach>
+                AND INF.INST_CD = #{inst_cd}
             </if>
-            <if test="prdt_cd != null and prdt_cd.size() > 0">
-                AND INF.PRDT_CD IN 
-                <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
-                    #{item}
-                </foreach>
+            <if test="prdt_cd != null">
+                AND INF.PRDT_CD = #{prdt_cd}
             </if>
             <if test="ctrl_no != null">
                 AND INF.CTRL_NO = #{ctrl_no}
@@ -150,16 +144,10 @@
                 AND INF.CTRL_YR = #{ctrl_yr}
             </if>
             <if test="inst_cd != null">
-                AND INF.INST_CD IN 
-                <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
-                    #{item}
-                </foreach>
+                AND INF.INST_CD = #{inst_cd}
             </if>
-            <if test="prdt_cd != null and prdt_cd.size() > 0">
-                AND INF.PRDT_CD IN 
-                <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
-                    #{item}
-                </foreach>
+            <if test="prdt_cd != null">
+                AND INF.PRDT_CD = #{prdt_cd}
             </if>
             <if test="ctrl_no != null">
                 AND INF.CTRL_NO = #{ctrl_no}

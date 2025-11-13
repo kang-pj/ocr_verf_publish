@@ -10,6 +10,9 @@ $(document).ready(function() {
             type: 'POST',
             contentType: 'application/json',  // JSON 전송
             data: function(d) {
+                // 관리번호 파싱
+                var parsedMgmtNo = parseManagementNo($('#searchManagementNo').val());
+                
                 // DataTables 기본 파라미터를 서버 형식으로 변환
                 var params = {
                     // 페이징
@@ -19,11 +22,13 @@ $(document).ready(function() {
                     // 정렬
                     sort: d.order && d.order.length > 0 ? d.order[0].dir.toUpperCase() : 'DESC',
                     
-                    // 검색 조건
-                    ctrl_no: $('#searchManagementNo').val() || null,
+                    // 검색 조건 (관리번호 파싱 결과 적용)
+                    ctrl_yr: parsedMgmtNo ? parsedMgmtNo.ctrl_yr : null,
+                    inst_cd: parsedMgmtNo ? parsedMgmtNo.inst_cd : getSelectedOrganizations(),
+                    prdt_cd: parsedMgmtNo ? parsedMgmtNo.prdt_cd : null,
+                    ctrl_no: parsedMgmtNo ? parsedMgmtNo.ctrl_no : null,
                     ins_dttm_st: $('#startDate').val() || null,
                     ins_dttm_en: $('#endDate').val() || null,
-                    inst_cd: getSelectedOrganizations(),
                     ocr_yn: $('#verifiedFilter').val() ? [$('#verifiedFilter').val()] : null
                 };
                 console.log('서버로 전송되는 파라미터:', params);
@@ -159,6 +164,14 @@ $(document).ready(function() {
         setDateRange(period);
     });
     
+    // 관리번호 입력창에서 엔터키 이벤트
+    $('#searchManagementNo').on('keypress', function(e) {
+        if (e.which === 13) { // Enter key
+            e.preventDefault();
+            table.ajax.reload();
+        }
+    });
+    
     // 검색 버튼 - 서버 재호출
     $('#btnSearch').on('click', function() {
         table.ajax.reload();
@@ -191,6 +204,64 @@ $(document).ready(function() {
 // ========================================
 // 유틸리티 함수
 // ========================================
+
+// 관리번호 파싱 (qq-ww-eee-rrrrrr 패턴)
+function parseManagementNo(input) {
+    if (!input || input.trim() === '') {
+        return null;
+    }
+    
+    // 하이픈 제거하고 숫자만 추출
+    var cleaned = input.replace(/[^0-9]/g, '');
+    
+    if (cleaned.length === 0) {
+        return null;
+    }
+    
+    // 2-2-3-6 패턴으로 자르기
+    var result = {
+        ctrl_yr: null,
+        inst_cd: null,
+        prdt_cd: null,
+        ctrl_no: null
+    };
+    
+    var pos = 0;
+    
+    // ctrl_yr (2자리)
+    if (cleaned.length >= 2) {
+        result.ctrl_yr = cleaned.substring(0, 2);
+        pos = 2;
+    } else {
+        result.ctrl_yr = cleaned;
+        return result;
+    }
+    
+    // inst_cd (2자리)
+    if (cleaned.length >= 4) {
+        result.inst_cd = cleaned.substring(2, 4);
+        pos = 4;
+    } else if (cleaned.length > 2) {
+        result.inst_cd = cleaned.substring(2);
+        return result;
+    }
+    
+    // prdt_cd (3자리)
+    if (cleaned.length >= 7) {
+        result.prdt_cd = cleaned.substring(4, 7);
+        pos = 7;
+    } else if (cleaned.length > 4) {
+        result.prdt_cd = cleaned.substring(4);
+        return result;
+    }
+    
+    // ctrl_no (6자리)
+    if (cleaned.length > 7) {
+        result.ctrl_no = cleaned.substring(7, 13); // 최대 6자리
+    }
+    
+    return result;
+}
 
 // 선택된 기관 목록 가져오기 (배열로 반환)
 function getSelectedOrganizations() {
