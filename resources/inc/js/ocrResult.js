@@ -13,6 +13,9 @@ $(document).ready(function() {
                 // 관리번호 파싱
                 var parsedMgmtNo = parseManagementNo($('#searchManagementNo').val());
                 
+                // 선택된 기관 코드
+                var orgCodes = getSelectedOrganizationCodes();
+                
                 // DataTables 기본 파라미터를 서버 형식으로 변환
                 var params = {
                     // 페이징
@@ -22,10 +25,12 @@ $(document).ready(function() {
                     // 정렬
                     sort: d.order && d.order.length > 0 ? d.order[0].dir.toUpperCase() : 'DESC',
                     
-                    // 검색 조건 (관리번호 파싱 결과 적용)
+                    // 검색 조건
+                    // 관리번호 입력 시: 파싱된 값 우선 사용
+                    // 체크박스 선택 시: 기관별 코드 배열 사용
                     ctrl_yr: parsedMgmtNo ? parsedMgmtNo.ctrl_yr : null,
-                    inst_cd: parsedMgmtNo ? parsedMgmtNo.inst_cd : getSelectedOrganizations(),
-                    prdt_cd: parsedMgmtNo ? parsedMgmtNo.prdt_cd : null,
+                    inst_cd: parsedMgmtNo ? parsedMgmtNo.inst_cd : orgCodes.inst_cd,
+                    prdt_cd: parsedMgmtNo ? parsedMgmtNo.prdt_cd : orgCodes.prdt_cd,
                     ctrl_no: parsedMgmtNo ? parsedMgmtNo.ctrl_no : null,
                     ins_dttm_st: $('#startDate').val() || null,
                     ins_dttm_en: $('#endDate').val() || null,
@@ -205,6 +210,29 @@ $(document).ready(function() {
 // 유틸리티 함수
 // ========================================
 
+// 기관별 inst_cd, prdt_cd 매핑
+var organizationMapping = {
+    '모바일반환보증': {
+        inst_cd: ['01', '45', '47', '49'],
+        prdt_cd: ['820', '830']
+    },
+    '신한전세': {
+        inst_cd: ['01'],
+        prdt_cd: ['001', '003', '005', '002', '016', '041', '050', '118', '119', '120', 
+                  '053', '200', '201', '202', '203', '217', '219', '220', '221', '007', 
+                  '014', '020', '031', '129', '028', '037', '032', '038', '128', '029', 
+                  '030', '036', '127', '027']
+    },
+    '전세안심보험(카손)': {
+        inst_cd: ['61'],
+        prdt_cd: ['L01']
+    },
+    '하나은행(사전)': {
+        inst_cd: ['02'],
+        prdt_cd: ['007', '222', '223', '224', '225']
+    }
+};
+
 // 관리번호 파싱 (qq-ww-eee-rrrrrr 패턴)
 function parseManagementNo(input) {
     if (!input || input.trim() === '') {
@@ -263,13 +291,36 @@ function parseManagementNo(input) {
     return result;
 }
 
-// 선택된 기관 목록 가져오기 (배열로 반환)
-function getSelectedOrganizations() {
-    var selected = [];
+// 선택된 기관의 inst_cd, prdt_cd 가져오기
+function getSelectedOrganizationCodes() {
+    var instCodes = [];
+    var prdtCodes = [];
+    
     $('input[type="checkbox"]:checked').each(function() {
-        selected.push($(this).val());
+        var orgName = $(this).val();
+        var mapping = organizationMapping[orgName];
+        
+        if (mapping) {
+            // inst_cd 추가 (중복 제거)
+            mapping.inst_cd.forEach(function(code) {
+                if (instCodes.indexOf(code) === -1) {
+                    instCodes.push(code);
+                }
+            });
+            
+            // prdt_cd 추가 (중복 제거)
+            mapping.prdt_cd.forEach(function(code) {
+                if (prdtCodes.indexOf(code) === -1) {
+                    prdtCodes.push(code);
+                }
+            });
+        }
     });
-    return selected.length > 0 ? selected : null;
+    
+    return {
+        inst_cd: instCodes.length > 0 ? instCodes : null,
+        prdt_cd: prdtCodes.length > 0 ? prdtCodes : null
+    };
 }
 
 // 상세보기 (예시)
