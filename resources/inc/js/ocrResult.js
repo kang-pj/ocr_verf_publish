@@ -38,7 +38,7 @@ $(document).ready(function() {
                 };
                 console.log('서버로 전송되는 파라미터:', params);
                 return JSON.stringify(params);  // JSON 문자열로 변환
-            },
+         
             dataSrc: function(json) {
                 // 서버 응답을 DataTables 형식으로 변환
                 if (json.success) {
@@ -110,7 +110,8 @@ $(document).ready(function() {
                 render: function(data, type, row) {
                     // ctrl_yr-inst_cd-prdt_cd-ctrl_no 조합
                     var ctrlNo = row.ctrl_yr + '-' + row.inst_cd + '-' + row.prdt_cd + '-' + row.ctrl_no;
-                    return '<a href="#" class="text-primary" onclick="viewDetail(\'' + ctrlNo + '\'); return false;">' + ctrlNo + '</a>';
+                    var docTpCd = row.doc_tp_cd || '';
+                    return '<a href="#" class="text-primary" onclick="viewDetail(\'' + row.ctrl_yr + '\', \'' + row.inst_cd + '\', \'' + row.prdt_cd + '\', \'' + row.ctrl_no + '\', \'' + docTpCd + '\'); return false;">' + ctrlNo + '</a>';
                 }
             },
             { 
@@ -323,11 +324,27 @@ function getSelectedOrganizationCodes() {
     };
 }
 
-// 상세보기 (예시)
-function viewDetail(ctrlNo) {
-    console.log('상세보기:', ctrlNo);
-    // 상세 페이지로 이동 또는 모달 표시
-    // location.href = '/rf_ocr_verf/detail?ctrl_no=' + ctrlNo;
+// 상세보기
+function viewDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd) {
+    console.log('상세보기:', ctrlYr, instCd, prdtCd, ctrlNo, docTpCd);
+    
+    // pageChange 방식으로 상세 페이지를 새 탭에서 열기
+    var currentPath = window.location.pathname;
+    var site = currentPath.substring(1); // '/rf_ocr_verf' -> 'rf_ocr_verf'
+    
+    // 파라미터 구성
+    var params = [];
+    params.push('pageChange=/ocrRsltDetail');
+    params.push('ctrl_yr=' + encodeURIComponent(ctrlYr));
+    params.push('inst_cd=' + encodeURIComponent(instCd));
+    params.push('prdt_cd=' + encodeURIComponent(prdtCd));
+    params.push('ctrl_no=' + encodeURIComponent(ctrlNo));
+    if (docTpCd) {
+        params.push('doc_tp_cd=' + encodeURIComponent(docTpCd));
+    }
+    
+    var url = '/' + site + '?' + params.join('&');
+    window.open(url, '_blank');
 }
 
 // ========================================
