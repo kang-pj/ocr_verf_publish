@@ -26,6 +26,7 @@ $(document).ready(function() {
                     inst_cd: getSelectedOrganizations(),
                     ocr_yn: $('#verifiedFilter').val() ? [$('#verifiedFilter').val()] : null
                 };
+                console.log('서버로 전송되는 파라미터:', params);
                 return JSON.stringify(params);  // JSON 문자열로 변환
             },
             dataSrc: function(json) {
@@ -77,8 +78,8 @@ $(document).ready(function() {
              '<"row"<"col-sm-12 col-md-3"i><"col-sm-12 col-md-12 text-center"p><"col-sm-12 col-md-3">>',
         order: [[1, 'desc']],
         columnDefs: [
-            { className: "text-center", targets: [0, 1, 2, 3, 4, 5] },
-            { orderable: false, targets: [0, 2, 3, 4, 5] },
+            { className: "text-center", targets: [0, 1, 2, 3, 4, 5, 6] },
+            { orderable: false, targets: [0, 2, 3, 4, 5, 6] },
             { orderable: true, targets: [1] }
         ],
         columns: [
@@ -109,6 +110,12 @@ $(document).ready(function() {
                 }
             },
             { 
+                data: 'doc_title',
+                render: function(data) {
+                    return data || '';
+                }
+            },
+            { 
                 data: 'doc_page',
                 render: function(data) {
                     return data || '0';
@@ -118,8 +125,9 @@ $(document).ready(function() {
                 data: 'ocr_yn',
                 render: function(data) {
                     if (data === 'Y') return '완료';
-                    if (data === 'N') return '미완료';
-                    return '미완료';
+                    if (data === 'N') return '대기';
+                    if (data === 'X') return '실패';
+                    return '오류';
                 }
             }
         ]
@@ -132,8 +140,8 @@ $(document).ready(function() {
             '<select class="form-control form-control-sm d-inline-block" id="verifiedFilter" style="width: 100px;">' +
             '<option value="">전체</option>' +
             '<option value="Y">완료</option>' +
-            '<option value="N">미완료</option>' +
-            '<option value="F">실패</option>' +
+            '<option value="N">대기</option>' +
+            '<option value="X">실패</option>' +
             '</select>'
         );
     }, 100);
