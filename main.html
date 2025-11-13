@@ -94,19 +94,32 @@
             color: white;
             text-decoration: none;
         }
+        /* DataTables wrapper를 card-body 안에 완전히 고정 */
+        .card-body {
+            position: relative !important;
+            padding: 1.25rem !important;
+        }
+        #ocrResultTable_wrapper {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
         /* DataTables 페이징 가운데 정렬 */
         .dataTables_wrapper .dataTables_paginate {
             text-align: center !important;
-            padding-top: 1rem;
-            display: flex !important;
-            justify-content: center !important;
         }
         .dataTables_wrapper .dataTables_paginate .pagination {
             justify-content: center !important;
-            margin: 0 auto !important;
         }
-        div.dataTables_wrapper div.dataTables_paginate ul.pagination {
-            justify-content: center !important;
+        .dataTables_wrapper .row {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            width: 100% !important;
+        }
+        .dataTables_wrapper .row > div {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
         }
         /* 테이블 크기 조정 */
         #ocrResultTable {

@@ -74,7 +74,7 @@ $(document).ready(function() {
         lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         dom: '<"row"<"col-sm-12 col-md-3"li><"col-sm-12 col-md-6 text-center"p><"col-sm-12 col-md-3 text-right"<"verified-filter-top">>>' +
              '<"row"<"col-sm-12"tr>>' +
-             '<"row"<"col-sm-12 col-md-3"i><"col-sm-12 col-md-6 text-center"p><"col-sm-12 col-md-3">>',
+             '<"row"<"col-sm-12 col-md-3"i><"col-sm-12 col-md-12 text-center"p><"col-sm-12 col-md-3">>',
         order: [[1, 'desc']],
         columnDefs: [
             { className: "text-center", targets: [0, 1, 2, 3, 4, 5] },
@@ -169,6 +169,15 @@ $(document).ready(function() {
 
     // 초기 날짜 설정
     setDateRange('all');
+    
+    // DataTables wrapper가 card-body 안에 있는지 확인
+    setTimeout(function() {
+        var wrapper = $('#ocrResultTable_wrapper');
+        var cardBody = wrapper.closest('.card-body');
+        if (cardBody.length === 0) {
+            console.warn('DataTables wrapper가 card-body 밖에 있습니다.');
+        }
+    }, 500);
 });
 
 // ========================================
