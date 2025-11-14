@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title>OCR 문서 상세</title>
+    <!-- Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        #wrapper {
+            display: flex;
+        }
+        .sidebar {
+            min-height: 100vh;
+            width: 250px;
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        }
+        .sidebar-brand {
+            height: 80px;
+            text-decoration: none;
+            color: white !important;
+        }
+        .sidebar-brand-icon i {
+            color: white;
+        }
+        .sidebar-brand-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .sidebar .nav-item .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem;
+        }
+        .sidebar .nav-item .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 0;
+        }
+        #content-wrapper {
+            flex: 1;
+            background-color: #f8f9fc;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        #content {
+            flex: 1;
+        }
+        .topbar {
+            background-color: white;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        .custom-navbar-height {
+            height: 60px;
+        }
+        .sticky-footer {
+            background-color: white;
+            padding: 1rem 0;
+        }
+        .bg-gradient-primary {
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        }
+        .scroll-to-top {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            display: none;
+            width: 2.75rem;
+            height: 2.75rem;
+            text-align: center;
+            color: white;
+            background: rgba(90, 92, 105, 0.5);
+            line-height: 46px;
+            border-radius: 50%;
+        }
+        .scroll-to-top:hover {
+            background: rgba(90, 92, 105, 0.7);
+            color: white;
+            text-decoration: none;
+        }
+        .info-card {
+            margin-bottom: 1.5rem;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #5a5c69;
+            padding: 0.5rem !important;
+            font-size: 0.85rem;
+        }
+        .info-value {
+            color: #3a3b45;
+            padding: 0.5rem !important;
+            font-size: 0.85rem;
+        }
+        /* 카드 헤더 크기 조정 */
+        .card-header h6 {
+            font-size: 0.9rem;
+        }
+        .card-header .badge {
+            font-size: 0.75rem;
+        }
+        /* 최소 너비 설정 (반응형 제한) */
+        body {
+            min-width: 1200px;
+        }
+        /* 이미지 뷰어 스타일 */
+        #imageViewer img {
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        /* 페이지 목록 아이템 */
+        .page-item {
+            cursor: pointer;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 2px solid #e3e6f0;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        .page-item:hover {
+            border-color: #4e73df;
+            background-color: #f8f9fc;
+        }
+        .page-item.active {
+            border-color: #4e73df;
+            background-color: #e7f1ff;
+        }
+        .page-thumbnail {
+            width: 100%;
+            height: auto;
+            border-radius: 3px;
+        }
+        /* 서류 리스트 스타일 */
+        .doc-type-item {
+            display: block;
+            padding: 10px 8px;
+            margin-bottom: 8px;
+            border: 1px solid #e3e6f0;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #5a5c69;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+        .doc-type-item:hover {
+            background-color: #f8f9fc;
+            border-color: #4e73df;
+            color: #4e73df;
+            text-decoration: none;
+        }
+        .doc-type-item.current {
+            background-color: #e7f1ff;
+            border-color: #4e73df;
+            color: #4e73df;
+            font-weight: 600;
+            cursor: default;
+        }
+        .doc-type-item i {
+            margin-right: 5px;
+        }
+        .doc-type-item small {
+            font-size: 0.7rem;
+            margin-top: 3px;
+        }
+    </style>
+</head>
+<body id="page-top">
+    <div id="wrapper">
+        <!-- Sidebar -->
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center">
+                <div class="sidebar-brand-icon">
+                    <i class="fas fa-file-image fa-2x"></i>
+                </div>
+                <div class="sidebar-brand-text mx-3 text-white">OCR 이미지 전산</div>
+            </a>
+            <hr class="sidebar-divider my-0">
+            <li class="nav-item">
+                <a class="nav-link" href="main.html">
+                    <i class="fas fa-fw fa-list"></i>
+                    <span>OCR 결과 목록</span>
+                </a>
+            </li>
+            <li class="nav-item active">
+                <a class="nav-link" href="#">
+                    <i class="fas fa-fw fa-file-alt"></i>
+                    <span>문서 상세</span>
+                </a>
+            </li>
+            <hr class="sidebar-divider my-0">
+        </ul>
+        
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+            <div id="content">
+                <!-- Topbar -->
+                <nav class="navbar navbar-expand navbar-light topbar mb-3 static-top custom-navbar-height" id="topNavbar">
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                    <div class="collapse navbar-collapse">
+                        <ul class="navbar-nav">
+                            <i class="nav-item fas fa-fw fa-home"></i>
+                        </ul>
+                    </div>
+                    <ul class="navbar-nav ml-auto">
+                        <div class="topbar-divider d-none d-sm-block"></div>
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="modal" data-target="#logoutModal">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600"><strong>강진우</strong></span>
+                                <span class="mr-2 d-none d-lg-inline text-gray-600"><i class="fas fa-sign-out-alt text-gray-600"></i></span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                
+                <!-- Logout Modal -->
+                <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h6 class="modal-title" id="logoutModalLabel">로그아웃 하시겠습니까?</h6>
+                                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">×</span>
+                                </button>
+                            </div>
+                            <div class="modal-footer">
+                                <a class="btn btn-primary btn-sm" href="logout">확인</a>
+                                <button class="btn btn-secondary btn-sm" type="button" data-dismiss="modal">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Content -->
+                <div class="container-fluid" style="min-width: 1200px;">
+                    <!-- 페이지 헤더 -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="mb-0 text-gray-800">
+                            <i class="fas fa-file-alt"></i> OCR 문서 상세
+                        </h4>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.close()">
+                            <i class="fas fa-times"></i> 닫기
+                        </button>
+                    </div>
+                    
+                    <!-- 상단: 서류 정보 (4x3 테이블) -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold text-primary">서류 정보</h6>
+                            <span class="badge badge-info" id="statusBadge">대기</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-bordered mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="info-label bg-light" style="width: 15%;">관리번호</td>
+                                        <td class="info-value" style="width: 35%;" id="ctrlNo">-</td>
+                                        <td class="info-label bg-light" style="width: 15%;">기관-상품명</td>
+                                        <td class="info-value" style="width: 35%;" id="orgProduct">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="info-label bg-light">문서유형</td>
+                                        <td class="info-value" id="docTpCd">-</td>
+                                        <td class="info-label bg-light">등록일시</td>
+                                        <td class="info-value" id="insDttm">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="info-label bg-light">서류 Title</td>
+                                        <td class="info-value" id="docTitle">-</td>
+                                        <td class="info-label bg-light">검증여부 (OCR 결과번호)</td>
+                                        <td class="info-value">
+                                            <span id="ocrYn">-</span>
+                                            <span class="text-muted ml-2" id="ocrDocNo">(-)</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 중단: 좌우 레이아웃 -->
+                    <div class="d-flex" style="gap: 15px;">
+                        <!-- 좌측: 이미지 뷰어 영역 (flex-grow) -->
+                        <div style="flex: 1;">
+                            <div class="card shadow mb-4" style="height: 1000px;">
+                                <div class="card-header py-2">
+                                    <h6 class="m-0 font-weight-bold text-primary">이미지 뷰어</h6>
+                                </div>
+                                <div class="card-body d-flex align-items-center justify-content-center" style="height: calc(100% - 50px); overflow: auto; background-color: #f8f9fa;">
+                                    <div id="imageViewer" class="text-center">
+                                        <p class="text-muted">이미지를 불러오는 중...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 중앙: 페이지 목록 (flex-grow) -->
+                        <div style="flex: 0.5;">
+                            <div class="card shadow mb-4" style="height: 1000px;">
+                                <div class="card-header py-2">
+                                    <h6 class="m-0 font-weight-bold text-primary">페이지 목록</h6>
+                                </div>
+                                <div class="card-body" style="height: calc(100% - 50px); overflow-y: auto;">
+                                    <div id="pageList">
+                                        <p class="text-center text-muted">데이터를 불러오는 중...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 우측: 서류 리스트 (168px 고정) -->
+                        <div style="width: 168px; flex-shrink: 0;">
+                            <div class="card shadow mb-4" style="height: 1000px;">
+                                <div class="card-header py-2">
+                                    <h6 class="m-0 font-weight-bold text-primary">서류 리스트</h6>
+                                </div>
+                                <div class="card-body p-2" style="height: calc(100% - 50px); overflow-y: auto;">
+                                    <div id="documentTypeList">
+                                        <!-- 예시 서류 리스트 -->
+                                        <a href="#" class="doc-type-item" data-doc-code="001">
+                                            <i class="fas fa-file-alt"></i> 서류 001
+                                        </a>
+                                        <a href="#" class="doc-type-item" data-doc-code="002">
+                                            <i class="fas fa-file-alt"></i> 서류 002
+                                        </a>
+                                        <div class="doc-type-item current">
+                                            <i class="fas fa-check-circle text-success"></i> 서류 003
+                                        </div>
+                                        <a href="#" class="doc-type-item" data-doc-code="004">
+                                            <i class="fas fa-file-alt"></i> 서류 004
+                                        </a>
+                                        <a href="#" class="doc-type-item" data-doc-code="005">
+                                            <i class="fas fa-file-alt"></i> 서류 005
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <footer class="sticky-footer">
+                <div class="container-fluid">
+                    <div class="copyright text-center my-auto">
+                        <span class="text-gray-700">Copyright &copy; <strong style="color: #b85363;">REFINE</strong> 2023</span>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
+    
+    <!-- Bootstrap 4 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="resources/inc/js/ocrDetail.js?v=1"></script>
+</body>
+</html>
