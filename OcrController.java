@@ -73,7 +73,7 @@ public class OcrController {
     }
     
     /**
-     * OCR 문서 상세 조회 (예시)
+     * OCR 문서 상세 조회
      */
     @PostMapping(value = "/api/getOcrDocumentDetail.do")
     @ResponseBody
@@ -81,16 +81,33 @@ public class OcrController {
         Map<String, Object> result = new HashMap<>();
         
         try {
+            logger.info("OCR 문서 상세 조회 요청: {}", params);
+            
+            // 필수 파라미터 검증
+            String ctrlYr = (String) params.get("ctrl_yr");
+            String instCd = (String) params.get("inst_cd");
+            String prdtCd = (String) params.get("prdt_cd");
             String ctrlNo = (String) params.get("ctrl_no");
             
-            if (ctrlNo == null || ctrlNo.trim().isEmpty()) {
-                throw new IllegalArgumentException("관리번호가 필요합니다.");
+            if (ctrlYr == null || instCd == null || prdtCd == null || ctrlNo == null) {
+                throw new IllegalArgumentException("관리번호 정보가 필요합니다.");
             }
             
-            OcrInfoVO detail = ocrService.getOcrDocumentDetail(ctrlNo);
+            // 상세 정보 조회
+            OcrInfoVO detail = ocrService.getOcrDocumentDetail(params);
+            
+            // 같은 관리번호의 서류 목록 조회
+            List<OcrInfoVO> documentList = ocrService.getDocumentListByCtrlNo(params);
+            
+            // OCR 결과 텍스트 조회
+            List<OcrInfoVO> ocrResults = ocrService.getOcrResultText(params);
             
             result.put("success", true);
             result.put("data", detail);
+            result.put("documentList", documentList);
+            result.put("ocrResults", ocrResults);
+            
+            logger.info("OCR 문서 상세 조회 완료: {}-{}-{}-{}", ctrlYr, instCd, prdtCd, ctrlNo);
             
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_JSON)

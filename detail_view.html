@@ -14,6 +14,7 @@
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
+            min-width: 1200px;
         }
         #wrapper {
             display: flex;
@@ -43,9 +44,16 @@
             color: white;
             background-color: rgba(255, 255, 255, 0.1);
         }
+        .sidebar .nav-item.active .nav-link {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
         .sidebar-divider {
             border-top: 1px solid rgba(255, 255, 255, 0.15);
             margin: 0;
+        }
+        .bg-gradient-primary {
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
         }
         #content-wrapper {
             flex: 1;
@@ -68,9 +76,6 @@
             background-color: white;
             padding: 1rem 0;
         }
-        .bg-gradient-primary {
-            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
-        }
         .scroll-to-top {
             position: fixed;
             right: 1rem;
@@ -89,9 +94,6 @@
             color: white;
             text-decoration: none;
         }
-        .info-card {
-            margin-bottom: 1.5rem;
-        }
         .info-label {
             font-weight: 600;
             color: #5a5c69;
@@ -103,24 +105,17 @@
             padding: 0.5rem !important;
             font-size: 0.85rem;
         }
-        /* 카드 헤더 크기 조정 */
         .card-header h6 {
             font-size: 0.9rem;
         }
         .card-header .badge {
             font-size: 0.75rem;
         }
-        /* 최소 너비 설정 (반응형 제한) */
-        body {
-            min-width: 1200px;
-        }
-        /* 이미지 뷰어 스타일 */
         #imageViewer img {
             max-width: 100%;
             height: auto;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        /* 페이지 목록 아이템 */
         .page-item {
             cursor: pointer;
             padding: 10px;
@@ -142,7 +137,6 @@
             height: auto;
             border-radius: 3px;
         }
-        /* 서류 리스트 스타일 */
         .doc-type-item {
             display: block;
             padding: 10px 8px;
@@ -170,10 +164,6 @@
         .doc-type-item i {
             margin-right: 5px;
         }
-        .doc-type-item small {
-            font-size: 0.7rem;
-            margin-top: 3px;
-        }
     </style>
 </head>
 <body id="page-top">
@@ -188,7 +178,7 @@
             </a>
             <hr class="sidebar-divider my-0">
             <li class="nav-item">
-                <a class="nav-link" href="main.html">
+                <a class="nav-link" href="list.html">
                     <i class="fas fa-fw fa-list"></i>
                     <span>OCR 결과 목록</span>
                 </a>
@@ -206,7 +196,7 @@
         <div id="content-wrapper" class="d-flex flex-column">
             <div id="content">
                 <!-- Topbar -->
-                <nav class="navbar navbar-expand navbar-light topbar mb-3 static-top custom-navbar-height" id="topNavbar">
+                <nav class="navbar navbar-expand navbar-light topbar mb-3 static-top custom-navbar-height">
                     <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
                         <i class="fa fa-bars"></i>
                     </button>
@@ -227,13 +217,13 @@
                 </nav>
                 
                 <!-- Logout Modal -->
-                <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
+                <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog">
                     <div class="modal-dialog" role="document">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h6 class="modal-title" id="logoutModalLabel">로그아웃 하시겠습니까?</h6>
-                                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">×</span>
+                                <h6 class="modal-title">로그아웃 하시겠습니까?</h6>
+                                <button class="close" type="button" data-dismiss="modal">
+                                    <span>×</span>
                                 </button>
                             </div>
                             <div class="modal-footer">
@@ -256,7 +246,7 @@
                         </button>
                     </div>
                     
-                    <!-- 상단: 서류 정보 (4x3 테이블) -->
+                    <!-- 상단: 서류 정보 -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3 d-flex justify-content-between align-items-center">
                             <h6 class="m-0 font-weight-bold text-primary">서류 정보</h6>
@@ -293,7 +283,7 @@
                     
                     <!-- 중단: 좌우 레이아웃 -->
                     <div class="d-flex" style="gap: 15px;">
-                        <!-- 좌측: 이미지 뷰어 영역 (flex-grow) -->
+                        <!-- 좌측: 이미지 뷰어 -->
                         <div style="flex: 1;">
                             <div class="card shadow mb-4" style="height: 1000px;">
                                 <div class="card-header py-2">
@@ -307,21 +297,21 @@
                             </div>
                         </div>
                         
-                        <!-- 중앙: 페이지 목록 (flex-grow) -->
+                        <!-- 중앙: OCR 결과 -->
                         <div style="flex: 0.5;">
                             <div class="card shadow mb-4" style="height: 1000px;">
                                 <div class="card-header py-2">
-                                    <h6 class="m-0 font-weight-bold text-primary">페이지 목록</h6>
+                                    <h6 class="m-0 font-weight-bold text-primary">OCR 결과</h6>
                                 </div>
                                 <div class="card-body" style="height: calc(100% - 50px); overflow-y: auto;">
                                     <div id="pageList">
-                                        <p class="text-center text-muted">데이터를 불러오는 중...</p>
+                                        <p class="text-center text-muted">OCR 결과가 없습니다.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- 우측: 서류 리스트 (168px 고정) -->
+                        <!-- 우측: 서류 리스트 -->
                         <div style="width: 168px; flex-shrink: 0;">
                             <div class="card shadow mb-4" style="height: 1000px;">
                                 <div class="card-header py-2">
@@ -329,20 +319,19 @@
                                 </div>
                                 <div class="card-body p-2" style="height: calc(100% - 50px); overflow-y: auto;">
                                     <div id="documentTypeList">
-                                        <!-- 예시 서류 리스트 -->
-                                        <a href="#" class="doc-type-item" data-doc-code="001">
+                                        <a href="#" class="doc-type-item">
                                             <i class="fas fa-file-alt"></i> 서류 001
                                         </a>
-                                        <a href="#" class="doc-type-item" data-doc-code="002">
+                                        <a href="#" class="doc-type-item">
                                             <i class="fas fa-file-alt"></i> 서류 002
                                         </a>
                                         <div class="doc-type-item current">
                                             <i class="fas fa-check-circle text-success"></i> 서류 003
                                         </div>
-                                        <a href="#" class="doc-type-item" data-doc-code="004">
+                                        <a href="#" class="doc-type-item">
                                             <i class="fas fa-file-alt"></i> 서류 004
                                         </a>
-                                        <a href="#" class="doc-type-item" data-doc-code="005">
+                                        <a href="#" class="doc-type-item">
                                             <i class="fas fa-file-alt"></i> 서류 005
                                         </a>
                                     </div>
@@ -372,6 +361,22 @@
     <!-- Bootstrap 4 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
-    <script src="resources/inc/js/ocrDetail.js?v=1"></script>
+    <script src="resources/inc/js/ocrDetail.js?v=3"></script>
+    
+    <!-- Scroll to top script -->
+    <script>
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 100) {
+                $('.scroll-to-top').fadeIn();
+            } else {
+                $('.scroll-to-top').fadeOut();
+            }
+        });
+        
+        $('.scroll-to-top').click(function() {
+            $('html, body').animate({scrollTop: 0}, 800);
+            return false;
+        });
+    </script>
 </body>
 </html>

@@ -4,21 +4,19 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <title>이미지 전산화 검증</title>
+    <title>OCR 이미지 전산화 검증</title>
     <!-- Bootstrap 4 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.bootstrap4.min.css">
-    <!-- Select2 CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
+            min-width: 1200px;
         }
         #wrapper {
             display: flex;
@@ -48,9 +46,16 @@
             color: white;
             background-color: rgba(255, 255, 255, 0.1);
         }
+        .sidebar .nav-item.active .nav-link {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
         .sidebar-divider {
             border-top: 1px solid rgba(255, 255, 255, 0.15);
             margin: 0;
+        }
+        .bg-gradient-primary {
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
         }
         #content-wrapper {
             flex: 1;
@@ -73,9 +78,6 @@
             background-color: white;
             padding: 1rem 0;
         }
-        .bg-gradient-primary {
-            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
-        }
         .scroll-to-top {
             position: fixed;
             right: 1rem;
@@ -94,34 +96,9 @@
             color: white;
             text-decoration: none;
         }
-        /* DataTables wrapper를 card-body 안에 완전히 고정 */
         .card-body {
-            position: relative !important;
             padding: 1.25rem !important;
         }
-        #ocrResultTable_wrapper {
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        /* DataTables 페이징 가운데 정렬 */
-        .dataTables_wrapper .dataTables_paginate {
-            text-align: center !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .pagination {
-            justify-content: center !important;
-        }
-        .dataTables_wrapper .row {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            width: 100% !important;
-        }
-        .dataTables_wrapper .row > div {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-        }
-        /* 테이블 크기 조정 */
         #ocrResultTable {
             font-size: 0.85rem;
         }
@@ -134,19 +111,14 @@
             padding: 0.5rem;
             vertical-align: middle;
         }
-        .table-responsive {
-            font-size: 0.85rem;
+        .dataTables_wrapper .dataTables_paginate {
+            text-align: center !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination {
+            justify-content: center !important;
         }
     </style>
 </head>
-<script type="text/javascript">
-    // 마우스 우클릭 방지, 드래그 방지, 선택 방지
-    /*$(document).ready(function() {
-        $(document).on('contextmenu dragstart selectstart', function() {
-            return false;
-        });
-    });*/
-</script>
 <body id="page-top">
     <div id="wrapper">
         <!-- Sidebar -->
@@ -158,10 +130,10 @@
                 <div class="sidebar-brand-text mx-3 text-white">OCR 이미지 전산</div>
             </a>
             <hr class="sidebar-divider my-0">
-            <li class="nav-item">
-                <a class="nav-link" bgWhen="ocrRsltList" href="?pageChange=/ocrRsltList">
-                    <i class="fas fa-fw fa-sitemap"></i>
-                    <span>OCR 결과 보기</span>
+            <li class="nav-item active">
+                <a class="nav-link" href="list.html">
+                    <i class="fas fa-fw fa-list"></i>
+                    <span>OCR 결과 목록</span>
                 </a>
             </li>
             <hr class="sidebar-divider my-0">
@@ -171,7 +143,7 @@
         <div id="content-wrapper" class="d-flex flex-column">
             <div id="content">
                 <!-- Topbar -->
-                <nav class="navbar navbar-expand navbar-light topbar mb-3 static-top custom-navbar-height" id="topNavbar">
+                <nav class="navbar navbar-expand navbar-light topbar mb-3 static-top custom-navbar-height">
                     <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
                         <i class="fa fa-bars"></i>
                     </button>
@@ -179,9 +151,7 @@
                         <ul class="navbar-nav">
                             <i class="nav-item fas fa-fw fa-home"></i>
                         </ul>
-                        <ul class="navbar-nav" id="menuNav"></ul>
                     </div>
-                    <hr />
                     <ul class="navbar-nav ml-auto">
                         <div class="topbar-divider d-none d-sm-block"></div>
                         <li class="nav-item dropdown no-arrow">
@@ -194,13 +164,13 @@
                 </nav>
                 
                 <!-- Logout Modal -->
-                <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
+                <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog">
                     <div class="modal-dialog" role="document">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h6 class="modal-title" id="logoutModalLabel">로그아웃 하시겠습니까?</h6>
-                                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">×</span>
+                                <h6 class="modal-title">로그아웃 하시겠습니까?</h6>
+                                <button class="close" type="button" data-dismiss="modal">
+                                    <span>×</span>
                                 </button>
                             </div>
                             <div class="modal-footer">
@@ -210,11 +180,6 @@
                         </div>
                     </div>
                 </div>
-                
-                <input type="hidden" id="usrId" value="rf1666@refine.co.kr"/>
-                <input type="hidden" id="usrNm" value="강진우"/>
-                <input type="hidden" id="dptCd" value="XW1130"/>
-                <input type="hidden" id="dtyCd" value="45"/>
                 
                 <!-- Main Content -->
                 <div class="container-fluid">
@@ -278,12 +243,13 @@
                                 </div>
                             </div>
                             <div class="form-row">
-                                <div class="col-md-12 text-center">
-                                    <button type="button" class="btn btn-secondary btn-sm mr-2" id="btnReset">
-                                        <i class="fas fa-redo"></i> 초기화
-                                    </button>
+                                <div class="col-auto" style="width: 120px;"></div>
+                                <div class="col-auto">
                                     <button type="button" class="btn btn-primary btn-sm" id="btnSearch">
                                         <i class="fas fa-search"></i> 검색
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btnReset">
+                                        <i class="fas fa-redo"></i> 초기화
                                     </button>
                                 </div>
                             </div>
@@ -296,24 +262,20 @@
                             <h6 class="m-0 font-weight-bold text-primary">OCR 결과 목록</h6>
                         </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-hover" id="ocrResultTable" width="100%" cellspacing="0">
-                                    <thead>
-                                        <tr>
-                                            <th>No</th>
-                                            <th>등록일시</th>
-                                            <th>관리번호</th>
-                                            <th>문서유형</th>
-                                            <th>한글 서류명 (결과)</th>
-                                            <th>페이지수</th>
-                                            <th>검증여부</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- 데이터는 JavaScript로 동적 로드 -->
-                                    </tbody>
-                                </table>
-                            </div>
+                            <table class="table table-bordered table-hover" id="ocrResultTable" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>등록일시</th>
+                                        <th>관리번호</th>
+                                        <th>문서유형</th>
+                                        <th>한글 서류명 (결과)</th>
+                                        <th>페이지수</th>
+                                        <th>검증여부</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -340,10 +302,23 @@
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
-    <!-- Select2 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- Custom JS -->
-    <script src="resources/inc/js/ocrResult.js?v=2"></script>
+    <script src="resources/inc/js/ocrResult.js?v=3"></script>
+    
+    <!-- Scroll to top script -->
+    <script>
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 100) {
+                $('.scroll-to-top').fadeIn();
+            } else {
+                $('.scroll-to-top').fadeOut();
+            }
+        });
+        
+        $('.scroll-to-top').click(function() {
+            $('html, body').animate({scrollTop: 0}, 800);
+            return false;
+        });
+    </script>
 </body>
 </html>

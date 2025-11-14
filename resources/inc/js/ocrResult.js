@@ -38,7 +38,7 @@ $(document).ready(function() {
                 };
                 console.log('서버로 전송되는 파라미터:', params);
                 return JSON.stringify(params);  // JSON 문자열로 변환
-         
+            },
             dataSrc: function(json) {
                 // 서버 응답을 DataTables 형식으로 변환
                 if (json.success) {
