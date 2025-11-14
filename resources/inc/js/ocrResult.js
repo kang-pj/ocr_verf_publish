@@ -135,10 +135,16 @@ $(document).ready(function() {
             { 
                 data: 'ocr_yn',
                 render: function(data) {
-                    if (data === 'Y') return '완료';
-                    if (data === 'N') return '대기';
-                    if (data === 'X') return '실패';
-                    return '오류';
+                    if (data === 'Y') {
+                        return '<span class="badge badge-success">완료</span>';
+                    }
+                    if (data === 'N') {
+                        return '<span class="badge badge-warning">대기</span>';
+                    }
+                    if (data === 'X') {
+                        return '<span class="badge badge-danger">실패</span>';
+                    }
+                    return '<span class="badge badge-secondary">오류</span>';
                 }
             }
         ]

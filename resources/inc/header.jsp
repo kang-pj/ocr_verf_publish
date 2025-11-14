@@ -62,6 +62,30 @@
             color: white;
             text-decoration: none;
         }
+        /* 뱃지 공통 스타일 */
+        .badge {
+            font-weight: 100;
+            padding: 0.3em 0.9em;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        /* 뱃지 색상 - 파스텔 톤 */
+        .badge-success {
+            background-color: #d4edda !important;
+            color: #28a745 !important;
+        }
+        .badge-warning {
+            background-color: #fff3cd !important;
+            color: #856404 !important;
+        }
+        .badge-danger {
+            background-color: #f8d7da !important;
+            color: #dc3545 !important;
+        }
+        .badge-secondary {
+            background-color: #e2e3e5 !important;
+            color: #6c757d !important;
+        }
     </style>
 </head>
 <body id="page-top">

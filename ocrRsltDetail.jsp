@@ -46,7 +46,7 @@
     }
     .doc-type-item {
         display: block;
-        padding: 10px 8px;
+        padding: 5px 8px;
         margin-bottom: 8px;
         border: 1px solid #e3e6f0;
         border-radius: 5px;
@@ -184,9 +184,5 @@
             </div>
         </div>
     </div>
-    
-    <%@ include file="resources/inc/footer.jsp" %>
-    
-    <!-- Custom JS -->
-    <script src="resources/inc/js/ocrDetail.js?v=2"></script>
+</div>
 
