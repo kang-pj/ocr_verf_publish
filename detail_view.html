@@ -164,6 +164,25 @@
         .doc-type-item i {
             margin-right: 5px;
         }
+        /* OCR 결과 테이블 스타일 */
+        #ocrResultTable {
+            font-size: 12px;
+        }
+        #ocrResultTable thead th {
+            background-color: #f8f9fc;
+            font-weight: 500;
+            text-align: center;
+            vertical-align: middle;
+        }
+        #ocrResultTable tbody td {
+            vertical-align: middle;
+        }
+        #ocrResultTable tbody td:nth-child(1) {
+            font-weight: 500;
+        }
+        #ocrResultTable tbody td:nth-child(2) {
+            word-break: break-all;
+        }
     </style>
 </head>
 <body id="page-top">
@@ -303,10 +322,138 @@
                                 <div class="card-header py-2">
                                     <h6 class="m-0 font-weight-bold text-primary">OCR 결과</h6>
                                 </div>
-                                <div class="card-body" style="height: calc(100% - 50px); overflow-y: auto;">
-                                    <div id="pageList">
-                                        <p class="text-center text-muted">OCR 결과가 없습니다.</p>
-                                    </div>
+                                <div class="card-body p-2" style="height: calc(100% - 50px); overflow-y: auto;">
+                                    <table class="table table-sm table-bordered table-hover" id="ocrResultTable">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 30%;">항목명</th>
+                                                <th>추출값</th>
+                                                <th style="width: 35px;">상태</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- 예시 데이터 -->
+                                            <tr>
+                                                <td>서류명</td>
+                                                <td>전입세대확인서</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>발급일자</td>
+                                                <td>2025-09-30</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>도로명주소</td>
+                                                <td>서울특별시 구로구 신도림로11가길 36, 7동 606호 (신도림동)</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>지번주소</td>
+                                                <td>서울특별시 구로구 신도림동 290 7동 606호</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>세대주명1</td>
+                                                <td>이장세</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>세대주등록구분1</td>
+                                                <td>거주자</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>세대주전입일1</td>
+                                                <td>2025-09-30</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>세대원명1</td>
+                                                <td></td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-danger"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>최초전입일1</td>
+                                                <td>2025-09-30</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>세대주명2</td>
+                                                <td>김민정</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>세대주등록구분2</td>
+                                                <td>거주자</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>세대주전입일2</td>
+                                                <td>2024-02-29</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>최초전입일2</td>
+                                                <td>2024-02-29</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>세대주명3</td>
+                                                <td>이평호</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>세대주등록구분3</td>
+                                                <td>말소</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>세대주전입일3</td>
+                                                <td>2000-06-16</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>최초전입일3</td>
+                                                <td>2000-06-16</td>
+                                                <td class="text-center">
+                                                    <i class="fas fa-circle text-success"></i>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -377,6 +524,35 @@
             $('html, body').animate({scrollTop: 0}, 800);
             return false;
         });
+        
+        // OCR 결과 데이터 로드 예시
+        var sampleOcrData = {
+            "docTitle": "전입세대확인서",
+            "prtDate": "2025-09-30",
+            "roadAddr": "서울특별시 구로구 신도림로11가길 36, 7동 606호 (신도림동)",
+            "localAddr": "서울특별시 구로구 신도림동 290 7동 606호",
+            "ownNm1": "이장세",
+            "ownRegis1": "거주자",
+            "ownDate1": "2025-09-30",
+            "mateNm1": "",
+            "mateRegis1": "",
+            "mateDate1": "",
+            "fst1": "2025-09-30",
+            "ownNm2": "김민정",
+            "ownRegis2": "거주자",
+            "ownDate2": "2024-02-29",
+            "mateNm2": "",
+            "mateRegis2": "",
+            "mateDate2": "",
+            "fst2": "2024-02-29",
+            "ownNm3": "이평호",
+            "ownRegis3": "말소",
+            "ownDate3": "2000-06-16",
+            "mateNm3": "",
+            "mateRegis3": "",
+            "mateDate3": "",
+            "fst3": "2000-06-16"
+        };
     </script>
 </body>
 </html>

@@ -99,6 +99,18 @@ public class OcrServiceImpl implements OcrService {
     }
     
     @Override
+    public List<OcrInfoVO> getImageList(Map<String, Object> params) {
+        logger.debug("이미지 목록 조회: {}", params);
+        
+        try {
+            return ocrDAO.getImageList(params);
+        } catch (Exception e) {
+            logger.error("이미지 목록 조회 중 오류 발생", e);
+            throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
     @Transactional(readOnly = false)
     public int updateVerificationStatus(Map<String, Object> params) {
         logger.info("OCR 문서 검증 상태 업데이트: {}", params);

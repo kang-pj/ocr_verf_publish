@@ -102,6 +102,13 @@ public class OcrController {
             // OCR 결과 텍스트 조회
             List<OcrInfoVO> ocrResults = ocrService.getOcrResultText(params);
             
+            logger.info("OCR 결과 개수: {}", ocrResults != null ? ocrResults.size() : 0);
+            if (ocrResults != null && !ocrResults.isEmpty()) {
+                OcrInfoVO first = ocrResults.get(0);
+                logger.info("첫 번째 OCR 결과 - ITEM_CD: {}, ITEM_NM: {}, ITEM_VALUE: {}", 
+                    first.getItem_cd(), first.getItem_nm(), first.getItem_value());
+            }
+            
             result.put("success", true);
             result.put("data", detail);
             result.put("documentList", documentList);

@@ -17,5 +17,7 @@ public interface OcrService {
     
     List<OcrInfoVO> getOcrResultText(Map<String, Object> params);
     
+    List<OcrInfoVO> getImageList(Map<String, Object> params);
+    
     int updateVerificationStatus(Map<String, Object> params);
 }

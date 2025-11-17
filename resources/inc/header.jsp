@@ -86,6 +86,13 @@
             background-color: #e2e3e5 !important;
             color: #6c757d !important;
         }
+        /* Font Awesome 아이콘 색상 */
+        .text-success {
+            color: #28a745 !important;
+        }
+        .text-danger {
+            color: #dc3545 !important;
+        }
     </style>
 </head>
 <body id="page-top">

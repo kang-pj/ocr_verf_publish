@@ -71,6 +71,25 @@
     .doc-type-item i {
         margin-right: 5px;
     }
+    /* OCR 결과 테이블 스타일 */
+    #ocrResultTable {
+        font-size: 12px;
+    }
+    #ocrResultTable thead th {
+        background-color: #f8f9fc;
+        font-weight: 500;
+        text-align: center;
+        vertical-align: middle;
+    }
+    #ocrResultTable tbody td {
+        vertical-align: middle;
+    }
+    #ocrResultTable tbody td:nth-child(1) {
+        font-weight: 500;
+    }
+    #ocrResultTable tbody td:nth-child(2) {
+        word-break: break-all;
+    }
 </style>
 
 <!-- Content Wrapper -->
@@ -146,10 +165,21 @@
                         <div class="card-header py-2">
                             <h6 class="m-0 font-weight-bold text-primary">OCR 결과</h6>
                         </div>
-                        <div class="card-body" style="height: calc(100% - 50px); overflow-y: auto;">
-                            <div id="pageList">
-                                <p class="text-center text-muted">OCR 결과가 없습니다.</p>
-                            </div>
+                        <div class="card-body p-2" style="height: calc(100% - 50px); overflow-y: auto;">
+                            <table class="table table-sm table-bordered table-hover" id="ocrResultTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 30%;">항목명</th>
+                                        <th>추출값</th>
+                                        <th style="width: 35px;">상태</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ocrResultBody">
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted">OCR 결과가 없습니다.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

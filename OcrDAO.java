@@ -51,6 +51,14 @@ public interface OcrDAO {
     List<OcrInfoVO> getOcrResultText(Map<String, Object> params);
     
     /**
+     * 이미지 목록 조회
+     * 
+     * @param params 관리번호 정보
+     * @return 이미지 목록
+     */
+    List<OcrInfoVO> getImageList(Map<String, Object> params);
+    
+    /**
      * OCR 문서 검증 상태 업데이트
      * 
      * @param params 업데이트 정보

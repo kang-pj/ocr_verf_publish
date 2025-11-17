@@ -7,12 +7,6 @@ $(document).ready(function() {
     var ctrlNo = urlParams.get('ctrl_no');
     var docTpCd = urlParams.get('doc_tp_cd');
     
-    if (!ctrlYr || !instCd || !prdtCd || !ctrlNo) {
-        alert('관리번호 정보가 없습니다.');
-        history.back();
-        return;
-    }
-    
     // 문서 상세 정보 로드
     loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd);
 });
@@ -170,24 +164,35 @@ function getStatusBadge(status) {
  */
 function displayOcrResults(ocrResults) {
     if (!ocrResults || ocrResults.length === 0) {
-        $('#pageList').html('<p class="text-center text-muted">OCR 결과가 없습니다.</p>');
+        $('#ocrResultBody').html('<tr><td colspan="3" class="text-center text-muted">OCR 결과가 없습니다.</td></tr>');
         return;
     }
     
     var html = '';
     
-    ocrResults.forEach(function(result, index) {
-        html += '<div class="card mb-3">';
-        html += '<div class="card-header py-2">';
-        html += '<small class="font-weight-bold">페이지 ' + (index + 1) + '</small>';
-        html += '</div>';
-        html += '<div class="card-body p-2">';
-        html += '<pre style="white-space: pre-wrap; font-size: 0.75rem; margin: 0;">' + (result.ocr_rslt_txt || '결과 없음') + '</pre>';
-        html += '</div>';
-        html += '</div>';
+    // 서버에서 받은 데이터를 테이블 행으로 변환
+    ocrResults.forEach(function(item) {
+        var itemName = item.item_nm || item.item_cd || '-';
+        var itemValue = item.item_value || '';
+        
+        // 빈 값 체크
+        var isEmpty = !itemValue || 
+                      itemValue.trim() === '' || 
+                      itemValue === 'null' || 
+                      itemValue === 'undefined';
+        
+        var statusIcon = isEmpty 
+            ? '<i class="fas fa-circle text-danger"></i>' 
+            : '<i class="fas fa-circle text-success"></i>';
+        
+        html += '<tr>';
+        html += '<td>' + itemName + '</td>';
+        html += '<td>' + itemValue + '</td>';
+        html += '<td class="text-center">' + statusIcon + '</td>';
+        html += '</tr>';
     });
     
-    $('#pageList').html(html);
+    $('#ocrResultBody').html(html);
 }
 
 /**

@@ -1,0 +1,36 @@
+-- 간단한 테스트 쿼리
+-- 관리번호: 25-47-820-000903, 서류: H03
+
+WITH base_doc AS (
+    SELECT 
+        INF.INST_CD,
+        INF.PRDT_CD,
+        PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS
+    FROM RFDB.OCR_DOC_INF INF
+    LEFT JOIN RFDB.OCR_DOC_RSLT RSLT 
+        ON RSLT.OCR_DOC_NO = INF.OCR_DOC_NO
+    WHERE INF.CTRL_YR = '25'
+        AND INF.INST_CD = '47'
+        AND INF.PRDT_CD = '820'
+        AND INF.CTRL_NO = '000903'
+        AND INF.DOC_TP_CD = 'H03'
+    LIMIT 1
+),
+json_parsed AS (
+    SELECT 
+        (JSON_EACH_TEXT(OCR_CNTS::JSON)).KEY AS ITEM_CD,
+        (JSON_EACH_TEXT(OCR_CNTS::JSON)).VALUE AS ITEM_VALUE,
+        INST_CD,
+        PRDT_CD
+    FROM base_doc
+    WHERE OCR_CNTS IS NOT NULL
+)
+SELECT 
+    jp.ITEM_CD,
+    jp.ITEM_VALUE,
+    COALESCE(codi.ITEM_NM, jp.ITEM_CD) AS ITEM_NM
+FROM json_parsed jp
+LEFT JOIN RFDB.C_OCR_DOC_ITEM codi 
+    ON codi.ITEM_CD = jp.ITEM_CD
+    AND codi.USE_YN = 'Y'
+ORDER BY jp.ITEM_CD;

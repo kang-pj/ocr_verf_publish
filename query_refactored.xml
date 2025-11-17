@@ -381,15 +381,7 @@
             INF.OCR_YN,
             INF.INS_DTTM,
             RSLT.OCR_RSLT_NO,
-            <if test='type == "original"'>
-                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS_ORIGINAL) AS OCR_CNTS,
-            </if>
-            <if test='type == "modified"'>
-                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
-            </if>
-            <if test='type == null'>
-                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
-            </if>
+            PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
             RSLT.SAVE_YN,
             RSLT.SAVE_DTTM,
             RSLT.VERF_YN,
@@ -418,10 +410,6 @@
             <if test="doc_tp_cd != null">
                 AND INF.DOC_TP_CD = #{doc_tp_cd}
             </if>
-            <if test="ins_dttm != null">
-                AND INF.INS_DTTM BETWEEN DATE_TRUNC('MINUTES', #{ins_dttm}::TIMESTAMP) 
-                    AND DATE_TRUNC('MINUTES', #{ins_dttm}::TIMESTAMP) + INTERVAL '1 MIN'
-            </if>
             AND (INF.OCR_DOC_NO = RSLT.OCR_DOC_NO OR RSLT.OCR_DOC_NO IS NULL)
         ORDER BY 
             RSLT.OCR_DOC_NO ASC,
@@ -438,27 +426,24 @@
             (JSON_EACH_TEXT(OCR_CNTS::JSON)).VALUE AS ITEM_VALUE,
             base_doc.*
         FROM base_doc
-    ),
-    item_mapped AS (
-        -- 3단계: 아이템 코드를 한글명으로 매핑
-        SELECT 
-            CODI.ITEM_NM,
-            json_parsed.*,
-            RANK() OVER (
-                PARTITION BY CODI.ITEM_CD 
-                ORDER BY CODI.PRDT_CD, CODI.INST_CD
-            ) AS RANK
-        FROM json_parsed
-        LEFT JOIN (
-            SELECT INST_CD, PRDT_CD, ITEM_CD, ITEM_NM 
-            FROM RFDB.C_OCR_DOC_ITEM 
-            WHERE INST_CD IN ('61', '99') 
-                AND PRDT_CD IN ('L01', '999') 
-            ORDER BY ITEM_ODR ASC
-        ) CODI ON CODI.ITEM_CD = json_parsed.ITEM_CD
+        WHERE OCR_CNTS IS NOT NULL
     )
-    -- 4단계: 중복 제거 (RANK = 1만 선택)
-    SELECT *
-    FROM item_mapped
-    WHERE RANK = 1
+    -- 3단계: 아이템 코드를 한글명으로 매핑
+    SELECT 
+        json_parsed.ITEM_CD,
+        json_parsed.ITEM_VALUE,
+        COALESCE(CODI.ITEM_NM, json_parsed.ITEM_CD) AS ITEM_NM,
+        json_parsed.OCR_DOC_NO,
+        json_parsed.CTRL_YR,
+        json_parsed.INST_CD,
+        json_parsed.PRDT_CD,
+        json_parsed.CTRL_NO,
+        json_parsed.DOC_TP_CD,
+        json_parsed.OCR_YN,
+        json_parsed.INS_DTTM
+    FROM json_parsed
+    LEFT JOIN RFDB.C_OCR_DOC_ITEM CODI 
+        ON CODI.ITEM_CD = json_parsed.ITEM_CD
+        AND CODI.USE_YN = 'Y'
+    ORDER BY json_parsed.ITEM_CD
 </select>
