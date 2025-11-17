@@ -99,13 +99,13 @@ public class OcrServiceImpl implements OcrService {
     }
     
     @Override
-    public List<OcrInfoVO> getImageList(Map<String, Object> params) {
-        logger.debug("이미지 목록 조회: {}", params);
+    public List<String> getOcrDocNoList(Map<String, Object> params) {
+        logger.debug("OCR 문서 번호 리스트 조회: {}", params);
         
         try {
-            return ocrDAO.getImageList(params);
+            return ocrDAO.getOcrDocNoList(params);
         } catch (Exception e) {
-            logger.error("이미지 목록 조회 중 오류 발생", e);
+            logger.error("OCR 문서 번호 리스트 조회 중 오류 발생", e);
             throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
         }
     }

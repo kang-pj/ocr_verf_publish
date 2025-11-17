@@ -93,14 +93,42 @@ public class OcrController {
                 throw new IllegalArgumentException("관리번호 정보가 필요합니다.");
             }
             
+            // OCR 문서 번호 리스트 조회
+            List<String> ocrDocNoList = ocrService.getOcrDocNoList(params);
+            
+            if (ocrDocNoList == null || ocrDocNoList.isEmpty()) {
+                throw new RuntimeException("해당 조건의 문서가 없습니다.");
+            }
+            
+            // 현재 조회할 ocr_doc_no 결정
+            String currentOcrDocNo = (String) params.get("ocr_doc_no");
+            if (currentOcrDocNo == null || currentOcrDocNo.isEmpty()) {
+                // ocr_doc_no가 없으면 첫 번째 문서
+                currentOcrDocNo = ocrDocNoList.get(0);
+            }
+            
+            // 현재 인덱스 찾기
+            int currentIndex = ocrDocNoList.indexOf(currentOcrDocNo);
+            if (currentIndex == -1) {
+                currentIndex = 0;
+                currentOcrDocNo = ocrDocNoList.get(0);
+            }
+            
             // 상세 정보 조회
-            OcrInfoVO detail = ocrService.getOcrDocumentDetail(params);
+            Map<String, Object> detailParams = new HashMap<>();
+            detailParams.put("ocr_doc_no", currentOcrDocNo);
+            OcrInfoVO detail = ocrService.getOcrDocumentDetail(detailParams);
             
             // 같은 관리번호의 서류 목록 조회
             List<OcrInfoVO> documentList = ocrService.getDocumentListByCtrlNo(params);
             
             // OCR 결과 텍스트 조회
-            List<OcrInfoVO> ocrResults = ocrService.getOcrResultText(params);
+            Map<String, Object> ocrParams = new HashMap<>();
+            ocrParams.put("ocr_doc_no", currentOcrDocNo);
+            List<OcrInfoVO> ocrResults = ocrService.getOcrResultText(ocrParams);
+            
+            logger.info("OCR 결과 조회 - OCR_DOC_NO: {}, 현재 인덱스: {}/{}", 
+                currentOcrDocNo, currentIndex + 1, ocrDocNoList.size());
             
             logger.info("OCR 결과 개수: {}", ocrResults != null ? ocrResults.size() : 0);
             if (ocrResults != null && !ocrResults.isEmpty()) {
@@ -113,6 +141,9 @@ public class OcrController {
             result.put("data", detail);
             result.put("documentList", documentList);
             result.put("ocrResults", ocrResults);
+            result.put("ocrDocNoList", ocrDocNoList);
+            result.put("currentIndex", currentIndex);
+            result.put("totalPages", ocrDocNoList.size());
             
             logger.info("OCR 문서 상세 조회 완료: {}-{}-{}-{}", ctrlYr, instCd, prdtCd, ctrlNo);
             

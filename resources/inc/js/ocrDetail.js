@@ -1,3 +1,7 @@
+// 전역 변수
+var ocrDocNoList = [];
+var currentIndex = 0;
+
 $(document).ready(function() {
     // URL 파라미터에서 관리번호 정보 가져오기
     var urlParams = new URLSearchParams(window.location.search);
@@ -6,23 +10,25 @@ $(document).ready(function() {
     var prdtCd = urlParams.get('prdt_cd');
     var ctrlNo = urlParams.get('ctrl_no');
     var docTpCd = urlParams.get('doc_tp_cd');
+    var ocrDocNo = urlParams.get('ocr_doc_no');
     
     // 문서 상세 정보 로드
-    loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd);
+    loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, ocrDocNo);
 });
 
 /**
  * 문서 상세 정보 로드
  */
-function loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd) {
-    console.log('문서 상세 조회:', ctrlYr, instCd, prdtCd, ctrlNo, docTpCd);
+function loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, ocrDocNo) {
+    console.log('문서 상세 조회:', ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, 'ocrDocNo:', ocrDocNo);
     
     var params = {
         ctrl_yr: ctrlYr,
         inst_cd: instCd,
         prdt_cd: prdtCd,
         ctrl_no: ctrlNo,
-        doc_tp_cd: docTpCd || null
+        doc_tp_cd: docTpCd || null,
+        ocr_doc_no: ocrDocNo || null
     };
     
     $.ajax({
@@ -34,6 +40,10 @@ function loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd) {
             console.log('서버 응답:', response);
             
             if (response.success && response.data) {
+                // 전역 변수에 저장
+                ocrDocNoList = response.ocrDocNoList || [];
+                currentIndex = response.currentIndex || 0;
+                
                 // 기본 정보 표시
                 displayDocumentInfo(response.data);
                 
@@ -43,10 +53,11 @@ function loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd) {
                 // OCR 결과 표시
                 displayOcrResults(response.ocrResults || []);
                 
-                // 이미지 표시 (경로가 있는 경우)
-                if (response.data.img_path) {
-                    displayImage(response.data.img_path);
-                }
+                // 이미지 정보 표시
+                displayImage(response.data);
+                
+                // 페이지 네비게이션 표시
+                displayPageNavigation(response.totalPages || 1);
             } else {
                 alert('문서 정보를 불러올 수 없습니다.');
                 $('#documentTypeList').html('<p class="text-center text-danger">데이터를 불러오지 못했습니다.</p>');
@@ -141,6 +152,57 @@ function displayDocumentList(documents, currentDocTpCd) {
 function changeDocument(docTpCd) {
     var urlParams = new URLSearchParams(window.location.search);
     urlParams.set('doc_tp_cd', docTpCd);
+    urlParams.delete('ocr_doc_no'); // OCR 문서 번호 초기화
+    window.location.search = urlParams.toString();
+}
+
+/**
+ * 페이지 네비게이션 표시
+ */
+function displayPageNavigation(totalPages) {
+    if (!totalPages || totalPages <= 1) {
+        return; // 페이지가 1개 이하면 네비게이션 불필요
+    }
+    
+    var html = '<div class="text-center" style="position: absolute; bottom: 10px; left: 0; right: 0;">';
+    html += '<div class="btn-group" role="group">';
+    
+    // 이전 버튼
+    if (currentIndex > 0) {
+        html += '<button type="button" class="btn btn-sm btn-outline-primary" onclick="changePage(' + (currentIndex - 1) + ')">';
+        html += '<i class="fas fa-chevron-left"></i> 이전';
+        html += '</button>';
+    }
+    
+    // 페이지 정보
+    html += '<button type="button" class="btn btn-sm btn-primary" disabled>';
+    html += (currentIndex + 1) + ' / ' + totalPages;
+    html += '</button>';
+    
+    // 다음 버튼
+    if (currentIndex < totalPages - 1) {
+        html += '<button type="button" class="btn btn-sm btn-outline-primary" onclick="changePage(' + (currentIndex + 1) + ')">';
+        html += '다음 <i class="fas fa-chevron-right"></i>';
+        html += '</button>';
+    }
+    
+    html += '</div></div>';
+    
+    // 이미지 뷰어 컨테이너에 position: relative 추가
+    $('#imageViewer').parent().css('position', 'relative');
+    $('#imageViewer').append(html);
+}
+
+/**
+ * 페이지 변경
+ */
+function changePage(index) {
+    if (index < 0 || index >= ocrDocNoList.length) {
+        return;
+    }
+    
+    var urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('ocr_doc_no', ocrDocNoList[index]);
     window.location.search = urlParams.toString();
 }
 
@@ -163,15 +225,23 @@ function getStatusBadge(status) {
  * OCR 결과 표시
  */
 function displayOcrResults(ocrResults) {
+    var tbody = $('#ocrResultTable tbody');
+    
+    if (!tbody.length) {
+        console.error('OCR 결과 테이블 tbody를 찾을 수 없습니다.');
+        return;
+    }
+    
     if (!ocrResults || ocrResults.length === 0) {
-        $('#ocrResultBody').html('<tr><td colspan="3" class="text-center text-muted">OCR 결과가 없습니다.</td></tr>');
+        tbody.html('<tr><td colspan="3" class="text-center text-muted">OCR 결과가 없습니다.</td></tr>');
         return;
     }
     
     var html = '';
     
     // 서버에서 받은 데이터를 테이블 행으로 변환
-    ocrResults.forEach(function(item) {
+    ocrResults.forEach(function(item, index) {
+        // 한글명 표시 (ITEM_NM), 영문 코드는 숨김
         var itemName = item.item_nm || item.item_cd || '-';
         var itemValue = item.item_value || '';
         
@@ -192,19 +262,33 @@ function displayOcrResults(ocrResults) {
         html += '</tr>';
     });
     
-    $('#ocrResultBody').html(html);
+    tbody.html(html);
 }
 
 /**
- * 이미지 표시
+ * 이미지 표시 (임시: 경로만 표시)
  */
-function displayImage(imgPath) {
-    if (!imgPath) {
-        $('#imageViewer').html('<p class="text-muted">이미지가 없습니다.</p>');
+function displayImage(data) {
+    if (!data) {
+        $('#imageViewer').html('<p class="text-muted">데이터가 없습니다.</p>');
         return;
     }
     
-    var html = '<img src="' + imgPath + '" alt="문서 이미지" onerror="this.parentElement.innerHTML=\'<p class=text-danger>이미지를 불러올 수 없습니다.</p>\'">';
+    var html = '<div class="text-left p-3">';
+    
+    if (data.doc_fl_sav_pth_nm) {
+        html += '<p><strong>이미지 경로:</strong></p>';
+        html += '<p class="text-break" style="word-break: break-all;">' + data.doc_fl_sav_pth_nm + '</p>';
+    } else {
+        html += '<p class="text-warning">이미지 경로 정보가 없습니다.</p>';
+    }
+    
+    html += '<hr>';
+    html += '<p><strong>OCR 문서 번호:</strong> ' + (data.ocr_doc_no || '-') + '</p>';
+    html += '<p><strong>OCR 결과 번호:</strong> ' + (data.ocr_rslt_no || '-') + '</p>';
+    html += '<p><strong>문서 유형:</strong> ' + (data.doc_tp_cd || '-') + '</p>';
+    html += '</div>';
+    
     $('#imageViewer').html(html);
 }
 

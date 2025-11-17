@@ -1,0 +1,453 @@
+<?xml version="1.0" encoding="UTF-8"?><!--Converted at: Thu Jul 13 09:41:48 KST 2017-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.refine.SQL.ocr">
+
+
+    <!--	OCR 검증 서류 목록-->
+<!--    <resultMap id="result_list" type="ocrInfoVO">
+        <result property="row_number" column="row_number"/>
+        <result property="ctrl_yr" column="ctrl_yr"/>
+        <result property="inst_cd" column="inst_cd"/>
+        <result property="prdt_cd" column="prdt_cd"/>
+        <result property="ctrl_no" column="ctrl_no"/>
+        <result property="doc_tp_cd" column="doc_tp_cd"/>
+        <result property="ocr_doc_no" column="ocr_doc_no"/>
+        <result property="doc_title" column="doc_title"/>
+        <result property="sub_title" column="sub_title"/>
+        <result property="ins_dttm" column="ins_dttm"/>
+        <result property="doc_page" column="doc_page"/>
+        <result property="ocr_yn" column="ocr_yn"/>
+        <result property="save_yn" column="save_yn"/>
+        <result property="verf_yn" column="verf_yn"/>
+        <result property="prcs_stat" column="prcs_stat"/>
+        <result property="doc_num" column="doc_num"/>
+        <result property="itme_nm" column="itme_nm"/>
+        <result property="item_cd" column="item_cd"/>
+        <result property="item_value" column="item_value"/>
+    </resultMap>-->
+
+
+
+
+
+    <!-- OCR 문서 전체 건수 조회 -->
+    <select id="getOcrDocumentCount" resultType="int">
+        WITH base_data AS (
+        SELECT
+        INF.CTRL_YR,
+        INF.INST_CD,
+        INF.PRDT_CD,
+        INF.CTRL_NO,
+        INF.DOC_TP_CD,
+        MAX(INF.OCR_DOC_NO) AS OCR_DOC_NO,
+        MAX(INF.INS_DTTM) AS INS_DTTM,
+        MAX(INF.OCR_YN) AS OCR_YN,
+        MAX(RSLT.SAVE_YN) AS SAVE_YN,
+        MAX(RSLT.VERF_YN) AS VERF_YN,
+        MIN(NULLIF(NULLIF(RSLT.DOC_TITLE, ''), 'Undefined')) AS DOC_TITLE,
+        MIN(NULLIF(NULLIF(RSLT.SUB_TITLE, ''), 'Undefined')) AS SUB_TITLE
+        FROM RFDB.OCR_DOC_INF INF
+        LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
+        ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+        WHERE 1=1
+        <!-- 기본 검색 조건 -->
+        <if test="ctrl_yr != null">
+            AND INF.CTRL_YR = #{ctrl_yr}
+        </if>
+        <choose>
+            <when test="inst_cd != null and inst_cd instanceof java.util.List">
+                AND INF.INST_CD IN
+                <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="inst_cd != null">
+                AND INF.INST_CD = #{inst_cd}
+            </when>
+        </choose>
+        <choose>
+            <when test="prdt_cd != null and prdt_cd instanceof java.util.List">
+                AND INF.PRDT_CD IN
+                <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="prdt_cd != null">
+                AND INF.PRDT_CD = #{prdt_cd}
+            </when>
+        </choose>
+        <if test="ctrl_no != null">
+            AND INF.CTRL_NO = #{ctrl_no}
+        </if>
+        <!-- 날짜 범위 검색 -->
+        <choose>
+            <when test="ins_dttm_st != null and ins_dttm_en != null">
+                AND INF.INS_DTTM BETWEEN #{ins_dttm_st}::TIMESTAMP AND #{ins_dttm_en}::TIMESTAMP
+            </when>
+            <when test="ins_dttm_st != null">
+                AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
+            </when>
+            <when test="ins_dttm_en != null">
+                AND INF.INS_DTTM &lt;= #{ins_dttm_en}::TIMESTAMP
+            </when>
+        </choose>
+        GROUP BY
+        INF.CTRL_YR,
+        INF.INST_CD,
+        INF.PRDT_CD,
+        INF.CTRL_NO,
+        INF.DOC_TP_CD,
+        DATE_TRUNC('MINUTES', INF.INS_DTTM)
+        ),
+        filtered_data AS (
+        SELECT *
+        FROM base_data
+        WHERE 1=1
+        <!-- 후처리 필터 -->
+        <if test="ocr_yn != null and ocr_yn.size() > 0">
+            AND OCR_YN IN
+            <foreach collection="ocr_yn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="save_yn != null">
+            AND (
+            SAVE_YN IN
+            <foreach collection="save_yn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+            <if test='P01 == "Y"'>
+                OR SAVE_YN IS NULL
+            </if>
+            )
+        </if>
+        <if test="verf_yn != null">
+            AND (
+            VERF_YN IN
+            <foreach collection="verf_yn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+            <if test='P01 == "Y"'>
+                OR VERF_YN IS NULL
+            </if>
+            )
+        </if>
+        <!-- 문서 타입 및 서브타이틀 필터 -->
+        <choose>
+            <when test="doc_tp_cd != null and doc_tp_cd.size() > 0 and sub_title != null">
+                AND (
+                DOC_TP_CD IN
+                <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+                OR SUB_TITLE IN
+                <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+                )
+            </when>
+            <when test="doc_tp_cd != null and doc_tp_cd.size() > 0">
+                AND DOC_TP_CD IN
+                <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="sub_title != null">
+                AND SUB_TITLE IN
+                <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="doc_tp_cd != null and doc_tp_cd.size() == 0">
+                AND DOC_TP_CD = ''
+            </when>
+        </choose>
+        )
+        SELECT COUNT(*) FROM filtered_data
+    </select>
+
+    <!--	OCR 검증 서류 목록-->
+    <select id="getOcrInfo" resultType="OcrInfoVO">
+            WITH base_data AS (
+            SELECT
+            INF.CTRL_YR,
+            INF.INST_CD,
+            INF.PRDT_CD,
+            INF.CTRL_NO,
+            INF.DOC_TP_CD,
+            MAX(INF.OCR_DOC_NO) AS OCR_DOC_NO,
+            MAX(INF.INS_DTTM) AS INS_DTTM,
+            COUNT(INF.OCR_DOC_NO) AS DOC_PAGE,
+            MIN(NULLIF(NULLIF(RSLT.DOC_TITLE, ''), 'Undefined')) AS DOC_TITLE,
+            MIN(NULLIF(NULLIF(RSLT.SUB_TITLE, ''), 'Undefined')) AS SUB_TITLE,
+            MAX(INF.OCR_YN) AS OCR_YN,
+            MAX(RSLT.SAVE_YN) AS SAVE_YN,
+            MAX(RSLT.VERF_YN) AS VERF_YN
+            FROM RFDB.OCR_DOC_INF INF
+            LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
+            ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+            WHERE 1=1
+            <!-- 기본 검색 조건 -->
+            <if test="ctrl_yr != null">
+                AND INF.CTRL_YR = #{ctrl_yr}
+            </if>
+        <choose>
+            <when test="inst_cd != null and inst_cd instanceof java.util.List">
+                AND INF.INST_CD IN
+                <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="inst_cd != null">
+                AND INF.INST_CD = #{inst_cd}
+            </when>
+        </choose>
+        <choose>
+            <when test="prdt_cd != null and prdt_cd instanceof java.util.List">
+                AND INF.PRDT_CD IN
+                <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="prdt_cd != null">
+                AND INF.PRDT_CD = #{prdt_cd}
+            </when>
+        </choose>
+            <if test="ctrl_no != null">
+                AND INF.CTRL_NO = #{ctrl_no}
+            </if>
+            <!-- 날짜 범위 검색 -->
+            <choose>
+                <when test="ins_dttm_st != null and ins_dttm_en != null">
+                    AND INF.INS_DTTM BETWEEN #{ins_dttm_st}::TIMESTAMP AND #{ins_dttm_en}::TIMESTAMP
+                </when>
+                <when test="ins_dttm_st != null">
+                    AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
+                </when>
+                <when test="ins_dttm_en != null">
+                    AND INF.INS_DTTM &lt;= #{ins_dttm_en}::TIMESTAMP
+                </when>
+            </choose>
+            GROUP BY
+            INF.CTRL_YR,
+            INF.INST_CD,
+            INF.PRDT_CD,
+            INF.CTRL_NO,
+            INF.DOC_TP_CD,
+            DATE_TRUNC('MINUTES', INF.INS_DTTM)
+            ORDER BY MAX(INF.INS_DTTM)
+            <choose>
+                <when test='sort == "ASC"'>ASC</when>
+                <otherwise>DESC</otherwise>
+            </choose>
+            ),
+            filtered_data AS (
+            SELECT *
+            FROM base_data
+            WHERE 1=1
+            <!-- 후처리 필터 -->
+            <if test="ocr_yn != null and ocr_yn.size() > 0">
+                AND OCR_YN IN
+                <foreach collection="ocr_yn" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="save_yn != null">
+                AND (
+                SAVE_YN IN
+                <foreach collection="save_yn" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+                <if test='P01 == "Y"'>
+                    OR SAVE_YN IS NULL
+                </if>
+                )
+            </if>
+            <if test="verf_yn != null">
+                AND (
+                VERF_YN IN
+                <foreach collection="verf_yn" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+                <if test='P01 == "Y"'>
+                    OR VERF_YN IS NULL
+                </if>
+                )
+            </if>
+            <!-- 문서 타입 및 서브타이틀 필터 -->
+            <choose>
+                <when test="doc_tp_cd != null and doc_tp_cd.size() > 0 and sub_title != null">
+                    AND (
+                    DOC_TP_CD IN
+                    <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                    OR SUB_TITLE IN
+                    <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                    )
+                </when>
+                <when test="doc_tp_cd != null and doc_tp_cd.size() > 0">
+                    AND DOC_TP_CD IN
+                    <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="sub_title != null">
+                    AND SUB_TITLE IN
+                    <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="doc_tp_cd != null and doc_tp_cd.size() == 0">
+                    AND DOC_TP_CD = ''
+                </when>
+            </choose>
+            )
+            SELECT
+            ROW_NUMBER() OVER() AS ROW_NUMBER,
+            COUNT(*) OVER() AS DOC_NUM,
+            *
+            FROM filtered_data
+            <if test="paging != null">
+                LIMIT #{num}::INTEGER
+                OFFSET (#{paging}::INTEGER * #{num}::INTEGER)
+            </if>
+    </select>
+
+
+    <!-- OCR 결과 텍스트 조회 (JSON 파싱) -->
+    <select id="getOcrResultText" resultType="OcrInfoVO">
+        WITH base_doc AS (
+            -- 1단계: 특정 OCR_DOC_NO의 문서 정보 조회
+            SELECT
+                INF.OCR_DOC_NO,
+                INF.CTRL_YR,
+                INF.INST_CD,
+                INF.PRDT_CD,
+                INF.CTRL_NO,
+                INF.DOC_TP_CD,
+                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS
+            FROM RFDB.OCR_DOC_INF INF
+            LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
+                ON RSLT.OCR_DOC_NO = INF.OCR_DOC_NO
+            WHERE INF.OCR_DOC_NO = #{ocr_doc_no}
+            LIMIT 1
+        ),
+        json_keys AS (
+            -- 2단계: JSON 키 순서 보존
+            SELECT
+                ROW_NUMBER() OVER() AS JSON_SEQ,
+                json_object_keys(OCR_CNTS::JSON) AS ITEM_CD,
+                OCR_CNTS::JSON
+            FROM base_doc
+            WHERE OCR_CNTS IS NOT NULL
+        ),
+        json_parsed AS (
+            -- 3단계: 키에 해당하는 값 추출
+            SELECT
+                json_keys.JSON_SEQ,
+                json_keys.ITEM_CD,
+                json_keys.OCR_CNTS ->> json_keys.ITEM_CD AS ITEM_VALUE
+            FROM json_keys
+        )
+        -- 4단계: JSON 순서 그대로 반환 (ITEM_CD 기반)
+        SELECT
+            json_parsed.ITEM_CD,
+            json_parsed.ITEM_VALUE,
+            COALESCE(CODI.ITEM_NM, json_parsed.ITEM_CD) AS ITEM_NM
+        FROM json_parsed
+        LEFT JOIN RFDB.C_OCR_DOC_ITEM CODI
+            ON CODI.ITEM_CD = json_parsed.ITEM_CD
+            AND CODI.USE_YN = 'Y'
+            AND CODI.INST_CD = (SELECT INST_CD FROM json_parsed LIMIT 1)
+        ORDER BY json_parsed.JSON_SEQ
+    </select>
+
+
+    <!-- OCR 문서 상세 조회 (ocr_doc_no 기반) -->
+    <select id="getOcrDocumentDetail" parameterType="OcrInfoVO" resultType="OcrInfoVO">
+        SELECT
+        INF.OCR_DOC_NO,
+        INF.CTRL_YR,
+        INF.INST_CD,
+        INF.PRDT_CD,
+        INF.CTRL_NO,
+        INF.DOC_TP_CD,
+        INF.DOC_FL_SAV_PTH_NM,
+        INF.DOC_FL_EXT,
+        INF.OCR_YN,
+        TO_CHAR(INF.INS_DTTM, 'YYYY-MM-DD HH24:MI:SS') AS INS_DTTM,
+        RSLT.OCR_RSLT_NO,
+        <if test='type == "original"'>
+            PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS_ORIGINAL) AS OCR_CNTS,
+        </if>
+        <if test='type == "modified"'>
+            PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
+        </if>
+        <if test='type == null'>
+            PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
+        </if>
+        RSLT.SAVE_YN,
+        RSLT.SAVE_DTTM,
+        RSLT.VERF_YN,
+        RSLT.VERF_DTTM,
+        RSLT.REPLACED,
+        PKG_PGCRYPTO$DECRYPT(JSN.JSON_VALUE) AS JSON_VALUE
+        FROM RFDB.OCR_DOC_INF INF
+        LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
+        ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+        LEFT JOIN RFDB.OCR_DOC_JSON JSN
+        ON RSLT.OCR_RSLT_NO = JSN.OCR_RSLT_NO
+        WHERE INF.OCR_DOC_NO = #{ocr_doc_no}
+    </select>
+
+    <!-- 특정 서류 타입의 OCR 문서 번호 리스트 조회 -->
+    <select id="getOcrDocNoList" resultType="string">
+        SELECT OCR_DOC_NO
+        FROM RFDB.OCR_DOC_INF
+        WHERE 1=1
+        <if test="ctrl_yr != null">
+            AND CTRL_YR = #{ctrl_yr}
+        </if>
+        <if test="inst_cd != null">
+            AND INST_CD = #{inst_cd}
+        </if>
+        <if test="prdt_cd != null">
+            AND PRDT_CD = #{prdt_cd}
+        </if>
+        <if test="ctrl_no != null">
+            AND CTRL_NO = #{ctrl_no}
+        </if>
+        <if test="doc_tp_cd != null">
+            AND DOC_TP_CD = #{doc_tp_cd}
+        </if>
+        ORDER BY OCR_DOC_NO ASC
+    </select>
+
+    <!-- 같은 관리번호의 서류 목록 조회 -->
+    <select id="getDocumentListByCtrlNo" resultType="OcrInfoVO">
+        SELECT
+            INF.DOC_TP_CD,
+            COUNT(*) AS DOC_PAGE,
+            MAX(INF.OCR_YN) AS OCR_YN,
+            MIN(NULLIF(NULLIF(RSLT.DOC_TITLE, ''), 'Undefined')) AS DOC_TITLE
+        FROM RFDB.OCR_DOC_INF INF
+                 LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
+                           ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+        WHERE 1=1
+          AND INF.CTRL_YR = #{ctrl_yr}
+          AND INF.INST_CD = #{inst_cd}
+          AND INF.PRDT_CD = #{prdt_cd}
+          AND INF.CTRL_NO = #{ctrl_no}
+        GROUP BY INF.DOC_TP_CD
+        ORDER BY INF.DOC_TP_CD
+    </select>
+
+
+
+
+
+</mapper>

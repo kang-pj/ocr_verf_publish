@@ -70,6 +70,15 @@ public class OcrInfoVO implements Serializable {
     @Getter
     private String item_value;
     
+    @Getter
+    private String doc_fl_sav_pth_nm;
+    
+    @Getter
+    private String doc_fl_ext;
+    
+    @Getter
+    private String ocr_rslt_no;
+    
     public void setIns_dttm(String ins_dttm) {
         this.ins_dttm = ins_dttm;
     }
