@@ -451,3 +451,19 @@
 
 
 </mapper>
+    <!-- 
+이미지 정보 조회 (암호화 여부 포함) -->
+    <select id="getImageInfo" resultType="OcrInfoVO">
+        SELECT
+            INF.OCR_DOC_NO,
+            INF.DOC_FL_SAV_PTH_NM,
+            INF.DOC_FL_EXT,
+            INF.DOC_FL_NM,
+            COALESCE(RSLT.ENC_YN, 'N') AS ENC_YN,
+            INF.INST_CD,
+            INF.PRDT_CD
+        FROM RFDB.OCR_DOC_INF INF
+        LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
+            ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+        WHERE INF.OCR_DOC_NO = #{ocr_doc_no}
+    </select>

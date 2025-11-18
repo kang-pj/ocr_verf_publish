@@ -65,4 +65,12 @@ public interface OcrDAO {
      * @return 업데이트 건수
      */
     int updateVerificationStatus(Map<String, Object> params);
+    
+    /**
+     * 이미지 정보 조회 (암호화 여부 포함)
+     * 
+     * @param params OCR 문서 번호
+     * @return 이미지 정보
+     */
+    OcrInfoVO getImageInfo(Map<String, Object> params);
 }

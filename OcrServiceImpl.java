@@ -128,6 +128,25 @@ public class OcrServiceImpl implements OcrService {
         }
     }
     
+    @Override
+    public OcrInfoVO getImageInfo(Map<String, Object> params) {
+        logger.debug("이미지 정보 조회: {}", params);
+        
+        try {
+            OcrInfoVO imageInfo = ocrDAO.getImageInfo(params);
+            
+            if (imageInfo == null) {
+                throw new RuntimeException("이미지 정보를 찾을 수 없습니다.");
+            }
+            
+            return imageInfo;
+            
+        } catch (Exception e) {
+            logger.error("이미지 정보 조회 중 오류 발생", e);
+            throw new RuntimeException("이미지 정보 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+    
     /**
      * 파라미터 검증 및 기본값 설정
      */

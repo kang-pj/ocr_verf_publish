@@ -20,4 +20,6 @@ public interface OcrService {
     List<String> getOcrDocNoList(Map<String, Object> params);
     
     int updateVerificationStatus(Map<String, Object> params);
+    
+    OcrInfoVO getImageInfo(Map<String, Object> params);
 }

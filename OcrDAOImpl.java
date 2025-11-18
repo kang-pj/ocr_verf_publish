@@ -55,4 +55,9 @@ public class OcrDAOImpl implements OcrDAO {
     public int updateVerificationStatus(Map<String, Object> params) {
         return sqlSession.update(NAMESPACE + ".updateVerificationStatus", params);
     }
+    
+    @Override
+    public OcrInfoVO getImageInfo(Map<String, Object> params) {
+        return sqlSession.selectOne(NAMESPACE + ".getImageInfo", params);
+    }
 }
