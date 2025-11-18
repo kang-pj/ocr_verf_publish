@@ -73,7 +73,7 @@ public class OcrController {
     }
     
     /**
-     * 이미지 정보 조회
+     * 이미지 S3에서 조회 (관리번호별 분기)
      */
     @PostMapping(value = "/api/getOcrImage.do")
     @ResponseBody
@@ -82,10 +82,13 @@ public class OcrController {
         
         try {
             String ocrDocNo = (String) params.get("ocr_doc_no");
+            String instCd = (String) params.get("inst_cd");
+            String prdtCd = (String) params.get("prdt_cd");
+            String imagePath = (String) params.get("image_path");
             
-            if (ocrDocNo == null) {
+            if (ocrDocNo == null || instCd == null || prdtCd == null || imagePath == null) {
                 result.put("success", false);
-                result.put("message", "OCR 문서 번호가 필요합니다.");
+                result.put("message", "필수 파라미터가 부족합니다.");
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             }
             
@@ -100,19 +103,68 @@ public class OcrController {
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             }
             
+            // 관리번호별 분기 처리
+            byte[] imageData = getImageDataByInstitution(instCd, prdtCd, imagePath);
+            
+            if (imageData == null || imageData.length == 0) {
+                result.put("success", false);
+                result.put("message", "이미지 데이터를 가져올 수 없습니다.");
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+            }
+            
             result.put("success", true);
             result.put("data", imageInfo);
+            result.put("imageData", imageData);
             
-            logger.info("이미지 정보 조회 완료: OCR_DOC_NO={}", ocrDocNo);
+            logger.info("이미지 조회 완료: OCR_DOC_NO={}, INST_CD={}, PRDT_CD={}", ocrDocNo, instCd, prdtCd);
             
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             
         } catch (Exception e) {
-            logger.error("이미지 정보 조회 실패", e);
+            logger.error("이미지 조회 실패", e);
             result.put("success", false);
-            result.put("message", "이미지 정보 조회 중 오류가 발생했습니다: " + e.getMessage());
+            result.put("message", "이미지 조회 중 오류가 발생했습니다: " + e.getMessage());
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
         }
+    }
+    
+    /**
+     * 관리번호별 이미지 데이터 조회
+     */
+    private byte[] getImageDataByInstitution(String instCd, String prdtCd, String imagePath) {
+        try {
+            // 관리번호별 분기 처리
+            switch (instCd) {
+                case "01":  // 신한
+                    logger.info("신한 이미지 조회: {}", imagePath);
+                    return getImageFromS3(imagePath);
+                    
+                case "49":  // 토스
+                    logger.info("토스 이미지 조회: {}", imagePath);
+                    return getImageFromS3(imagePath);
+                    
+                case "47":  // 네이버
+                    logger.info("네이버 이미지 조회: {}", imagePath);
+                    return getImageFromS3(imagePath);
+                    
+                default:    // 카카오 등 기타
+                    logger.info("기타 이미지 조회: {}", imagePath);
+                    return getImageFromS3(imagePath);
+            }
+        } catch (Exception e) {
+            logger.error("이미지 데이터 조회 실패: INST_CD={}, PRDT_CD={}", instCd, prdtCd, e);
+            return null;
+        }
+    }
+    
+    /**
+     * S3에서 이미지 데이터 조회
+     */
+    private byte[] getImageFromS3(String imagePath) {
+        // TODO: S3 클라이언트를 사용하여 이미지 데이터 조회
+        // 예: s3Client.getObject(bucket, imagePath).read()
+        logger.info("S3에서 이미지 조회: {}", imagePath);
+        return new byte[0];  // 임시 구현
     }
     
     
