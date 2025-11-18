@@ -135,7 +135,7 @@ public class OcrController {
                 imageData = fileUploadService.previewEncImage(imagePath, instCd);
             } else {
                 // 일반 이미지 로드
-                imageData = fileUploadService.previewImage(imagePath).read();
+                imageData = IOUtils.toByteArray(fileUploadService.previewImage(imagePath));
             }
             
             // 포맷별 변환
