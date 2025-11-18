@@ -1,22 +1,9 @@
 package com.refine.ocr.controller;
 
-import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
-import javax.imageio.ImageIO;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.PDFRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +17,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.refine.ocr.service.OcrService;
 import com.refine.ocr.vo.OcrInfoVO;
-import com.refine.common.component.Aes256Util;
-import com.refine.common.service.FileUploadService;
 
 /**
  * OCR 문서 관리 컨트롤러
@@ -44,12 +29,6 @@ public class OcrController {
     
     @Autowired
     private OcrService ocrService;
-    
-    @Autowired
-    private Aes256Util aes256Util;
-    
-    @Autowired
-    private FileUploadService fileUploadService;
     
     /**
      * OCR 결과 목록 조회 (AJAX)
@@ -94,7 +73,7 @@ public class OcrController {
     }
     
     /**
-     * 이미지 로딩 및 변환 (직접 처리)
+     * 이미지 정보 조회
      */
     @PostMapping(value = "/api/getOcrImage.do")
     @ResponseBody
@@ -103,11 +82,10 @@ public class OcrController {
         
         try {
             String ocrDocNo = (String) params.get("ocr_doc_no");
-            String ext = (String) params.get("ext");
             
-            if (ocrDocNo == null || ext == null) {
+            if (ocrDocNo == null) {
                 result.put("success", false);
-                result.put("message", "OCR 문서 번호와 확장자가 필요합니다.");
+                result.put("message", "OCR 문서 번호가 필요합니다.");
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             }
             
@@ -122,62 +100,21 @@ public class OcrController {
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             }
             
-            String imagePath = imageInfo.getDoc_fl_sav_pth_nm();
-            String encYn = imageInfo.getEnc_yn();
-            String instCd = imageInfo.getInst_cd();
-            
-            // 이미지 데이터 로드
-            byte[] imageData = null;
-            
-            if ("Y".equals(encYn)) {
-                // 암호화된 이미지 복호화
-                imagePath = aes256Util.Enc_module_by_inst_cd(instCd, imagePath, "D");
-                imageData = fileUploadService.previewEncImage(imagePath, instCd);
-            } else {
-                // 일반 이미지 로드
-                imageData = IOUtils.toByteArray(fileUploadService.previewImage(imagePath));
-            }
-            
-            // 포맷별 변환
-            String base64Image = convertToBase64Image(imageData, ext);
-            
             result.put("success", true);
-            result.put("data", base64Image);
+            result.put("data", imageInfo);
             
-            logger.info("이미지 로딩 완료: OCR_DOC_NO={}, EXT={}", ocrDocNo, ext);
+            logger.info("이미지 정보 조회 완료: OCR_DOC_NO={}", ocrDocNo);
             
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             
         } catch (Exception e) {
-            logger.error("이미지 로딩 실패", e);
+            logger.error("이미지 정보 조회 실패", e);
             result.put("success", false);
-            result.put("message", "이미지 로딩 중 오류가 발생했습니다: " + e.getMessage());
+            result.put("message", "이미지 정보 조회 중 오류가 발생했습니다: " + e.getMessage());
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
         }
     }
     
-    /**
-     * 이미지를 Base64로 변환
-     */
-    private String convertToBase64Image(byte[] fileArray, String ext) throws IOException {
-        BufferedImage image = null;
-        
-        if ("pdf".equalsIgnoreCase(ext)) {
-            PDDocument document = PDDocument.load(fileArray);
-            image = new PDFRenderer(document).renderImageWithDPI(0, 300);
-            document.close();
-        } else if ("tif".equalsIgnoreCase(ext) || "tiff".equalsIgnoreCase(ext)) {
-            BufferedImage original = ImageIO.read(new ByteArrayInputStream(fileArray));
-            image = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_INT_RGB);
-            image.createGraphics().drawImage(original, 0, 0, Color.WHITE, null);
-        } else {
-            image = ImageIO.read(new ByteArrayInputStream(fileArray));
-        }
-        
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(image, "JPEG", baos);
-        return "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
-    }
     
     /**
      * OCR 문서 상세 조회
