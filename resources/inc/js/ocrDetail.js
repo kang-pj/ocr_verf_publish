@@ -53,11 +53,13 @@ function loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, ocrDocNo) {
                 // OCR 결과 표시
                 displayOcrResults(response.ocrResults || []);
                 
-                // 이미지 정보 표시
+                // 이미지 정보 표시 (비동기)
                 displayImage(response.data);
                 
-                // 페이지 네비게이션 표시
-                displayPageNavigation(response.totalPages || 1);
+                // 페이지 네비게이션 표시 (이미지 로딩 상관없이 항상 표시)
+                setTimeout(function() {
+                    displayPageNavigation(response.totalPages || 1);
+                }, 100);
             } else {
                 alert('문서 정보를 불러올 수 없습니다.');
                 $('#documentTypeList').html('<p class="text-center text-danger">데이터를 불러오지 못했습니다.</p>');
@@ -164,8 +166,7 @@ function displayPageNavigation(totalPages) {
         return; // 페이지가 1개 이하면 네비게이션 불필요
     }
     
-    var html = '<div class="text-center" style="position: absolute; bottom: 10px; left: 0; right: 0;">';
-    html += '<div class="btn-group" role="group">';
+    var html = '<div class="btn-group" role="group">';
     
     // 이전 버튼
     if (currentIndex > 0) {
@@ -186,11 +187,10 @@ function displayPageNavigation(totalPages) {
         html += '</button>';
     }
     
-    html += '</div></div>';
+    html += '</div>';
     
-    // 이미지 뷰어 컨테이너에 position: relative 추가
-    $('#imageViewer').parent().css('position', 'relative');
-    $('#imageViewer').append(html);
+    // pageNavigation 컨테이너에 추가
+    $('#pageNavigation').html(html);
 }
 
 /**
@@ -266,29 +266,88 @@ function displayOcrResults(ocrResults) {
 }
 
 /**
- * 이미지 표시 (임시: 경로만 표시)
+ * 이미지 표시
  */
 function displayImage(data) {
-    if (!data) {
-        $('#imageViewer').html('<p class="text-muted">데이터가 없습니다.</p>');
+    if (!data || !data.doc_fl_sav_pth_nm) {
+        $('#imageViewer').html('<p class="text-muted">이미지 정보가 없습니다.</p>');
         return;
     }
     
-    var html = '<div class="text-left p-3">';
+    // 이미지 로딩
+    loadImage(data);
+}
+
+/**
+ * 이미지 로딩 API 호출
+ */
+function loadImage(data) {
+    // 로딩바 표시
+    var loadingHtml = '<div style="display: flex; align-items: center; justify-content: center; height: 100%;">';
+    loadingHtml += '<div class="spinner-border text-primary" role="status">';
+    loadingHtml += '<span class="sr-only">로딩 중...</span>';
+    loadingHtml += '</div></div>';
+    $('#imageViewer').html(loadingHtml);
     
-    if (data.doc_fl_sav_pth_nm) {
-        html += '<p><strong>이미지 경로:</strong></p>';
-        html += '<p class="text-break" style="word-break: break-all;">' + data.doc_fl_sav_pth_nm + '</p>';
-    } else {
-        html += '<p class="text-warning">이미지 경로 정보가 없습니다.</p>';
-    }
+    var params = {
+        inst_cd: data.inst_cd,
+        prdt_cd: data.prdt_cd,
+        image_path: data.doc_fl_sav_pth_nm,
+        ext: data.doc_fl_ext
+    };
     
-    html += '<hr>';
-    html += '<p><strong>OCR 문서 번호:</strong> ' + (data.ocr_doc_no || '-') + '</p>';
-    html += '<p><strong>OCR 결과 번호:</strong> ' + (data.ocr_rslt_no || '-') + '</p>';
-    html += '<p><strong>문서 유형:</strong> ' + (data.doc_tp_cd || '-') + '</p>';
+    $.ajax({
+        url: '/rf_ocr_verf/api/getOcrImage.do',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(params),
+        success: function(response) {
+            if (response.success && response.data) {
+                // Base64 이미지 또는 경로
+                if (response.data.startsWith('data:image')) {
+                    var html = '<img src="' + response.data + '" style="width: 100%; height: 100%; object-fit: contain; border-radius: 5px;" onerror="handleImageError()">';
+                    $('#imageViewer').html(html);
+                } else {
+                    displayImagePath(data, response.data, '외부 API 응답 (파일 경로)');
+                }
+            } else {
+                displayImagePath(data, data.doc_fl_sav_pth_nm, '서버 응답 실패');
+            }
+        },
+        error: function(xhr, status, error) {
+            var errorMsg = '서버 연결 실패';
+            if (xhr.status === 404) {
+                errorMsg = 'API 엔드포인트 없음 (404)';
+            } else if (xhr.status === 500) {
+                errorMsg = '서버 오류 (500)';
+            } else if (status === 'timeout') {
+                errorMsg = '요청 시간 초과';
+            }
+            displayImagePath(data, data.doc_fl_sav_pth_nm, errorMsg);
+        }
+    });
+}
+
+/**
+ * 이미지 로드 오류 처리
+ */
+function handleImageError() {
+    var errorHtml = '<div class="text-center p-3" style="font-size: 0.9rem;">';
+    errorHtml += '<p class="text-danger mb-2">이미지 파일을 찾을 수 없습니다.</p>';
+    errorHtml += '<p class="text-muted small">파일이 삭제되었거나 경로가 잘못되었을 수 있습니다.</p>';
+    errorHtml += '</div>';
+    $('#imageViewer').html(errorHtml);
+}
+
+/**
+ * 이미지 경로 표시
+ */
+function displayImagePath(data, imagePath, reason) {
+    var html = '<div class="text-center p-3" style="font-size: 0.9rem;">';
+    html += '<p class="text-danger mb-2">이미지를 불러올 수 없습니다.</p>';
+    html += '<p class="text-muted small mb-2">' + (reason || '알 수 없는 오류') + '</p>';
+    html += '<p class="text-break small" style="word-break: break-all; color: #999;">' + imagePath + '</p>';
     html += '</div>';
-    
     $('#imageViewer').html(html);
 }
 
