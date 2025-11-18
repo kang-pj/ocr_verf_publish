@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.refine.ocr.service.OcrService;
 import com.refine.ocr.vo.OcrInfoVO;
+import com.refine.common.component.S3Util;
 
 /**
  * OCR 문서 관리 컨트롤러
@@ -29,6 +30,9 @@ public class OcrController {
     
     @Autowired
     private OcrService ocrService;
+    
+    @Autowired
+    private S3Util s3Util;
     
     /**
      * OCR 결과 목록 조회 (AJAX)
@@ -129,27 +133,25 @@ public class OcrController {
     }
     
     /**
-     * 관리번호별 이미지 데이터 조회
+     * 관리번호 및 상품별 이미지 데이터 조회
      */
     private byte[] getImageDataByInstitution(String instCd, String prdtCd, String imagePath) {
         try {
-            // 관리번호별 분기 처리
+            logger.info("이미지 조회 시작: INST_CD={}, PRDT_CD={}, PATH={}", instCd, prdtCd, imagePath);
+            
+            // 기관별 분기
             switch (instCd) {
                 case "01":  // 신한
-                    logger.info("신한 이미지 조회: {}", imagePath);
-                    return getImageFromS3(imagePath);
+                    return getImageByShinhan(prdtCd, imagePath);
                     
                 case "49":  // 토스
-                    logger.info("토스 이미지 조회: {}", imagePath);
-                    return getImageFromS3(imagePath);
+                    return getImageByToss(prdtCd, imagePath);
                     
                 case "47":  // 네이버
-                    logger.info("네이버 이미지 조회: {}", imagePath);
-                    return getImageFromS3(imagePath);
+                    return getImageByNaver(prdtCd, imagePath);
                     
                 default:    // 카카오 등 기타
-                    logger.info("기타 이미지 조회: {}", imagePath);
-                    return getImageFromS3(imagePath);
+                    return getImageByKakao(prdtCd, imagePath);
             }
         } catch (Exception e) {
             logger.error("이미지 데이터 조회 실패: INST_CD={}, PRDT_CD={}", instCd, prdtCd, e);
@@ -158,13 +160,75 @@ public class OcrController {
     }
     
     /**
-     * S3에서 이미지 데이터 조회
+     * 신한 이미지 조회 (상품별 분기)
      */
-    private byte[] getImageFromS3(String imagePath) {
-        // TODO: S3 클라이언트를 사용하여 이미지 데이터 조회
-        // 예: s3Client.getObject(bucket, imagePath).read()
-        logger.info("S3에서 이미지 조회: {}", imagePath);
-        return new byte[0];  // 임시 구현
+    private byte[] getImageByShinhan(String prdtCd, String imagePath) {
+        logger.info("신한 이미지 조회: PRDT_CD={}, PATH={}", prdtCd, imagePath);
+        
+        switch (prdtCd) {
+            case "KRH":  // 반환보증
+                return s3Util.getObject(imagePath);
+            case "KH":   // 저당
+                return s3Util.getObject(imagePath);
+            case "JL":   // 전세
+                return s3Util.getObject(imagePath);
+            default:
+                return s3Util.getObject(imagePath);
+        }
+    }
+    
+    /**
+     * 토스 이미지 조회 (상품별 분기)
+     */
+    private byte[] getImageByToss(String prdtCd, String imagePath) {
+        logger.info("토스 이미지 조회: PRDT_CD={}, PATH={}", prdtCd, imagePath);
+        
+        switch (prdtCd) {
+            case "KRH":  // 반환보증
+                return s3Util.getObject(imagePath);
+            case "KH":   // 저당
+                return s3Util.getObject(imagePath);
+            case "JL":   // 전세
+                return s3Util.getObject(imagePath);
+            default:
+                return s3Util.getObject(imagePath);
+        }
+    }
+    
+    /**
+     * 네이버 이미지 조회 (상품별 분기)
+     */
+    private byte[] getImageByNaver(String prdtCd, String imagePath) {
+        logger.info("네이버 이미지 조회: PRDT_CD={}, PATH={}", prdtCd, imagePath);
+        
+        switch (prdtCd) {
+            case "KRH":  // 반환보증
+                return s3Util.getObject(imagePath);
+            case "KH":   // 저당
+                return s3Util.getObject(imagePath);
+            case "JL":   // 전세
+                return s3Util.getObject(imagePath);
+            default:
+                return s3Util.getObject(imagePath);
+        }
+    }
+    
+    /**
+     * 카카오 이미지 조회 (상품별 분기)
+     */
+    private byte[] getImageByKakao(String prdtCd, String imagePath) {
+        logger.info("카카오 이미지 조회: PRDT_CD={}, PATH={}", prdtCd, imagePath);
+        
+        switch (prdtCd) {
+            case "KRH":  // 반환보증
+                return s3Util.getObject(imagePath);
+            case "KH":   // 저당
+                return s3Util.getObject(imagePath);
+            case "JL":   // 전세
+                return s3Util.getObject(imagePath);
+            default:
+                return s3Util.getObject(imagePath);
+        }
     }
     
     
