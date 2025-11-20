@@ -60,4 +60,9 @@ public class OcrDAOImpl implements OcrDAO {
     public OcrInfoVO getImageInfo(Map<String, Object> params) {
         return sqlSession.selectOne(NAMESPACE + ".getImageInfo", params);
     }
+    
+    @Override
+    public String getSysClsCd(Map<String, Object> params) {
+        return sqlSession.selectOne(NAMESPACE + ".getSysClsCd", params);
+    }
 }

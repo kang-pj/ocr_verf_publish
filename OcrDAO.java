@@ -73,4 +73,12 @@ public interface OcrDAO {
      * @return 이미지 정보
      */
     OcrInfoVO getImageInfo(Map<String, Object> params);
+    
+    /**
+     * 상품 분류 코드 조회
+     * 
+     * @param params 기관 코드, 상품 코드
+     * @return 상품 분류 코드
+     */
+    String getSysClsCd(Map<String, Object> params);
 }

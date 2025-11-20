@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.refine.hug.mapper.AttachedFileMapper">
+
+    <select id="getHugDocInfo" resultType="com.refine.hug.model.HugDocFl">
+        select
+            doc_fl_no,
+            doc_fl_dtl_no,
+            doc_fl_nm,
+            doc_fl_sav_pth_nm,
+            doc_tp_cd,
+            ctrl_yr,
+            inst_cd,
+            prdt_cd,
+            ctrl_no,
+            client_id,
+            client_req_no,
+            rfn_key,
+            doc_fl_ext,
+            ins_id,
+            ins_dttm,
+            ins_ip,
+            del_yn,
+            upd_id,
+            upd_dttm,
+            upd_ip,
+            orgn_doc_fl_nm,
+            doc_cd,
+            enc_yn
+        from
+            rfdb.hug_doc_fl hdf
+        where
+            doc_fl_sav_pth_nm = #{doc_att_fl_decoded}
+        and prdt_cd = '820'
+    </select>
+
+    <select id="getSysClsCd" resultType="String">
+        select prdt_cls_cd2
+          from rfdb.c_prdt
+         where inst_cd = #{instCd}
+           and prdt_cd = #{prdtCd}
+    </select>
+</mapper>

@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title>OCR 실시간 테스트</title>
+    <!-- Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            min-width: 1200px;
+        }
+        #wrapper {
+            display: flex;
+        }
+        .sidebar {
+            min-height: 100vh;
+            width: 250px;
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        }
+        .sidebar-brand {
+            height: 80px;
+            text-decoration: none;
+            color: white !important;
+        }
+        .sidebar-brand-icon i {
+            color: white;
+        }
+        .sidebar-brand-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .sidebar .nav-item .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem;
+        }
+        .sidebar .nav-item .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar .nav-item.active .nav-link {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        .sidebar-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 0;
+        }
+        .bg-gradient-primary {
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        }
+        #content-wrapper {
+            flex: 1;
+            background-color: #f8f9fc;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        #content {
+            flex: 1;
+        }
+        .topbar {
+            background-color: white;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        .custom-navbar-height {
+            height: 60px;
+        }
+        .sticky-footer {
+            background-color: white;
+            padding: 1rem 0;
+        }
+        .scroll-to-top {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            display: none;
+            width: 2.75rem;
+            height: 2.75rem;
+            text-align: center;
+            color: white;
+            background: rgba(90, 92, 105, 0.5);
+            line-height: 46px;
+            border-radius: 50%;
+        }
+        .scroll-to-top:hover {
+            background: rgba(90, 92, 105, 0.7);
+            color: white;
+            text-decoration: none;
+        }
+        .card-body {
+            padding: 1.25rem !important;
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+        .file-input-label {
+            display: block;
+            padding: 20px;
+            background: #f8f9fc;
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+        }
+        .file-input-label:hover {
+            border-color: #4e73df;
+            background: #f0f4ff;
+        }
+        .file-name {
+            margin-top: 10px;
+            color: #4e73df;
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body id="page-top">
+    <div id="wrapper">
+        <!-- Sidebar -->
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center">
+                <div class="sidebar-brand-icon">
+                    <i class="fas fa-file-image fa-2x"></i>
+                </div>
+                <div class="sidebar-brand-text mx-3 text-white">OCR 이미지 전산</div>
+            </a>
+            <hr class="sidebar-divider my-0">
+            <li class="nav-item">
+                <a class="nav-link" href="list.html">
+                    <i class="fas fa-fw fa-list"></i>
+                    <span>OCR 결과 목록</span>
+                </a>
+            </li>
+            <li class="nav-item active">
+                <a class="nav-link" href="ocrRealtimeTest.html">
+                    <i class="fas fa-fw fa-flask"></i>
+                    <span>실시간 테스트</span>
+                </a>
+            </li>
+            <hr class="sidebar-divider my-0">
+        </ul>
+        
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+            <div id="content">
+                <!-- Topbar -->
+                <nav class="navbar navbar-expand navbar-light topbar mb-3 static-top custom-navbar-height">
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                    <div class="collapse navbar-collapse">
+                        <ul class="navbar-nav">
+                            <i class="nav-item fas fa-fw fa-home"></i>
+                        </ul>
+                    </div>
+                    <ul class="navbar-nav ml-auto">
+                        <div class="topbar-divider d-none d-sm-block"></div>
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="modal" data-target="#logoutModal">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600"><strong>강진우</strong></span>
+                                <span class="mr-2 d-none d-lg-inline text-gray-600"><i class="fas fa-sign-out-alt text-gray-600"></i></span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                
+                <!-- Logout Modal -->
+                <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h6 class="modal-title">로그아웃 하시겠습니까?</h6>
+                                <button class="close" type="button" data-dismiss="modal">
+                                    <span>×</span>
+                                </button>
+                            </div>
+                            <div class="modal-footer">
+                                <a class="btn btn-primary btn-sm" href="logout">확인</a>
+                                <button class="btn btn-secondary btn-sm" type="button" data-dismiss="modal">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Content -->
+                <div class="container-fluid">
+                    <div class="row">
+                        <!-- OCR 실시간 테스트 (좌측) -->
+                        <div class="col-md-10">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">OCR 실시간 테스트</h6>
+                                </div>
+                                <div class="card-body">
+                                    <form id="ocrTestForm">
+                                        <div class="form-row">
+                                            <div class="col-md-12 mb-3">
+                                                <label>파일 선택 *</label>
+                                                <div class="file-input-wrapper">
+                                                    <input type="file" id="fileInput" name="file" accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff" required>
+                                                    <label for="fileInput" class="file-input-label">
+                                                        <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
+                                                        <p class="mb-0">파일을 선택하거나 여기에 드래그하세요</p>
+                                                    </label>
+                                                    <div class="file-name" id="fileName"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-row">
+                                            <div class="col-md-12">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-play"></i> 테스트 시작
+                                                </button>
+                                                <button type="reset" class="btn btn-secondary btn-sm">
+                                                    <i class="fas fa-redo"></i> 초기화
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                    
+                                    <div id="resultSection" style="display: none; margin-top: 20px;">
+                                        <div style="display: flex; gap: 10px;">
+                                            <!-- 이미지 영역 (65%) -->
+                                            <div style="flex: 0 0 65%;">
+                                                <h6 class="font-weight-bold text-secondary">이미지 미리보기</h6>
+                                                <div id="imagePreview" style="background: #f8f9fc; padding: 10px; border-radius: 5px; min-height: 800px; display: flex; align-items: center; justify-content: center;">
+                                                    <p class="text-muted">이미지가 표시됩니다</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 테이블 결과 영역 (35%) -->
+                                            <div style="flex: 0 0 35%;">
+                                                <h6 class="font-weight-bold text-secondary">OCR 결과</h6>
+                                                <div id="resultTable" style="background: #f8f9fc; border-radius: 5px; max-height: 400px; overflow-y: auto;">
+                                                    <table class="table table-sm table-bordered mb-0" style="font-size: 12px;">
+                                                        <tbody id="resultTableBody">
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 히스토리 (우측) -->
+                        <div class="col-md-2">
+                            <div class="card shadow mb-4" style="height: 1000px; display: flex; flex-direction: column;">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">테스트 히스토리</h6>
+                                </div>
+                                <div class="card-body" style="flex: 1; overflow-y: auto;">
+                                    <div id="historyList" style="font-size: 13px;">
+                                        <!-- 샘플 테스트 결과 -->
+                                        <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;" onclick="showHistoryResult(1)">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <strong>processing_document.pdf</strong>
+                                                    <div style="color: #999; font-size: 11px; margin-top: 3px;">2024-11-20 14:35:00</div>
+                                                </div>
+                                                <span class="badge badge-warning" style="font-size: 11px;">대기</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;" onclick="showHistoryResult(2)">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <strong>sample_document.pdf</strong>
+                                                    <div style="color: #999; font-size: 11px; margin-top: 3px;">2024-11-20 14:30:25</div>
+                                                </div>
+                                                <span class="badge badge-success" style="font-size: 11px;">성공</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;" onclick="showHistoryResult(3)">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <strong>test_image.jpg</strong>
+                                                    <div style="color: #999; font-size: 11px; margin-top: 3px;">2024-11-20 14:25:10</div>
+                                                </div>
+                                                <span class="badge badge-success" style="font-size: 11px;">성공</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;" onclick="showHistoryResult(4)">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <strong>error_file.png</strong>
+                                                    <div style="color: #999; font-size: 11px; margin-top: 3px;">2024-11-20 14:20:45</div>
+                                                </div>
+                                                <span class="badge badge-danger" style="font-size: 11px;">실패</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;" onclick="showHistoryResult(5)">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <strong>contract.tiff</strong>
+                                                    <div style="color: #999; font-size: 11px; margin-top: 3px;">2024-11-20 14:15:30</div>
+                                                </div>
+                                                <span class="badge badge-success" style="font-size: 11px;">성공</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <footer class="sticky-footer">
+                <div class="container-fluid">
+                    <div class="copyright text-center my-auto">
+                        <span class="text-gray-700">Copyright &copy; <strong style="color: #b85363;">REFINE</strong> 2023</span>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
+    
+    <!-- Bootstrap 4 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        const historyData = {
+            1: {
+                status: 'PROCESSING',
+                data: {
+                    ctrl_yr: '2024',
+                    inst_cd: '01',
+                    prdt_cd: 'KRH',
+                    ctrl_no: '12345',
+                    doc_tp_cd: '01',
+                    doc_fl_nm: 'processing_document.pdf',
+                    doc_fl_ext: 'pdf',
+                    file_size: 2048576,
+                    ocr_doc_no: 'OCR202411200000',
+                    s3_path: 'ocr-test/2024/01/KRH/12345/processing_document.pdf'
+                }
+            },
+            2: {
+                status: 'SUCCESS',
+                data: {
+                    ctrl_yr: '2024',
+                    inst_cd: '01',
+                    prdt_cd: 'KRH',
+                    ctrl_no: '12345',
+                    doc_tp_cd: '01',
+                    doc_fl_nm: 'sample_document.pdf',
+                    doc_fl_ext: 'pdf',
+                    file_size: 2048576,
+                    ocr_doc_no: 'OCR202411200001',
+                    s3_path: 'ocr-test/2024/01/KRH/12345/sample_document.pdf'
+                }
+            },
+            3: {
+                status: 'SUCCESS',
+                data: {
+                    ctrl_yr: '2024',
+                    inst_cd: '49',
+                    prdt_cd: 'KH',
+                    ctrl_no: '67890',
+                    doc_tp_cd: '02',
+                    doc_fl_nm: 'test_image.jpg',
+                    doc_fl_ext: 'jpg',
+                    file_size: 1024000,
+                    ocr_doc_no: 'OCR202411200002',
+                    s3_path: 'ocr-test/2024/49/KH/67890/test_image.jpg'
+                }
+            },
+            4: {
+                status: 'FAILED',
+                error: 'UNSUPPORTED_FILE_FORMAT',
+                data: {
+                    doc_fl_nm: 'error_file.png',
+                    doc_fl_ext: 'png',
+                    file_size: 512000,
+                    error_code: 'E001',
+                    error_detail: 'PNG 파일은 현재 지원되지 않습니다.'
+                }
+            },
+            5: {
+                status: 'SUCCESS',
+                data: {
+                    ctrl_yr: '2024',
+                    inst_cd: '47',
+                    prdt_cd: 'JL',
+                    ctrl_no: '11111',
+                    doc_tp_cd: '03',
+                    doc_fl_nm: 'contract.tiff',
+                    doc_fl_ext: 'tiff',
+                    file_size: 3145728,
+                    ocr_doc_no: 'OCR202411200003',
+                    s3_path: 'ocr-test/2024/47/JL/11111/contract.tiff'
+                }
+            }
+        };
+
+        function showHistoryResult(id) {
+            const data = historyData[id];
+            const resultSection = document.getElementById('resultSection');
+            const resultTableBody = document.getElementById('resultTableBody');
+            
+            resultTableBody.innerHTML = '';
+            
+            function addTableRows(obj, prefix = '') {
+                for (const key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        const value = obj[key];
+                        const displayKey = prefix ? `${prefix}.${key}` : key;
+                        
+                        if (typeof value === 'object' && value !== null) {
+                            addTableRows(value, displayKey);
+                        } else {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td style="font-weight: 600; width: 40%; word-break: break-word;">${displayKey}</td>
+                                <td style="width: 60%; word-break: break-word;">${value}</td>
+                            `;
+                            resultTableBody.appendChild(row);
+                        }
+                    }
+                }
+            }
+            
+            addTableRows(data);
+            resultSection.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

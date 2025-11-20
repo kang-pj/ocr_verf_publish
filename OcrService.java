@@ -22,4 +22,8 @@ public interface OcrService {
     int updateVerificationStatus(Map<String, Object> params);
     
     OcrInfoVO getImageInfo(Map<String, Object> params);
+    
+    byte[] getOcrImage(String instCd, String prdtCd, String imagePath);
+    
+    String getSysClsCd(String instCd, String prdtCd);
 }

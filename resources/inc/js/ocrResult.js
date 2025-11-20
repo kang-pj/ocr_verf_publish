@@ -6,7 +6,7 @@ $(document).ready(function() {
         processing: true,
         serverSide: true,  // 서버사이드 처리 활성화
         ajax: {
-            url: '/rf_ocr_verf/api/getOcrResultList.do',
+            url: '/rf-ocr-verf/api/getOcrResultList.do',
             type: 'POST',
             contentType: 'application/json',  // JSON 전송
             data: function(d) {
@@ -336,7 +336,7 @@ function viewDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd) {
     
     // pageChange 방식으로 상세 페이지를 새 탭에서 열기
     var currentPath = window.location.pathname;
-    var site = currentPath.substring(1); // '/rf_ocr_verf' -> 'rf_ocr_verf'
+    var site = currentPath.substring(1); // '/rf-ocr-verf' -> 'rf-ocr-verf'
     
     // 파라미터 구성
     var params = [];

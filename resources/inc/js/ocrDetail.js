@@ -32,7 +32,7 @@ function loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, ocrDocNo) {
     };
     
     $.ajax({
-        url: '/rf_ocr_verf/api/getOcrDocumentDetail.do',
+        url: '/rf-ocr-verf/api/getOcrDocumentDetail.do',
         type: 'POST',
         contentType: 'application/json',
         data: JSON.stringify(params),
@@ -297,7 +297,7 @@ function loadImage(data) {
     };
     
     $.ajax({
-        url: '/rf_ocr_verf/api/getOcrImage.do',
+        url: '/rf-ocr-verf/api/getOcrImage.do',
         type: 'POST',
         contentType: 'application/json',
         data: JSON.stringify(params),

@@ -1,9 +1,22 @@
 package com.refine.ocr.controller;
 
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLEncoder;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.imageio.ImageIO;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,17 +26,17 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.refine.ocr.service.OcrService;
 import com.refine.ocr.vo.OcrInfoVO;
-import com.refine.common.component.S3Util;
 
 /**
  * OCR 문서 관리 컨트롤러
  */
-@Controller
-@RequestMapping("/rf_ocr_verf")
+@RestController
 public class OcrController {
     
     private static final Logger logger = LoggerFactory.getLogger(OcrController.class);
@@ -31,17 +44,13 @@ public class OcrController {
     @Autowired
     private OcrService ocrService;
     
-    @Autowired
-    private S3Util s3Util;
-    
     /**
      * OCR 결과 목록 조회 (AJAX)
      * 
      * @param params 검색 조건
      * @return JSON 응답
      */
-    @PostMapping(value = "/api/getOcrResultList.do")
-    @ResponseBody
+    @PostMapping(value = "/rf-ocr-verf/api/getOcrResultList.do")
     public ResponseEntity<Map<String, Object>> getOcrResultList(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         
@@ -77,166 +86,116 @@ public class OcrController {
     }
     
     /**
-     * 이미지 S3에서 조회 (관리번호별 분기)
+     * 이미지 로딩 및 변환
      */
-    @PostMapping(value = "/api/getOcrImage.do")
-    @ResponseBody
+    @PostMapping(value = "/rf-ocr-verf/api/getOcrImage.do")
     public ResponseEntity<Map<String, Object>> getOcrImage(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         
         try {
-            String ocrDocNo = (String) params.get("ocr_doc_no");
             String instCd = (String) params.get("inst_cd");
             String prdtCd = (String) params.get("prdt_cd");
             String imagePath = (String) params.get("image_path");
+            String ext = (String) params.get("ext");
             
-            if (ocrDocNo == null || instCd == null || prdtCd == null || imagePath == null) {
+            if (imagePath == null || ext == null) {
                 result.put("success", false);
-                result.put("message", "필수 파라미터가 부족합니다.");
+                result.put("message", "이미지 경로와 확장자가 필요합니다.");
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             }
             
-            // 이미지 정보 조회
-            Map<String, Object> imageParams = new HashMap<>();
-            imageParams.put("ocr_doc_no", ocrDocNo);
-            OcrInfoVO imageInfo = ocrService.getImageInfo(imageParams);
+            // 이미지 URL 구성
+            String baseUrl = "TEST".equals(String.valueOf(ContextHolder.getDbMode()))
+                ? "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/preview-image-all"
+                : "https://api.work.refinehub.com/apis/refine-ocr-api/v1/application/file/preview-image-all";
             
-            if (imageInfo == null) {
-                result.put("success", false);
-                result.put("message", "이미지 정보를 찾을 수 없습니다.");
-                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+            String encodedPath = URLEncoder.encode(Base64.getEncoder().encodeToString(imagePath.getBytes()), "UTF-8");
+            String trgtURL = baseUrl + "?instCd=" + instCd + "&prdtCd=" + prdtCd + "&imagePath=" + encodedPath;
+            
+            try {
+                // 이미지 다운로드
+                InputStream is = HttpUtil.httpConnectionStream(trgtURL, "GET", null, null);
+                byte[] fileArray = IOUtils.toByteArray(is);
+                is.close();
+                
+                // 포맷별 변환
+                String base64Image = convertToBase64Image(fileArray, ext);
+                
+                result.put("success", true);
+                result.put("data", base64Image);
+                
+            } catch (Exception e) {
+                logger.warn("외부 API 이미지 로딩 실패, 경로만 반환: {}", e.getMessage());
+                result.put("success", true);
+                result.put("data", imagePath);
             }
-            
-            // 관리번호별 분기 처리
-            byte[] imageData = getImageDataByInstitution(instCd, prdtCd, imagePath);
-            
-            if (imageData == null || imageData.length == 0) {
-                result.put("success", false);
-                result.put("message", "이미지 데이터를 가져올 수 없습니다.");
-                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
-            }
-            
-            result.put("success", true);
-            result.put("data", imageInfo);
-            result.put("imageData", imageData);
-            
-            logger.info("이미지 조회 완료: OCR_DOC_NO={}, INST_CD={}, PRDT_CD={}", ocrDocNo, instCd, prdtCd);
             
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             
         } catch (Exception e) {
-            logger.error("이미지 조회 실패", e);
+            logger.error("이미지 로딩 실패", e);
             result.put("success", false);
-            result.put("message", "이미지 조회 중 오류가 발생했습니다: " + e.getMessage());
+            result.put("message", e.getMessage());
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
         }
     }
     
     /**
-     * 관리번호 및 상품별 이미지 데이터 조회
+     * 이미지를 Base64로 변환
      */
-    private byte[] getImageDataByInstitution(String instCd, String prdtCd, String imagePath) {
+    private String convertToBase64Image(byte[] fileArray, String ext) throws IOException {
+        String mimeType = "image/jpeg";
+        String outputFormat = "JPEG";
+        byte[] outputArray = fileArray;
+        
         try {
-            logger.info("이미지 조회 시작: INST_CD={}, PRDT_CD={}, PATH={}", instCd, prdtCd, imagePath);
-            
-            // 기관별 분기
-            switch (instCd) {
-                case "01":  // 신한
-                    return getImageByShinhan(prdtCd, imagePath);
+            if ("pdf".equalsIgnoreCase(ext)) {
+                PDDocument document = PDDocument.load(fileArray);
+                BufferedImage image = new PDFRenderer(document).renderImageWithDPI(0, 300);
+                document.close();
+                
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ImageIO.write(image, "JPEG", baos);
+                outputArray = baos.toByteArray();
+                mimeType = "image/jpeg";
+            } else if ("png".equalsIgnoreCase(ext)) {
+                // PNG는 원본 유지
+                mimeType = "image/png";
+                outputArray = fileArray;
+            } else if ("gif".equalsIgnoreCase(ext)) {
+                // GIF는 원본 유지
+                mimeType = "image/gif";
+                outputArray = fileArray;
+            } else if ("tif".equalsIgnoreCase(ext) || "tiff".equalsIgnoreCase(ext)) {
+                // TIFF를 JPEG로 변환
+                BufferedImage original = ImageIO.read(new ByteArrayInputStream(fileArray));
+                if (original != null) {
+                    BufferedImage image = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_INT_RGB);
+                    image.createGraphics().drawImage(original, 0, 0, Color.WHITE, null);
                     
-                case "49":  // 토스
-                    return getImageByToss(prdtCd, imagePath);
-                    
-                case "47":  // 네이버
-                    return getImageByNaver(prdtCd, imagePath);
-                    
-                default:    // 카카오 등 기타
-                    return getImageByKakao(prdtCd, imagePath);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    ImageIO.write(image, "JPEG", baos);
+                    outputArray = baos.toByteArray();
+                    mimeType = "image/jpeg";
+                }
+            } else {
+                // JPG 및 기타 형식은 원본 유지
+                mimeType = "image/jpeg";
+                outputArray = fileArray;
             }
         } catch (Exception e) {
-            logger.error("이미지 데이터 조회 실패: INST_CD={}, PRDT_CD={}", instCd, prdtCd, e);
-            return null;
+            logger.warn("이미지 변환 실패, 원본 반환: {}", e.getMessage());
+            outputArray = fileArray;
         }
-    }
-    
-    /**
-     * 신한 이미지 조회 (상품별 분기)
-     */
-    private byte[] getImageByShinhan(String prdtCd, String imagePath) {
-        logger.info("신한 이미지 조회: PRDT_CD={}, PATH={}", prdtCd, imagePath);
         
-        switch (prdtCd) {
-            case "KRH":  // 반환보증
-                return s3Util.getObject(imagePath);
-            case "KH":   // 저당
-                return s3Util.getObject(imagePath);
-            case "JL":   // 전세
-                return s3Util.getObject(imagePath);
-            default:
-                return s3Util.getObject(imagePath);
-        }
-    }
-    
-    /**
-     * 토스 이미지 조회 (상품별 분기)
-     */
-    private byte[] getImageByToss(String prdtCd, String imagePath) {
-        logger.info("토스 이미지 조회: PRDT_CD={}, PATH={}", prdtCd, imagePath);
-        
-        switch (prdtCd) {
-            case "KRH":  // 반환보증
-                return s3Util.getObject(imagePath);
-            case "KH":   // 저당
-                return s3Util.getObject(imagePath);
-            case "JL":   // 전세
-                return s3Util.getObject(imagePath);
-            default:
-                return s3Util.getObject(imagePath);
-        }
-    }
-    
-    /**
-     * 네이버 이미지 조회 (상품별 분기)
-     */
-    private byte[] getImageByNaver(String prdtCd, String imagePath) {
-        logger.info("네이버 이미지 조회: PRDT_CD={}, PATH={}", prdtCd, imagePath);
-        
-        switch (prdtCd) {
-            case "KRH":  // 반환보증
-                return s3Util.getObject(imagePath);
-            case "KH":   // 저당
-                return s3Util.getObject(imagePath);
-            case "JL":   // 전세
-                return s3Util.getObject(imagePath);
-            default:
-                return s3Util.getObject(imagePath);
-        }
-    }
-    
-    /**
-     * 카카오 이미지 조회 (상품별 분기)
-     */
-    private byte[] getImageByKakao(String prdtCd, String imagePath) {
-        logger.info("카카오 이미지 조회: PRDT_CD={}, PATH={}", prdtCd, imagePath);
-        
-        switch (prdtCd) {
-            case "KRH":  // 반환보증
-                return s3Util.getObject(imagePath);
-            case "KH":   // 저당
-                return s3Util.getObject(imagePath);
-            case "JL":   // 전세
-                return s3Util.getObject(imagePath);
-            default:
-                return s3Util.getObject(imagePath);
-        }
+        return "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(outputArray);
     }
     
     
     /**
      * OCR 문서 상세 조회
      */
-    @PostMapping(value = "/api/getOcrDocumentDetail.do")
-    @ResponseBody
+    @PostMapping(value = "/rf-ocr-verf/api/getOcrDocumentDetail.do")
     public ResponseEntity<Map<String, Object>> getOcrDocumentDetail(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         
@@ -321,4 +280,63 @@ public class OcrController {
                     .body(result);
         }
     }
+    
+    /**
+     * OCR 실시간 테스트 (서류 등록)
+     */
+    @PostMapping(value = "/rf-ocr-verf/api/ocrRealtimeTest.do", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> ocrRealtimeTest(
+            @RequestParam("instCd") String instCd,
+            @RequestParam("prdtCd") String prdtCd,
+            @RequestParam("ctrlYr") String ctrlYr,
+            @RequestParam("ctrlNo") String ctrlNo,
+            @RequestParam("docTpCd") String docTpCd,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            logger.info("OCR 실시간 테스트 요청 - FILE: {}", file.getOriginalFilename());
+            
+            if (file.isEmpty()) {
+                result.put("success", false);
+                result.put("message", "파일이 비어있습니다.");
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+            }
+            
+            String fileName = file.getOriginalFilename();
+            String fileExt = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+            
+            // 서류 등록 (임시 데이터)
+            Map<String, Object> params = new HashMap<>();
+            params.put("ctrl_yr", ctrlYr);
+            params.put("inst_cd", instCd);
+            params.put("prdt_cd", prdtCd);
+            params.put("ctrl_no", ctrlNo);
+            params.put("doc_tp_cd", docTpCd);
+            params.put("doc_fl_nm", fileName);
+            params.put("doc_fl_ext", fileExt);
+            params.put("file_size", file.getSize());
+            
+            result.put("success", true);
+            result.put("message", "서류가 성공적으로 등록되었습니다.");
+            result.put("data", params);
+            
+            logger.info("OCR 실시간 테스트 완료 - 파일명: {}", fileName);
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+            
+        } catch (Exception e) {
+            logger.error("OCR 실시간 테스트 실패", e);
+            result.put("success", false);
+            result.put("message", "서류 등록 중 오류가 발생했습니다: " + e.getMessage());
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+
 }

@@ -467,3 +467,11 @@
             ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
         WHERE INF.OCR_DOC_NO = #{ocr_doc_no}
     </select>
+
+    <!-- 상품 분류 코드 조회 -->
+    <select id="getSysClsCd" resultType="String">
+        select prdt_cls_cd2
+          from rfdb.c_prdt
+         where inst_cd = #{instCd}
+           and prdt_cd = #{prdtCd}
+    </select>
