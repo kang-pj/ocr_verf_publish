@@ -10,75 +10,25 @@ import com.refine.ocr.vo.OcrInfoVO;
  */
 public interface OcrDAO {
     
-    /**
-     * OCR 문서 전체 건수 조회
-     * 
-     * @param params 검색 조건
-     * @return 전체 건수
-     */
     int getOcrDocumentCount(Map<String, Object> params);
     
-    /**
-     * OCR 문서 목록 조회
-     * 
-     * @param params 검색 조건
-     * @return OCR 문서 목록
-     */
     List<OcrInfoVO> getOcrDocumentList(Map<String, Object> params);
     
-    /**
-     * OCR 문서 상세 조회
-     * 
-     * @param params 관리번호 정보
-     * @return OCR 문서 상세
-     */
     OcrInfoVO getOcrDocumentDetail(Map<String, Object> params);
     
-    /**
-     * 같은 관리번호의 서류 목록 조회
-     * 
-     * @param params 관리번호 정보
-     * @return 서류 목록
-     */
     List<OcrInfoVO> getDocumentListByCtrlNo(Map<String, Object> params);
     
-    /**
-     * OCR 결과 텍스트 조회
-     * 
-     * @param params 관리번호 정보
-     * @return OCR 결과 목록
-     */
     List<OcrInfoVO> getOcrResultText(Map<String, Object> params);
     
-    /**
-     * 특정 서류 타입의 OCR 문서 번호 리스트 조회
-     * 
-     * @param params 관리번호 + 서류타입 정보
-     * @return OCR 문서 번호 리스트
-     */
     List<String> getOcrDocNoList(Map<String, Object> params);
     
-    /**
-     * OCR 문서 검증 상태 업데이트
-     * 
-     * @param params 업데이트 정보
-     * @return 업데이트 건수
-     */
     int updateVerificationStatus(Map<String, Object> params);
     
-    /**
-     * 이미지 정보 조회 (암호화 여부 포함)
-     * 
-     * @param params OCR 문서 번호
-     * @return 이미지 정보
-     */
     OcrInfoVO getImageInfo(Map<String, Object> params);
     
-    /**
-     * 상품 분류 코드 조회
-     * 
-     * @param params 기관 코드, 상품 코드
-     * @return 상품 분류 코드
-     */
     String getSysClsCd(Map<String, Object> params);
+    
+    String getMaxCtrlNo(Map<String, Object> params);
+    
+    int insertOcrDocument(Map<String, Object> params);
 }

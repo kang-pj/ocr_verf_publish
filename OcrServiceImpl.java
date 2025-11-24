@@ -313,6 +313,116 @@ public class OcrServiceImpl implements OcrService {
         }
     }
     
+    @Override
+    public void uploadFileToS3(org.springframework.web.multipart.MultipartFile file, String path) {
+        logger.info("S3 파일 업로드 시작 - PATH: {}", path);
+        
+        try {
+            s3Util.uploadFile(file, path);
+            logger.info("S3 파일 업로드 완료 - PATH: {}", path);
+        } catch (Exception e) {
+            logger.error("S3 파일 업로드 실패 - PATH: {}", path, e);
+            throw new RuntimeException("S3 파일 업로드 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
+    public Map<String, Object> uploadFileToExternalApi(org.springframework.web.multipart.MultipartFile file, String path) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            String uploadUrl = "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/upload-image";
+            
+            // RestTemplate 사용
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            
+            // MultiValueMap으로 form-data 구성
+            org.springframework.util.MultiValueMap<String, Object> body = new org.springframework.util.LinkedMultiValueMap<>();
+            body.add("file", new org.springframework.core.io.ByteArrayResource(file.getBytes()) {
+                @Override
+                public String getFilename() {
+                    return file.getOriginalFilename();
+                }
+            });
+            body.add("path", path);
+            
+            // HttpHeaders 설정
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+            
+            // HttpEntity 생성
+            org.springframework.http.HttpEntity<org.springframework.util.MultiValueMap<String, Object>> requestEntity = 
+                new org.springframework.http.HttpEntity<>(body, headers);
+            
+            // 외부 API 호출
+            org.springframework.http.ResponseEntity<Map> response = restTemplate.postForEntity(uploadUrl, requestEntity, Map.class);
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                result.put("success", true);
+                result.put("message", "파일 업로드 성공");
+                result.put("data", response.getBody());
+            } else {
+                result.put("success", false);
+                result.put("message", "파일 업로드 실패");
+            }
+            
+            logger.info("외부 API 파일 업로드 완료 - PATH: {}", path);
+            
+        } catch (Exception e) {
+            logger.error("외부 API 파일 업로드 실패", e);
+            result.put("success", false);
+            result.put("message", "파일 업로드 중 오류: " + e.getMessage());
+        }
+        
+        return result;
+    }
+    
+    @Override
+    public String getNextCtrlNo(String instCd, String prdtCd) {
+        logger.debug("다음 CTRL_NO 조회: INST_CD={}, PRDT_CD={}", instCd, prdtCd);
+        
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("inst_cd", instCd);
+            params.put("prdt_cd", prdtCd);
+            
+            // DB에서 최대 CTRL_NO 조회
+            String maxCtrlNo = ocrDAO.getMaxCtrlNo(params);
+            
+            String nextCtrlNo;
+            if (maxCtrlNo == null || maxCtrlNo.isEmpty()) {
+                // 첫 번째 데이터
+                nextCtrlNo = "000001";
+            } else {
+                // 최대값 + 1
+                int nextNum = Integer.parseInt(maxCtrlNo) + 1;
+                nextCtrlNo = String.format("%06d", nextNum);
+            }
+            
+            logger.debug("다음 CTRL_NO: {}", nextCtrlNo);
+            return nextCtrlNo;
+            
+        } catch (Exception e) {
+            logger.error("다음 CTRL_NO 조회 실패", e);
+            throw new RuntimeException("CTRL_NO 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
+    public int insertOcrDocument(Map<String, Object> params) {
+        logger.info("OCR 문서 등록: CTRL_YR={}, INST_CD={}, PRDT_CD={}, CTRL_NO={}", 
+            params.get("ctrl_yr"), params.get("inst_cd"), params.get("prdt_cd"), params.get("ctrl_no"));
+        
+        try {
+            int result = ocrDAO.insertOcrDocument(params);
+            logger.info("OCR 문서 등록 완료: {} 건", result);
+            return result;
+        } catch (Exception e) {
+            logger.error("OCR 문서 등록 실패", e);
+            throw new RuntimeException("OCR 문서 등록 중 오류가 발생했습니다.", e);
+        }
+    }
+    
     /**
      * 파라미터 검증 및 기본값 설정
      */

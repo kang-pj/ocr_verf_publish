@@ -1,0 +1,485 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title>OCR 실시간 테스트</title>
+    <!-- Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            min-width: 1200px;
+        }
+        #wrapper {
+            display: flex;
+        }
+        .sidebar {
+            min-height: 100vh;
+            width: 250px;
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        }
+        .sidebar-brand {
+            height: 80px;
+            text-decoration: none;
+            color: white !important;
+        }
+        .sidebar-brand-icon i {
+            color: white;
+        }
+        .sidebar-brand-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .sidebar .nav-item .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem;
+        }
+        .sidebar .nav-item .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar .nav-item.active .nav-link {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        .sidebar-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 0;
+        }
+        .bg-gradient-primary {
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        }
+        #content-wrapper {
+            flex: 1;
+            background-color: #f8f9fc;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        #content {
+            flex: 1;
+        }
+        .topbar {
+            background-color: white;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        .custom-navbar-height {
+            height: 60px;
+        }
+        .sticky-footer {
+            background-color: white;
+            padding: 1rem 0;
+        }
+        .scroll-to-top {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            display: none;
+            width: 2.75rem;
+            height: 2.75rem;
+            text-align: center;
+            color: white;
+            background: rgba(90, 92, 105, 0.5);
+            line-height: 46px;
+            border-radius: 50%;
+        }
+        .scroll-to-top:hover {
+            background: rgba(90, 92, 105, 0.7);
+            color: white;
+            text-decoration: none;
+        }
+        .card-body {
+            padding: 1.25rem !important;
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+        .file-input-label {
+            display: block;
+            padding: 20px;
+            background: #f8f9fc;
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+        }
+        .file-input-label:hover {
+            border-color: #4e73df;
+            background: #f0f4ff;
+        }
+        .file-name {
+            margin-top: 10px;
+            color: #4e73df;
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body id="page-top">
+    <div id="wrapper">
+        <!-- Sidebar -->
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center">
+                <div class="sidebar-brand-icon">
+                    <i class="fas fa-file-image fa-2x"></i>
+                </div>
+                <div class="sidebar-brand-text mx-3 text-white">OCR 이미지 전산</div>
+            </a>
+            <hr class="sidebar-divider my-0">
+            <li class="nav-item">
+                <a class="nav-link" href="list.jsp">
+                    <i class="fas fa-fw fa-list"></i>
+                    <span>OCR 결과 목록</span>
+                </a>
+            </li>
+            <li class="nav-item active">
+                <a class="nav-link" href="ocrRealtimeTest.jsp">
+                    <i class="fas fa-fw fa-flask"></i>
+                    <span>실시간 테스트</span>
+                </a>
+            </li>
+            <hr class="sidebar-divider my-0">
+        </ul>
+        
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+            <div id="content">
+                <!-- Topbar -->
+                <nav class="navbar navbar-expand navbar-light topbar mb-3 static-top custom-navbar-height">
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                    <div class="collapse navbar-collapse">
+                        <ul class="navbar-nav">
+                            <i class="nav-item fas fa-fw fa-home"></i>
+                        </ul>
+                    </div>
+                    <ul class="navbar-nav ml-auto">
+                        <div class="topbar-divider d-none d-sm-block"></div>
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="modal" data-target="#logoutModal">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600"><strong>강진우</strong></span>
+                                <span class="mr-2 d-none d-lg-inline text-gray-600"><i class="fas fa-sign-out-alt text-gray-600"></i></span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                
+                <!-- Logout Modal -->
+                <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h6 class="modal-title">로그아웃 하시겠습니까?</h6>
+                                <button class="close" type="button" data-dismiss="modal">
+                                    <span>×</span>
+                                </button>
+                            </div>
+                            <div class="modal-footer">
+                                <a class="btn btn-primary btn-sm" href="logout">확인</a>
+                                <button class="btn btn-secondary btn-sm" type="button" data-dismiss="modal">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Content -->
+                <div class="container-fluid">
+                    <div class="row">
+                        <!-- 좌측: 테스트 폼 및 결과 -->
+                        <div class="col-md-9">
+                            <!-- 테스트 폼 -->
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">OCR 실시간 테스트</h6>
+                                </div>
+                                <div class="card-body">
+                                    <form id="ocrTestForm" enctype="multipart/form-data">
+                                        <div class="form-row">
+                                            <div class="col-md-12 mb-3">
+                                                <label>파일 선택 *</label>
+                                                <div class="file-input-wrapper">
+                                                    <input type="file" id="fileInput" name="file" accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff" multiple>
+                                                    <label for="fileInput" class="file-input-label">
+                                                        <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
+                                                        <p class="mb-0">파일을 선택하거나 여기에 드래그하세요 (여러 파일 선택 가능)</p>
+                                                    </label>
+                                                    <div class="file-name" id="fileName"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-row">
+                                            <div class="col-md-12">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-play"></i> 테스트 시작
+                                                </button>
+                                                <button type="reset" class="btn btn-secondary btn-sm">
+                                                    <i class="fas fa-redo"></i> 초기화
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            
+                            <!-- 이미지 및 결과 -->
+                            <div class="row">
+                                <!-- 이미지 영역 (65%) -->
+                                <div style="width: 65%; padding-right: 10px;">
+                                    <div class="card shadow mb-4">
+                                        <div class="card-header py-3">
+                                            <h6 class="m-0 font-weight-bold text-primary">이미지 미리보기</h6>
+                                        </div>
+                                        <div class="card-body" style="text-align: center; min-height: 800px; display: flex; align-items: center; justify-content: center;">
+                                            <div id="imagePreview" style="width: 100%; max-height: 800px;">
+                                                <p class="text-muted">이미지가 표시됩니다</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 테이블 결과 영역 (35%) -->
+                                <div style="width: 35%; padding-left: 10px;">
+                                    <div class="card shadow mb-4">
+                                        <div class="card-header py-3">
+                                            <h6 class="m-0 font-weight-bold text-primary">OCR 결과</h6>
+                                        </div>
+                                        <div class="card-body" style="min-height: 800px;">
+                                            <div id="resultSection" style="display: none;">
+                                                <div style="background: #f8f9fc; border-radius: 5px; max-height: 800px; overflow-y: auto;">
+                                                    <table class="table table-sm table-bordered mb-0" style="font-size: 12px;">
+                                                        <tbody id="resultTableBody">
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            <div id="emptyResult" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                                                <p class="text-muted">결과가 표시됩니다</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 우측: 히스토리 -->
+                        <div class="col-md-3">
+                            <div class="card shadow mb-4" style="height: 1000px; display: flex; flex-direction: column;">
+                                <div class="card-header py-3" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h6 class="m-0 font-weight-bold text-primary">테스트 히스토리</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmClearHistory()">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="card-body" style="flex: 1; overflow-y: auto;">
+                                    <div id="historyList" style="font-size: 13px;">
+                                        <p class="text-muted text-center">테스트 기록이 없습니다.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <footer class="sticky-footer">
+                <div class="container-fluid">
+                    <div class="copyright text-center my-auto">
+                        <span class="text-gray-700">Copyright &copy; <strong style="color: #b85363;">REFINE</strong> 2023</span>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
+    
+    <script>
+        // 파일 선택 처리
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (files.length === 0) {
+                document.getElementById('fileName').textContent = '';
+                return;
+            }
+            
+            if (files.length === 1) {
+                document.getElementById('fileName').textContent = '✓ ' + files[0].name;
+                previewFile(files[0]);
+            } else {
+                document.getElementById('fileName').textContent = '✓ ' + files.length + '개 파일 선택됨';
+                previewFile(files[0]);  // 첫 번째 파일만 미리보기
+            }
+        });
+        
+        // 파일 미리보기
+        function previewFile(file) {
+            const fileExt = file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase();
+            const imagePreview = document.getElementById('imagePreview');
+            const pdfPreview = document.getElementById('pdfPreview');
+            const resultSection = document.getElementById('resultSection');
+            
+            if (fileExt === 'pdf') {
+                imagePreview.style.display = 'none';
+                pdfPreview.style.display = 'block';
+                pdfPreview.src = URL.createObjectURL(file);
+            } else if (['jpg', 'jpeg', 'png', 'tif', 'tiff'].includes(fileExt)) {
+                pdfPreview.style.display = 'none';
+                imagePreview.style.display = 'block';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.innerHTML = `<img src="${e.target.result}" style="max-width: 100%; max-height: 800px;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            resultSection.style.display = 'none';
+        }
+        
+        // 폼 제출 처리
+        document.getElementById('ocrTestForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('파일을 선택해주세요.');
+                return;
+            }
+            
+            const files = fileInput.files;
+            const currentYear = new Date().getFullYear().toString();
+            const ctrlYr = currentYear.substring(2);
+            
+            // 각 파일을 순차적으로 업로드
+            let uploadCount = 0;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('instCd', '99');
+                formData.append('prdtCd', 'OCR');
+                formData.append('ctrlYr', ctrlYr);
+                formData.append('docTpCd', '01');
+                
+                // 서버에 파일 업로드
+                fetch('/rf-ocr-verf/api/ocrRealtimeTest.do', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('업로드 성공:', data);
+                    displayResult(data, file.name);
+                    uploadCount++;
+                    if (uploadCount === files.length) {
+                        alert('모든 파일 업로드가 완료되었습니다.');
+                    }
+                })
+                .catch(error => {
+                    console.error('업로드 실패:', error);
+                    alert(file.name + ' 파일 업로드 중 오류가 발생했습니다.');
+                });
+            }
+        });
+        
+        // 결과 표시
+        function displayResult(data, fileName) {
+            const resultSection = document.getElementById('resultSection');
+            const emptyResult = document.getElementById('emptyResult');
+            const resultTableBody = document.getElementById('resultTableBody');
+            const historyList = document.getElementById('historyList');
+            
+            resultTableBody.innerHTML = '';
+            
+            function addTableRows(obj, prefix = '') {
+                for (const key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        const value = obj[key];
+                        const displayKey = prefix ? `${prefix}.${key}` : key;
+                        
+                        if (typeof value === 'object' && value !== null) {
+                            addTableRows(value, displayKey);
+                        } else {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td style="font-weight: 600; width: 40%; word-break: break-word;">${displayKey}</td>
+                                <td style="width: 60%; word-break: break-word;">${value}</td>
+                            `;
+                            resultTableBody.appendChild(row);
+                        }
+                    }
+                }
+            }
+            
+            addTableRows(data);
+            resultSection.style.display = 'block';
+            emptyResult.style.display = 'none';
+            
+            // 히스토리에 추가
+            const now = new Date();
+            const timestamp = now.toLocaleString('ko-KR');
+            const statusBadge = data.success ? '<span class="badge badge-success" style="font-size: 11px;">성공</span>' : '<span class="badge badge-danger" style="font-size: 11px;">실패</span>';
+            
+            const historyItem = document.createElement('div');
+            historyItem.style.cssText = 'padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;';
+            historyItem.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>${fileName}</strong>
+                        <div style="color: #999; font-size: 11px; margin-top: 3px;">${timestamp}</div>
+                    </div>
+                    ${statusBadge}
+                </div>
+            `;
+            
+            historyItem.addEventListener('click', function() {
+                resultTableBody.innerHTML = '';
+                addTableRows(data);
+                resultSection.style.display = 'block';
+                emptyResult.style.display = 'none';
+            });
+            
+            if (historyList.querySelector('.text-muted')) {
+                historyList.innerHTML = '';
+            }
+            
+            historyList.insertBefore(historyItem, historyList.firstChild);
+        }
+        
+        // 히스토리 초기화
+        function confirmClearHistory() {
+            if (confirm('히스토리를 초기화하시겠습니까?')) {
+                clearHistory();
+            }
+        }
+        
+        function clearHistory() {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '<p class="text-muted text-center">테스트 기록이 없습니다.</p>';
+            const resultSection = document.getElementById('resultSection');
+            const emptyResult = document.getElementById('emptyResult');
+            resultSection.style.display = 'none';
+            emptyResult.style.display = 'flex';
+        }
+    </script>
+</body>
+</html>

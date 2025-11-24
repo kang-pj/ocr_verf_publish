@@ -26,4 +26,12 @@ public interface OcrService {
     byte[] getOcrImage(String instCd, String prdtCd, String imagePath);
     
     String getSysClsCd(String instCd, String prdtCd);
+    
+    void uploadFileToS3(org.springframework.web.multipart.MultipartFile file, String path);
+
+    java.util.Map<String, Object> uploadFileToExternalApi(org.springframework.web.multipart.MultipartFile file, String path);
+    
+    String getNextCtrlNo(String instCd, String prdtCd);
+    
+    int insertOcrDocument(java.util.Map<String, Object> params);
 }

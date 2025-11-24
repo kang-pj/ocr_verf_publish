@@ -7,6 +7,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -30,13 +31,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpSession;
+
 import com.refine.ocr.service.OcrService;
 import com.refine.ocr.vo.OcrInfoVO;
+import com.refine.common.vo.LoginVO;
 
 /**
  * OCR 문서 관리 컨트롤러
  */
 @RestController
+@RequestMapping("/rf-ocr-verf/api")
 public class OcrController {
     
     private static final Logger logger = LoggerFactory.getLogger(OcrController.class);
@@ -50,7 +55,7 @@ public class OcrController {
      * @param params 검색 조건
      * @return JSON 응답
      */
-    @PostMapping(value = "/rf-ocr-verf/api/getOcrResultList.do")
+    @PostMapping(value = "/getOcrResultList.do")
     public ResponseEntity<Map<String, Object>> getOcrResultList(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         
@@ -88,7 +93,7 @@ public class OcrController {
     /**
      * 이미지 로딩 및 변환
      */
-    @PostMapping(value = "/rf-ocr-verf/api/getOcrImage.do")
+    @PostMapping(value = "/getOcrImage.do")
     public ResponseEntity<Map<String, Object>> getOcrImage(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         
@@ -104,19 +109,15 @@ public class OcrController {
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             }
             
-            // 이미지 URL 구성
-            String baseUrl = "TEST".equals(String.valueOf(ContextHolder.getDbMode()))
-                ? "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/preview-image-all"
-                : "https://api.work.refinehub.com/apis/refine-ocr-api/v1/application/file/preview-image-all";
+            // 이미지 URL 구성 (기본값: dev 환경)
+            String baseUrl = "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/preview-image-all";
             
             String encodedPath = URLEncoder.encode(Base64.getEncoder().encodeToString(imagePath.getBytes()), "UTF-8");
             String trgtURL = baseUrl + "?instCd=" + instCd + "&prdtCd=" + prdtCd + "&imagePath=" + encodedPath;
             
             try {
                 // 이미지 다운로드
-                InputStream is = HttpUtil.httpConnectionStream(trgtURL, "GET", null, null);
-                byte[] fileArray = IOUtils.toByteArray(is);
-                is.close();
+                byte[] fileArray = downloadImageFromUrl(trgtURL);
                 
                 // 포맷별 변환
                 String base64Image = convertToBase64Image(fileArray, ext);
@@ -138,6 +139,18 @@ public class OcrController {
             result.put("message", e.getMessage());
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
         }
+    }
+    
+    /**
+     * URL에서 이미지 다운로드
+     */
+    private byte[] downloadImageFromUrl(String urlString) throws IOException {
+        java.net.URL url = new java.net.URL(urlString);
+        java.net.URLConnection connection = url.openConnection();
+        InputStream is = connection.getInputStream();
+        byte[] fileArray = IOUtils.toByteArray(is);
+        is.close();
+        return fileArray;
     }
     
     /**
@@ -195,7 +208,7 @@ public class OcrController {
     /**
      * OCR 문서 상세 조회
      */
-    @PostMapping(value = "/rf-ocr-verf/api/getOcrDocumentDetail.do")
+    @PostMapping(value = "/getOcrDocumentDetail.do")
     public ResponseEntity<Map<String, Object>> getOcrDocumentDetail(@RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         
@@ -282,47 +295,112 @@ public class OcrController {
     }
     
     /**
-     * OCR 실시간 테스트 (서류 등록)
+     * OCR 실시간 테스트 (서류 등록 - 멀티파일 지원)
      */
-    @PostMapping(value = "/rf-ocr-verf/api/ocrRealtimeTest.do", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/ocrRealtimeTest.do", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> ocrRealtimeTest(
             @RequestParam("instCd") String instCd,
             @RequestParam("prdtCd") String prdtCd,
             @RequestParam("ctrlYr") String ctrlYr,
             @RequestParam("ctrlNo") String ctrlNo,
             @RequestParam("docTpCd") String docTpCd,
-            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile[] files,
+            HttpSession session) {
         
         Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> uploadedFiles = new ArrayList<>();
+        int totalInserted = 0;
+        int totalFailed = 0;
         
         try {
-            logger.info("OCR 실시간 테스트 요청 - FILE: {}", file.getOriginalFilename());
+            logger.info("OCR 실시간 테스트 요청 - 파일 개수: {}", files.length);
             
-            if (file.isEmpty()) {
+            if (files == null || files.length == 0) {
                 result.put("success", false);
-                result.put("message", "파일이 비어있습니다.");
+                result.put("message", "파일이 없습니다.");
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             }
             
-            String fileName = file.getOriginalFilename();
-            String fileExt = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+            // DB에서 다음 ctrl_no 조회
+            String nextCtrlNo = ocrService.getNextCtrlNo(instCd, prdtCd);
             
-            // 서류 등록 (임시 데이터)
-            Map<String, Object> params = new HashMap<>();
-            params.put("ctrl_yr", ctrlYr);
-            params.put("inst_cd", instCd);
-            params.put("prdt_cd", prdtCd);
-            params.put("ctrl_no", ctrlNo);
-            params.put("doc_tp_cd", docTpCd);
-            params.put("doc_fl_nm", fileName);
-            params.put("doc_fl_ext", fileExt);
-            params.put("file_size", file.getSize());
+            // 로그인 정보 조회
+            LoginVO loginVO = (LoginVO) session.getAttribute("USER");
+            String usrId = (loginVO != null) ? loginVO.getUsrId() : "SYSTEM";
             
-            result.put("success", true);
-            result.put("message", "서류가 성공적으로 등록되었습니다.");
-            result.put("data", params);
+            // 각 파일 처리
+            for (org.springframework.web.multipart.MultipartFile file : files) {
+                if (file.isEmpty()) {
+                    logger.warn("빈 파일 스킵");
+                    totalFailed++;
+                    continue;
+                }
+                
+                try {
+                    String originalFileName = file.getOriginalFilename();
+                    String fileExt = originalFileName.substring(originalFileName.lastIndexOf(".") + 1).toLowerCase();
+                    String fileNameWithoutExt = originalFileName.substring(0, originalFileName.lastIndexOf("."));
+                    
+                    // S3 경로 생성
+                    String s3Path = "test/" + ctrlYr + "/" + instCd + "/" + prdtCd + "/" + nextCtrlNo + "/" + originalFileName;
+                    
+                    // 외부 API로 파일 업로드
+                    Map<String, Object> uploadResult = ocrService.uploadFileToExternalApi(file, s3Path);
+                    
+                    if ((boolean) uploadResult.get("success")) {
+                        // DB에 서류 정보 등록
+                        Map<String, Object> insertParams = new HashMap<>();
+                        insertParams.put("ctrl_yr", ctrlYr);
+                        insertParams.put("inst_cd", instCd);
+                        insertParams.put("prdt_cd", prdtCd);
+                        insertParams.put("ctrl_no", nextCtrlNo);
+                        insertParams.put("doc_tp_cd", docTpCd);
+                        insertParams.put("doc_fl_nm", fileNameWithoutExt);
+                        insertParams.put("doc_fl_sav_pth_nm", s3Path);
+                        insertParams.put("doc_fl_ext", fileExt);
+                        insertParams.put("ins_id", usrId);
+                        insertParams.put("enc_yn", "N");
+                        insertParams.put("ocr_yn", "N");
+                        insertParams.put("menu_cd", "RF_TEST");
+                        
+                        // DB Insert
+                        int insertResult = ocrService.insertOcrDocument(insertParams);
+                        
+                        if (insertResult > 0) {
+                            totalInserted++;
+                            uploadedFiles.add(insertParams);
+                            logger.info("파일 등록 완료 - 파일명: {}", fileNameWithoutExt);
+                        } else {
+                            totalFailed++;
+                            logger.warn("파일 DB 등록 실패 - 파일명: {}", fileNameWithoutExt);
+                        }
+                    } else {
+                        totalFailed++;
+                        logger.warn("파일 업로드 실패 - 파일명: {}, 사유: {}", fileNameWithoutExt, uploadResult.get("message"));
+                    }
+                } catch (Exception e) {
+                    totalFailed++;
+                    logger.error("파일 처리 중 오류 발생", e);
+                }
+            }
             
-            logger.info("OCR 실시간 테스트 완료 - 파일명: {}", fileName);
+            // 결과 반환
+            if (totalInserted > 0) {
+                result.put("success", true);
+                result.put("message", totalInserted + "개 파일이 등록되었습니다.");
+                if (totalFailed > 0) {
+                    result.put("message", result.get("message") + " (" + totalFailed + "개 실패)");
+                }
+                result.put("data", uploadedFiles);
+                result.put("totalInserted", totalInserted);
+                result.put("totalFailed", totalFailed);
+                logger.info("OCR 실시간 테스트 완료 - 성공: {} 건, 실패: {} 건", totalInserted, totalFailed);
+            } else {
+                result.put("success", false);
+                result.put("message", "등록된 파일이 없습니다.");
+                result.put("totalInserted", 0);
+                result.put("totalFailed", totalFailed);
+            }
             
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_JSON)
@@ -338,5 +416,6 @@ public class OcrController {
                     .body(result);
         }
     }
-
+    
 }
+

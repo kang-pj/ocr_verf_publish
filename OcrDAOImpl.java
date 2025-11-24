@@ -3,7 +3,7 @@ package com.refine.ocr.dao.impl;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.ibatis.session.SqlSession;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -17,7 +17,7 @@ import com.refine.ocr.vo.OcrInfoVO;
 public class OcrDAOImpl implements OcrDAO {
     
     @Autowired
-    private SqlSession sqlSession;
+    private SqlSessionTemplate sqlSession;
     
     private static final String NAMESPACE = "com.refine.ocr.mapper.OcrMapper";
     
@@ -64,5 +64,15 @@ public class OcrDAOImpl implements OcrDAO {
     @Override
     public String getSysClsCd(Map<String, Object> params) {
         return sqlSession.selectOne(NAMESPACE + ".getSysClsCd", params);
+    }
+    
+    @Override
+    public String getMaxCtrlNo(Map<String, Object> params) {
+        return sqlSession.selectOne(NAMESPACE + ".getMaxCtrlNo", params);
+    }
+    
+    @Override
+    public int insertOcrDocument(Map<String, Object> params) {
+        return sqlSession.insert(NAMESPACE + ".insertOcrDocument", params);
     }
 }
