@@ -242,8 +242,11 @@
                                 <!-- 이미지 영역 (65%) -->
                                 <div style="width: 65%; padding-right: 10px;">
                                     <div class="card shadow mb-4">
-                                        <div class="card-header py-3">
+                                        <div class="card-header py-3" style="display: flex; justify-content: space-between; align-items: center;">
                                             <h6 class="m-0 font-weight-bold text-primary">이미지 미리보기</h6>
+                                            <button type="button" class="btn btn-sm btn-primary" id="detailViewBtn" style="display: none;">
+                                                <i class="fas fa-external-link-alt"></i> 상세보기
+                                            </button>
                                         </div>
                                         <div class="card-body" style="text-align: center; min-height: 800px; display: flex; align-items: center; justify-content: center;">
                                             <div id="imagePreview" style="width: 100%; max-height: 800px;">
@@ -384,13 +387,33 @@
                 historyItem.onmouseover = function() { this.style.backgroundColor = '#f8f9fc'; };
                 historyItem.onmouseout = function() { this.style.backgroundColor = '#ffffff'; };
                 
-                const fileName = item.doc_fl_nm || item.ocr_doc_no || 'Unknown';
+                const ctrlKey = item.ctrl_key || 'Unknown';
                 const timestamp = item.ins_dttm ? new Date(item.ins_dttm).toLocaleString('ko-KR') : '';
-                const statusBadge = '<span class="badge badge-success" style="font-size: 11px; background-color: #28a745; color: white;">완료</span>';
+                
+                // ocr_yn에 따라 상태 배지 결정
+                let statusBadge = '';
+                let statusText = '';
+                let badgeColor = '';
+                
+                if (item.ocr_yn === 'Y') {
+                    statusText = '완료';
+                    badgeColor = '#28a745';
+                } else if (item.ocr_yn === 'N') {
+                    statusText = '대기';
+                    badgeColor = '#ffc107';
+                } else if (item.ocr_yn === 'X') {
+                    statusText = '실패';
+                    badgeColor = '#dc3545';
+                } else {
+                    statusText = '대기';
+                    badgeColor = '#ffc107';
+                }
+                
+                statusBadge = '<span class="badge" style="font-size: 11px; background-color: ' + badgeColor + '; color: white;">' + statusText + '</span>';
                 
                 historyItem.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; color: #333;">' +
                     '<div style="flex: 1; min-width: 0;">' +
-                    '<strong style="display: block; word-break: break-word; color: #333;">' + fileName + '</strong>' +
+                    '<strong style="display: block; word-break: break-word; color: #333;">' + ctrlKey + '</strong>' +
                     '<div style="color: #999; font-size: 11px; margin-top: 3px;">' + timestamp + '</div>' +
                     '</div>' +
                     '<div style="flex-shrink: 0;">' +
@@ -404,7 +427,7 @@
                 });
                 
                 historyList.appendChild(historyItem);
-                console.log('히스토리 항목 추가됨:', fileName);
+                console.log('히스토리 항목 추가됨:', ctrlKey);
             });
             console.log('히스토리 목록 표시 완료');
         }
@@ -415,8 +438,26 @@
             const emptyResult = document.getElementById('emptyResult');
             const resultTableBody = document.getElementById('resultTableBody');
             const imagePreview = document.getElementById('imagePreview');
+            const detailViewBtn = document.getElementById('detailViewBtn');
             
             resultTableBody.innerHTML = '';
+            
+            // 상세보기 버튼 설정
+            if (item.ocr_doc_no) {
+                detailViewBtn.style.display = 'block';
+                detailViewBtn.onclick = function() {
+                    // detail 페이지로 이동 (새탭)
+                    const detailUrl = '/rf-ocr-verf/main?pageChange=/ocrRsltDetail' + 
+                        '&ctrl_yr=' + item.ctrl_yr + 
+                        '&inst_cd=' + item.inst_cd + 
+                        '&prdt_cd=' + item.prdt_cd + 
+                        '&ctrl_no=' + item.ctrl_no + 
+                        '&doc_tp_cd=' + item.doc_tp_cd;
+                    window.open(detailUrl, '_blank');
+                };
+            } else {
+                detailViewBtn.style.display = 'none';
+            }
             
             // 이미지 미리보기 표시
             if (item.doc_fl_sav_pth_nm) {
@@ -452,29 +493,80 @@
                 imagePreview.innerHTML = '<p class="text-muted">이미지 정보가 없습니다.</p>';
             }
             
-            // 주요 정보 표시
-            const displayData = {
-                '파일명': item.doc_fl_nm || '-',
-                '확장자': item.doc_fl_ext || '-',
-                '등록일시': item.ins_dttm || '-',
-                '등록자': item.ins_id || '-',
-                'OCR문서번호': item.ocr_doc_no || '-',
-                '관리번호': item.ctrl_key || '-'
-            };
-            
-            for (const key in displayData) {
-                const row = document.createElement('tr');
-                row.innerHTML = '<td style="font-weight: 600; width: 40%; word-break: break-word;">' + key + '</td>' +
-                    '<td style="width: 60%; word-break: break-word;">' + displayData[key] + '</td>';
-                resultTableBody.appendChild(row);
+            // OCR 결과 조회
+            if (item.ocr_doc_no) {
+                fetch('/rf-ocr-verf/api/getOcrResultText.do', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ocr_doc_no: item.ocr_doc_no
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('OCR 결과:', data);
+                    if (data.success && data.data && data.data.length > 0) {
+                        // OCR 결과가 있으면 테이블에 추가
+                        data.data.forEach(function(ocrItem) {
+                            const row = document.createElement('tr');
+                            const itemNm = ocrItem.item_nm || ocrItem.item_cd || '-';
+                            const itemValue = ocrItem.item_value || '-';
+                            row.innerHTML = '<td style="font-weight: 600; width: 30%; word-break: break-word; padding: 6px 8px; background-color: #f8f9fc;">' + itemNm + '</td>' +
+                                '<td style="width: 70%; word-break: break-word; padding: 6px 8px;">' + itemValue + '</td>';
+                            resultTableBody.appendChild(row);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('OCR 결과 조회 실패:', error);
+                });
             }
             
             resultSection.style.display = 'block';
             emptyResult.style.display = 'none';
         }
         
+        // 드래그 앤 드롭 처리
+        const fileInputLabel = document.querySelector('.file-input-label');
+        const fileInput = document.getElementById('fileInput');
+        
+        // 드래그 오버 이벤트
+        fileInputLabel.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInputLabel.style.borderColor = '#4e73df';
+            fileInputLabel.style.backgroundColor = '#f0f4ff';
+        });
+        
+        // 드래그 리브 이벤트
+        fileInputLabel.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInputLabel.style.borderColor = '#ddd';
+            fileInputLabel.style.backgroundColor = '#f8f9fc';
+        });
+        
+        // 드롭 이벤트
+        fileInputLabel.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInputLabel.style.borderColor = '#ddd';
+            fileInputLabel.style.backgroundColor = '#f8f9fc';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                
+                // change 이벤트 트리거
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+            }
+        });
+        
         // 파일 선택 처리
-        document.getElementById('fileInput').addEventListener('change', function(e) {
+        fileInput.addEventListener('change', function(e) {
             const files = e.target.files;
             if (files.length === 0) {
                 document.getElementById('fileName').textContent = '';

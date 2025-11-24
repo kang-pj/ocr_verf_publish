@@ -140,6 +140,39 @@ public class OcrController {
     }
     
     /**
+     * OCR 결과 텍스트 조회
+     */
+    @PostMapping(value = "/getOcrResultText.do")
+    public ResponseEntity<Map<String, Object>> getOcrResultText(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            logger.info("OCR 결과 텍스트 조회 요청: {}", params);
+            
+            // OCR 결과 조회
+            List<OcrInfoVO> ocrResults = ocrService.getOcrResultText(params);
+            
+            result.put("success", true);
+            result.put("data", ocrResults);
+            
+            logger.info("OCR 결과 텍스트 조회 완료: {} 건", ocrResults != null ? ocrResults.size() : 0);
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+            
+        } catch (Exception e) {
+            logger.error("OCR 결과 텍스트 조회 실패", e);
+            result.put("success", false);
+            result.put("message", "OCR 결과 조회 중 오류가 발생했습니다: " + e.getMessage());
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+    
+    /**
      * 이미지 로딩 및 변환
      */
     @PostMapping(value = "/getOcrImage.do")
