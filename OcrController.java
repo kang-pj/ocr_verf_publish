@@ -50,6 +50,55 @@ public class OcrController {
     private OcrService ocrService;
     
     /**
+     * OCR 실시간 테스트 히스토리 목록 조회
+     */
+    @PostMapping(value = "/getOcrTestHistory.do")
+    public ResponseEntity<Map<String, Object>> getOcrTestHistory(HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            // 로그인 정보 조회
+            LoginVO loginVO = (LoginVO) session.getAttribute("USER");
+            if (loginVO == null) {
+                result.put("success", false);
+                result.put("message", "로그인 정보가 없습니다.");
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+            }
+            
+            String usrId = loginVO.getUsrId();
+            logger.info("OCR 테스트 히스토리 조회 요청 - 사용자: {}", usrId);
+            
+            // 조회 조건 설정
+            Map<String, Object> params = new HashMap<>();
+            params.put("inst_cd", "99");
+            params.put("prdt_cd", "OCR");
+            params.put("ins_id", usrId);
+            
+            // 히스토리 목록 조회 (최신순)
+            List<OcrInfoVO> historyList = ocrService.getOcrDocumentList(params);
+            
+            result.put("success", true);
+            result.put("data", historyList);
+            result.put("recordsTotal", historyList.size());
+            
+            logger.info("OCR 테스트 히스토리 조회 완료: {} 건", historyList.size());
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+            
+        } catch (Exception e) {
+            logger.error("OCR 테스트 히스토리 조회 실패", e);
+            result.put("success", false);
+            result.put("message", "히스토리 조회 중 오류가 발생했습니다: " + e.getMessage());
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+    
+    /**
      * OCR 결과 목록 조회 (AJAX)
      * 
      * @param params 검색 조건

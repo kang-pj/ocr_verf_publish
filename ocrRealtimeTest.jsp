@@ -286,9 +286,9 @@
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
-                                <div class="card-body" style="flex: 1; overflow-y: auto;">
-                                    <div id="historyList" style="font-size: 13px;">
-                                        <p class="text-muted text-center">테스트 기록이 없습니다.</p>
+                                <div class="card-body" style="flex: 1; overflow-y: auto; padding: 0;">
+                                    <div id="historyList" style="font-size: 13px; background-color: #fff; color: #333;">
+                                        <p class="text-muted text-center" style="padding: 20px 10px; margin: 0;">테스트 기록이 없습니다.</p>
                                     </div>
                                 </div>
                             </div>
@@ -314,6 +314,165 @@
     </a>
     
     <script>
+        console.log('스크립트 로드됨');
+        
+        // 페이지 로드 시 히스토리 조회
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded 이벤트 발생');
+            loadHistory();
+        });
+        
+        // 혹시 DOMContentLoaded가 이미 지난 경우를 대비
+        if (document.readyState === 'loading') {
+            console.log('문서 로딩 중');
+        } else {
+            console.log('문서 이미 로드됨, 히스토리 조회 시작');
+            loadHistory();
+        }
+        
+        // 히스토리 조회
+        function loadHistory() {
+            console.log('히스토리 조회 시작');
+            const historyListElement = document.getElementById('historyList');
+            console.log('historyList 요소:', historyListElement);
+            if (!historyListElement) {
+                console.error('historyList 요소를 찾을 수 없습니다!');
+                return;
+            }
+            
+            fetch('/rf-ocr-verf/api/getOcrTestHistory.do', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log('응답 상태:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('히스토리 데이터:', data);
+                if (data.success && data.data && data.data.length > 0) {
+                    console.log('히스토리 개수:', data.data.length);
+                    displayHistoryList(data.data);
+                } else {
+                    console.log('히스토리 없음');
+                    document.getElementById('historyList').innerHTML = '<p class="text-muted text-center">테스트 기록이 없습니다.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('히스토리 조회 실패:', error);
+                document.getElementById('historyList').innerHTML = '<p class="text-muted text-center">히스토리 조회 중 오류가 발생했습니다.</p>';
+            });
+        }
+        
+        // 히스토리 목록 표시
+        function displayHistoryList(historyData) {
+            console.log('히스토리 목록 표시 시작, 개수:', historyData.length);
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            
+            if (!historyData || historyData.length === 0) {
+                historyList.innerHTML = '<p class="text-muted text-center">테스트 기록이 없습니다.</p>';
+                return;
+            }
+            
+            historyData.forEach(function(item, index) {
+                console.log('히스토리 항목 ' + index + ':', item);
+                const historyItem = document.createElement('div');
+                historyItem.style.cssText = 'padding: 12px 10px; border-bottom: 1px solid #eee; cursor: pointer; background-color: #ffffff; transition: background-color 0.2s; color: #333;';
+                historyItem.onmouseover = function() { this.style.backgroundColor = '#f8f9fc'; };
+                historyItem.onmouseout = function() { this.style.backgroundColor = '#ffffff'; };
+                
+                const fileName = item.doc_fl_nm || item.ocr_doc_no || 'Unknown';
+                const timestamp = item.ins_dttm ? new Date(item.ins_dttm).toLocaleString('ko-KR') : '';
+                const statusBadge = '<span class="badge badge-success" style="font-size: 11px; background-color: #28a745; color: white;">완료</span>';
+                
+                historyItem.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; color: #333;">' +
+                    '<div style="flex: 1; min-width: 0;">' +
+                    '<strong style="display: block; word-break: break-word; color: #333;">' + fileName + '</strong>' +
+                    '<div style="color: #999; font-size: 11px; margin-top: 3px;">' + timestamp + '</div>' +
+                    '</div>' +
+                    '<div style="flex-shrink: 0;">' +
+                    statusBadge +
+                    '</div>' +
+                    '</div>';
+                
+                historyItem.addEventListener('click', function() {
+                    console.log('히스토리 항목 클릭:', item);
+                    displayHistoryDetail(item);
+                });
+                
+                historyList.appendChild(historyItem);
+                console.log('히스토리 항목 추가됨:', fileName);
+            });
+            console.log('히스토리 목록 표시 완료');
+        }
+        
+        // 히스토리 상세 표시
+        function displayHistoryDetail(item) {
+            const resultSection = document.getElementById('resultSection');
+            const emptyResult = document.getElementById('emptyResult');
+            const resultTableBody = document.getElementById('resultTableBody');
+            const imagePreview = document.getElementById('imagePreview');
+            
+            resultTableBody.innerHTML = '';
+            
+            // 이미지 미리보기 표시
+            if (item.doc_fl_sav_pth_nm) {
+                // 이미지 경로가 있으면 미리보기 표시
+                imagePreview.innerHTML = '<p class="text-muted">이미지 로딩 중...</p>';
+                
+                // 이미지 조회 API 호출
+                fetch('/rf-ocr-verf/api/getOcrImage.do', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inst_cd: item.inst_cd,
+                        prdt_cd: item.prdt_cd,
+                        image_path: item.doc_fl_sav_pth_nm,
+                        ext: item.doc_fl_ext
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        imagePreview.innerHTML = '<img src="' + data.data + '" style="max-width: 100%; max-height: 800px;">';
+                    } else {
+                        imagePreview.innerHTML = '<p class="text-muted">이미지를 로드할 수 없습니다.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('이미지 조회 실패:', error);
+                    imagePreview.innerHTML = '<p class="text-muted">이미지 조회 중 오류가 발생했습니다.</p>';
+                });
+            } else {
+                imagePreview.innerHTML = '<p class="text-muted">이미지 정보가 없습니다.</p>';
+            }
+            
+            // 주요 정보 표시
+            const displayData = {
+                '파일명': item.doc_fl_nm || '-',
+                '확장자': item.doc_fl_ext || '-',
+                '등록일시': item.ins_dttm || '-',
+                '등록자': item.ins_id || '-',
+                'OCR문서번호': item.ocr_doc_no || '-',
+                '관리번호': item.ctrl_key || '-'
+            };
+            
+            for (const key in displayData) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td style="font-weight: 600; width: 40%; word-break: break-word;">' + key + '</td>' +
+                    '<td style="width: 60%; word-break: break-word;">' + displayData[key] + '</td>';
+                resultTableBody.appendChild(row);
+            }
+            
+            resultSection.style.display = 'block';
+            emptyResult.style.display = 'none';
+        }
+        
         // 파일 선택 처리
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const files = e.target.files;
@@ -392,6 +551,7 @@
                     uploadCount++;
                     if (uploadCount === files.length) {
                         alert('모든 파일 업로드가 완료되었습니다.');
+                        loadHistory();  // 히스토리 새로고침
                     }
                 })
                 .catch(error => {

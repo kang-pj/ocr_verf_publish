@@ -22,7 +22,20 @@
     
     <!-- OCR 문서 목록 조회 -->
     <select id="getOcrDocumentList" parameterType="map" resultType="com.refine.ocr.vo.OcrInfoVO">
-        SELECT *
+        SELECT
+            ctrl_yr,
+            inst_cd,
+            prdt_cd,
+            ctrl_no,
+            CONCAT(ctrl_yr, '-', inst_cd, '-', prdt_cd, '-', ctrl_no) AS ctrl_key,
+            doc_tp_cd,
+            ocr_doc_no,
+            doc_fl_nm,
+            doc_fl_sav_pth_nm,
+            doc_fl_ext,
+            ins_dttm,
+            ins_id,
+            enc_yn
         FROM doc_ocr_inf
         WHERE 1=1
         <if test="ctrl_yr != null and ctrl_yr != ''">
@@ -33,6 +46,9 @@
         </if>
         <if test="prdt_cd != null and prdt_cd != ''">
             AND prdt_cd = #{prdt_cd}
+        </if>
+        <if test="ins_id != null and ins_id != ''">
+            AND ins_id = #{ins_id}
         </if>
         ORDER BY ins_dttm DESC
         <if test="paging != null and num != null">
