@@ -419,46 +419,15 @@ public class OcrController {
                 }
                 
                 try {
-                    String originalFileName = file.getOriginalFilename();
-                    String fileExt = originalFileName.substring(originalFileName.lastIndexOf(".") + 1).toLowerCase();
-                    String fileNameWithoutExt = originalFileName.substring(0, originalFileName.lastIndexOf("."));
+                    int uploadResult = ocrService.uploadAndInsertOcrDocument(file, ctrlYr, instCd, prdtCd, nextCtrlNo, docTpCd, usrId);
                     
-                    // S3 경로 생성
-                    String s3Path = "test/" + ctrlYr + "/" + instCd + "/" + prdtCd + "/" + nextCtrlNo + "/" + originalFileName;
-                    
-                    // 외부 API로 파일 업로드
-                    Map<String, Object> uploadResult = ocrService.uploadFileToExternalApi(file, s3Path);
-                    
-                    if ((boolean) uploadResult.get("success")) {
-                        // DB에 서류 정보 등록
-                        Map<String, Object> insertParams = new HashMap<>();
-                        insertParams.put("ctrl_yr", ctrlYr);
-                        insertParams.put("inst_cd", instCd);
-                        insertParams.put("prdt_cd", prdtCd);
-                        insertParams.put("ctrl_no", nextCtrlNo);
-                        insertParams.put("doc_tp_cd", docTpCd);
-                        insertParams.put("doc_fl_nm", fileNameWithoutExt);
-                        insertParams.put("doc_fl_sav_pth_nm", s3Path);
-                        insertParams.put("doc_fl_ext", fileExt);
-                        insertParams.put("ins_id", usrId);
-                        insertParams.put("enc_yn", "N");
-                        insertParams.put("ocr_yn", "N");
-                        insertParams.put("menu_cd", "RF_TEST");
-                        
-                        // DB Insert
-                        int insertResult = ocrService.insertOcrDocument(insertParams);
-                        
-                        if (insertResult > 0) {
-                            totalInserted++;
-                            uploadedFiles.add(insertParams);
-                            logger.info("파일 등록 완료 - 파일명: {}", fileNameWithoutExt);
-                        } else {
-                            totalFailed++;
-                            logger.warn("파일 DB 등록 실패 - 파일명: {}", fileNameWithoutExt);
-                        }
+                    if (uploadResult > 0) {
+                        totalInserted++;
+                        Map<String, Object> fileInfo = new HashMap<>();
+                        fileInfo.put("file_name", file.getOriginalFilename());
+                        uploadedFiles.add(fileInfo);
                     } else {
                         totalFailed++;
-                        logger.warn("파일 업로드 실패 - 파일명: {}, 사유: {}", fileNameWithoutExt, uploadResult.get("message"));
                     }
                 } catch (Exception e) {
                     totalFailed++;

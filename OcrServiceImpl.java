@@ -487,7 +487,7 @@ public class OcrServiceImpl implements OcrService {
     public void deleteFileFromExternalApi(List<String> filePaths) {
         try {
             org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-            String deleteFileUrl = "http://localhost:8080/delete-files";
+            String deleteFileUrl = "http://localhost:8080/delete-file-multi";
             
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
@@ -528,6 +528,55 @@ public class OcrServiceImpl implements OcrService {
         } catch (Exception e) {
             logger.error("사용자 테스트 파일 리스트 조회 실패: USR_ID={}", usrId, e);
             throw new RuntimeException("파일 리스트 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
+    @Transactional(readOnly = false)
+    public int uploadAndInsertOcrDocument(org.springframework.web.multipart.MultipartFile file, String ctrlYr, String instCd, String prdtCd, String nextCtrlNo, String docTpCd, String usrId) {
+        try {
+            String originalFileName = file.getOriginalFilename();
+            String fileExt = originalFileName.substring(originalFileName.lastIndexOf(".") + 1).toLowerCase();
+            String fileNameWithoutExt = originalFileName.substring(0, originalFileName.lastIndexOf("."));
+            
+            // S3 경로 생성
+            String s3Path = "test/" + ctrlYr + "/" + instCd + "/" + prdtCd + "/" + nextCtrlNo + "/" + originalFileName;
+            
+            // 외부 API로 파일 업로드
+            Map<String, Object> uploadResult = uploadFileToExternalApi(file, s3Path);
+            
+            if ((boolean) uploadResult.get("success")) {
+                // DB에 서류 정보 등록
+                Map<String, Object> insertParams = new HashMap<>();
+                insertParams.put("ctrl_yr", ctrlYr);
+                insertParams.put("inst_cd", instCd);
+                insertParams.put("prdt_cd", prdtCd);
+                insertParams.put("ctrl_no", nextCtrlNo);
+                insertParams.put("doc_tp_cd", docTpCd);
+                insertParams.put("doc_fl_nm", fileNameWithoutExt);
+                insertParams.put("doc_fl_sav_pth_nm", s3Path);
+                insertParams.put("doc_fl_ext", fileExt);
+                insertParams.put("ins_id", usrId);
+                insertParams.put("enc_yn", "N");
+                insertParams.put("ocr_yn", "N");
+                insertParams.put("menu_cd", "RF_TEST");
+                
+                int insertResult = ocrDAO.insertOcrDocument(insertParams);
+                
+                if (insertResult > 0) {
+                    logger.info("파일 등록 완료 - 파일명: {}", fileNameWithoutExt);
+                    return 1;
+                } else {
+                    logger.warn("파일 DB 등록 실패 - 파일명: {}", fileNameWithoutExt);
+                    return 0;
+                }
+            } else {
+                logger.warn("파일 업로드 실패 - 파일명: {}, 사유: {}", fileNameWithoutExt, uploadResult.get("message"));
+                return 0;
+            }
+        } catch (Exception e) {
+            logger.error("파일 처리 중 오류 발생", e);
+            throw new RuntimeException("파일 처리 중 오류가 발생했습니다.", e);
         }
     }
     

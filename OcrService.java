@@ -43,5 +43,7 @@ public interface OcrService {
     
     void deleteFileFromExternalApi(java.util.List<String> filePaths);
     
+    int uploadAndInsertOcrDocument(org.springframework.web.multipart.MultipartFile file, String ctrlYr, String instCd, String prdtCd, String nextCtrlNo, String docTpCd, String usrId);
+    
     int deleteUserTestData(String usrId);
 }
