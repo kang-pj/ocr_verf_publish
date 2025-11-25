@@ -19,60 +19,83 @@ public class OcrDAOImpl implements OcrDAO {
     @Autowired
     private SqlSessionTemplate sqlSession;
     
-    private static final String NAMESPACE = "com.refine.ocr.mapper.OcrMapper";
-    
     @Override
     public int getOcrDocumentCount(Map<String, Object> params) {
-        return sqlSession.selectOne(NAMESPACE + ".getOcrDocumentCount", params);
+        return sqlSession.selectOne("ocr.getOcrDocumentCount", params);
     }
     
     @Override
     public List<OcrInfoVO> getOcrDocumentList(Map<String, Object> params) {
-        return sqlSession.selectList(NAMESPACE + ".getOcrDocumentList", params);
+        return sqlSession.selectList("ocr.getOcrDocumentList", params);
     }
     
     @Override
     public OcrInfoVO getOcrDocumentDetail(Map<String, Object> params) {
-        return sqlSession.selectOne(NAMESPACE + ".getOcrDocumentDetail", params);
+        return sqlSession.selectOne("ocr.getOcrDocumentDetail", params);
     }
     
     @Override
     public List<OcrInfoVO> getDocumentListByCtrlNo(Map<String, Object> params) {
-        return sqlSession.selectList(NAMESPACE + ".getDocumentListByCtrlNo", params);
+        return sqlSession.selectList("ocr.getDocumentListByCtrlNo", params);
     }
     
     @Override
     public List<OcrInfoVO> getOcrResultText(Map<String, Object> params) {
-        return sqlSession.selectList(NAMESPACE + ".getOcrResultText", params);
+        return sqlSession.selectList("ocr.getOcrResultText", params);
     }
     
     @Override
     public List<String> getOcrDocNoList(Map<String, Object> params) {
-        return sqlSession.selectList(NAMESPACE + ".getOcrDocNoList", params);
+        return sqlSession.selectList("ocr.getOcrDocNoList", params);
     }
     
     @Override
     public int updateVerificationStatus(Map<String, Object> params) {
-        return sqlSession.update(NAMESPACE + ".updateVerificationStatus", params);
+        return sqlSession.update("ocr.updateVerificationStatus", params);
     }
     
     @Override
     public OcrInfoVO getImageInfo(Map<String, Object> params) {
-        return sqlSession.selectOne(NAMESPACE + ".getImageInfo", params);
+        return sqlSession.selectOne("ocr.getImageInfo", params);
     }
     
     @Override
     public String getSysClsCd(Map<String, Object> params) {
-        return sqlSession.selectOne(NAMESPACE + ".getSysClsCd", params);
+        return sqlSession.selectOne("ocr.getSysClsCd", params);
     }
     
     @Override
     public String getMaxCtrlNo(Map<String, Object> params) {
-        return sqlSession.selectOne(NAMESPACE + ".getMaxCtrlNo", params);
+        return sqlSession.selectOne("ocr.getMaxCtrlNo", params);
     }
     
     @Override
     public int insertOcrDocument(Map<String, Object> params) {
-        return sqlSession.insert(NAMESPACE + ".insertOcrDocument", params);
+        return sqlSession.insert("ocr.insertOcrDocument", params);
+    }
+    
+    @Override
+    public int deleteOcrResult(Map<String, Object> params) {
+        return sqlSession.delete("ocr.deleteOcrResult", params);
+    }
+    
+    @Override
+    public int deleteOcrDocument(Map<String, Object> params) {
+        return sqlSession.delete("ocr.deleteOcrDocument", params);
+    }
+    
+    @Override
+    public List<String> getOcrDocNoListByUserId(Map<String, Object> params) {
+        return sqlSession.selectList("ocr.getOcrDocNoListByUserId", params);
+    }
+    
+    @Override
+    public List<String> getUserTestFilePathList(Map<String, Object> params) {
+        return sqlSession.selectList("ocr.getUserTestFilePathList", params);
+    }
+    
+    @Override
+    public int deleteUserTestDocuments(Map<String, Object> params) {
+        return sqlSession.delete("ocr.deleteUserTestDocuments", params);
     }
 }

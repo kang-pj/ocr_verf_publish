@@ -98,6 +98,38 @@
         .card-body {
             padding: 1.25rem !important;
         }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
+        .loading-spinner {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .loading-spinner .spinner-border {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 15px;
+        }
+        .loading-spinner p {
+            margin: 0;
+            color: #333;
+            font-weight: 600;
+        }
         .file-input-wrapper {
             position: relative;
             overflow: hidden;
@@ -130,6 +162,16 @@
     </style>
 </head>
 <body id="page-top">
+    <!-- 로딩 오버레이 -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">로딩 중...</span>
+            </div>
+            <p>테스트 진행 중입니다...</p>
+        </div>
+    </div>
+    
     <div id="wrapper">
         <!-- Sidebar -->
         <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
@@ -319,6 +361,13 @@
     <script>
         console.log('스크립트 로드됨');
         
+        // 페이지 이동 경고
+        window.addEventListener('beforeunload', function(e) {
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        });
+        
         // 페이지 로드 시 히스토리 조회
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOMContentLoaded 이벤트 발생');
@@ -383,7 +432,7 @@
             historyData.forEach(function(item, index) {
                 console.log('히스토리 항목 ' + index + ':', item);
                 const historyItem = document.createElement('div');
-                historyItem.style.cssText = 'padding: 12px 10px; border-bottom: 1px solid #eee; cursor: pointer; background-color: #ffffff; transition: background-color 0.2s; color: #333;';
+                historyItem.style.cssText = 'padding: 12px 10px; border-bottom: 1px solid #eee; background-color: #ffffff; transition: background-color 0.2s; color: #333;';
                 historyItem.onmouseover = function() { this.style.backgroundColor = '#f8f9fc'; };
                 historyItem.onmouseout = function() { this.style.backgroundColor = '#ffffff'; };
                 
@@ -411,21 +460,33 @@
                 
                 statusBadge = '<span class="badge" style="font-size: 11px; background-color: ' + badgeColor + '; color: white;">' + statusText + '</span>';
                 
-                historyItem.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; color: #333;">' +
-                    '<div style="flex: 1; min-width: 0;">' +
+                const contentDiv = document.createElement('div');
+                contentDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; color: #333; cursor: pointer;';
+                contentDiv.innerHTML = '<div style="flex: 1; min-width: 0;">' +
                     '<strong style="display: block; word-break: break-word; color: #333;">' + ctrlKey + '</strong>' +
                     '<div style="color: #999; font-size: 11px; margin-top: 3px;">' + timestamp + '</div>' +
                     '</div>' +
                     '<div style="flex-shrink: 0;">' +
                     statusBadge +
-                    '</div>' +
                     '</div>';
                 
-                historyItem.addEventListener('click', function() {
+                contentDiv.addEventListener('click', function() {
                     console.log('히스토리 항목 클릭:', item);
                     displayHistoryDetail(item);
                 });
                 
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'btn btn-sm btn-outline-danger';
+                deleteBtn.style.cssText = 'padding: 2px 6px; font-size: 11px; margin-top: 8px; width: 100%;';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 삭제';
+                deleteBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    deleteHistoryItem(item.ocr_doc_no, item.doc_fl_sav_pth_nm);
+                });
+                
+                historyItem.appendChild(contentDiv);
+                historyItem.appendChild(deleteBtn);
                 historyList.appendChild(historyItem);
                 console.log('히스토리 항목 추가됨:', ctrlKey);
             });
@@ -620,6 +681,9 @@
             const currentYear = new Date().getFullYear().toString();
             const ctrlYr = currentYear.substring(2);
             
+            // 로딩 바 표시
+            document.getElementById('loadingOverlay').classList.add('active');
+            
             // 각 파일을 순차적으로 업로드
             let uploadCount = 0;
             for (let i = 0; i < files.length; i++) {
@@ -642,12 +706,16 @@
                     displayResult(data, file.name);
                     uploadCount++;
                     if (uploadCount === files.length) {
+                        // 로딩 바 숨김
+                        document.getElementById('loadingOverlay').classList.remove('active');
                         alert('모든 파일 업로드가 완료되었습니다.');
                         loadHistory();  // 히스토리 새로고침
                     }
                 })
                 .catch(error => {
                     console.error('업로드 실패:', error);
+                    // 로딩 바 숨김
+                    document.getElementById('loadingOverlay').classList.remove('active');
                     alert(file.name + ' 파일 업로드 중 오류가 발생했습니다.');
                 });
             }
@@ -717,9 +785,43 @@
             historyList.insertBefore(historyItem, historyList.firstChild);
         }
         
-        // 히스토리 초기화
+        // 히스토리 삭제 (개별)
+        function deleteHistoryItem(ocrDocNo, docFlSavPthNm) {
+            if (confirm('이 항목을 삭제하시겠습니까?')) {
+                // 로딩 바 표시
+                document.getElementById('loadingOverlay').classList.add('active');
+                
+                fetch('/rf-ocr-verf/api/deleteHistory.do', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // 로딩 바 숨김
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    
+                    if (data.success) {
+                        alert('삭제되었습니다.');
+                        loadHistory();
+                    } else {
+                        alert('삭제 실패: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    // 로딩 바 숨김
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    
+                    console.error('삭제 실패:', error);
+                    alert('삭제 중 오류가 발생했습니다.');
+                });
+            }
+        }
+        
+        // 히스토리 초기화 (전체)
         function confirmClearHistory() {
-            if (confirm('히스토리를 초기화하시겠습니까?')) {
+            if (confirm('모든 테스트 기록을 삭제하시겠습니까?')) {
                 clearHistory();
             }
         }

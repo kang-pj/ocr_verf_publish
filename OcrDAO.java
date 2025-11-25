@@ -31,4 +31,14 @@ public interface OcrDAO {
     String getMaxCtrlNo(Map<String, Object> params);
     
     int insertOcrDocument(Map<String, Object> params);
+    
+    int deleteOcrResult(Map<String, Object> params);
+    
+    int deleteOcrDocument(Map<String, Object> params);
+    
+    List<String> getOcrDocNoListByUserId(Map<String, Object> params);
+    
+    List<String> getUserTestFilePathList(Map<String, Object> params);
+    
+    int deleteUserTestDocuments(Map<String, Object> params);
 }

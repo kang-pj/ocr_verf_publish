@@ -423,6 +423,158 @@ public class OcrServiceImpl implements OcrService {
         }
     }
     
+    @Override
+    @Transactional(readOnly = false)
+    public int deleteOcrDocument(String ocrDocNo) {
+        logger.info("OCR 문서 삭제: OCR_DOC_NO={}", ocrDocNo);
+        
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("ocr_doc_no", ocrDocNo);
+            
+            int result = ocrDAO.deleteOcrDocument(params);
+            logger.info("OCR 문서 삭제 완료: {} 건", result);
+            return result;
+        } catch (Exception e) {
+            logger.error("OCR 문서 삭제 실패", e);
+            throw new RuntimeException("OCR 문서 삭제 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
+    @Transactional(readOnly = false)
+    public boolean deleteOcrDocumentWithFile(Map<String, Object> params) {
+        String ocrDocNo = (String) params.get("ocr_doc_no");
+        String docFlSavPthNm = (String) params.get("doc_fl_sav_pth_nm");
+        
+        logger.info("OCR 문서 및 파일 삭제 시작: OCR_DOC_NO={}", ocrDocNo);
+        
+        try {
+            // 1. DB에서 삭제
+            int deleteResult = deleteOcrDocument(ocrDocNo);
+            
+            if (deleteResult > 0) {
+                logger.info("DB 삭제 완료 - OCR_DOC_NO: {}", ocrDocNo);
+                
+                // 2. 파일 삭제 API 호출 (외부 프로젝트)
+                if (docFlSavPthNm != null && !docFlSavPthNm.isEmpty()) {
+                    try {
+                        List<String> filePaths = new ArrayList<>();
+                        filePaths.add(docFlSavPthNm);
+                        deleteFileFromExternalApi(filePaths);
+                        logger.info("파일 삭제 API 호출 완료 - PATH: {}", docFlSavPthNm);
+                    } catch (Exception e) {
+                        logger.warn("파일 삭제 API 호출 실패 (DB 삭제는 완료됨): {}", e.getMessage());
+                        // 파일 삭제 실패해도 DB 삭제는 완료되었으므로 성공으로 처리
+                    }
+                }
+                
+                return true;
+            } else {
+                logger.warn("삭제할 히스토리가 없음 - OCR_DOC_NO: {}", ocrDocNo);
+                return false;
+            }
+            
+        } catch (Exception e) {
+            logger.error("OCR 문서 및 파일 삭제 실패", e);
+            throw new RuntimeException("OCR 문서 삭제 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    /**
+     * 외부 API를 통한 파일 삭제
+     */
+    public void deleteFileFromExternalApi(List<String> filePaths) {
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            String deleteFileUrl = "http://localhost:8080/delete-files";
+            
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            
+            Map<String, List<String>> requestBody = new HashMap<>();
+            requestBody.put("filePaths", filePaths);
+            
+            org.springframework.http.HttpEntity<Map<String, List<String>>> requestEntity = 
+                new org.springframework.http.HttpEntity<>(requestBody, headers);
+            
+            restTemplate.postForEntity(deleteFileUrl, requestEntity, String.class);
+            
+            logger.info("파일 삭제 API 호출 완료 - 파일 개수: {}", filePaths.size());
+        } catch (Exception e) {
+            logger.error("파일 삭제 API 호출 실패", e);
+            throw new RuntimeException("파일 삭제 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
+    public List<String> getUserTestFileList(String usrId) {
+        logger.info("사용자 테스트 파일 리스트 조회: USR_ID={}", usrId);
+        
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("ins_id", usrId);
+            params.put("inst_cd", "99");
+            params.put("prdt_cd", "OCR");
+            
+            // 사용자의 테스트 파일 경로 리스트 조회
+            List<String> filePathList = ocrDAO.getUserTestFilePathList(params);
+            
+            logger.info("사용자 테스트 파일 리스트 조회 완료: USR_ID={}, 파일 개수={}", usrId, 
+                filePathList != null ? filePathList.size() : 0);
+            
+            return filePathList;
+            
+        } catch (Exception e) {
+            logger.error("사용자 테스트 파일 리스트 조회 실패: USR_ID={}", usrId, e);
+            throw new RuntimeException("파일 리스트 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
+    @Transactional(readOnly = false)
+    public int deleteUserTestData(String usrId) {
+        logger.info("사용자 테스트 데이터 삭제 시작: USR_ID={}", usrId);
+        
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("ins_id", usrId);
+            params.put("inst_cd", "99");
+            params.put("prdt_cd", "OCR");
+            
+            // 1. 삭제할 ocr_doc_no 리스트 조회
+            List<String> ocrDocNoList = ocrDAO.getOcrDocNoListByUserId(params);
+            
+            if (ocrDocNoList == null || ocrDocNoList.isEmpty()) {
+                logger.info("삭제할 테스트 데이터 없음: USR_ID={}", usrId);
+                return 0;
+            }
+            
+            logger.info("삭제 대상 문서 개수: {}", ocrDocNoList.size());
+            
+            // 2. 각 문서의 결과 데이터 삭제
+            int totalResultDeleted = 0;
+            for (String ocrDocNo : ocrDocNoList) {
+                Map<String, Object> deleteParams = new HashMap<>();
+                deleteParams.put("ocr_doc_no", ocrDocNo);
+                int resultDeleted = ocrDAO.deleteOcrResult(deleteParams);
+                totalResultDeleted += resultDeleted;
+                logger.debug("OCR 결과 삭제: OCR_DOC_NO={}, 삭제 건수={}", ocrDocNo, resultDeleted);
+            }
+            
+            // 3. 문서 정보 삭제
+            int docDeleted = ocrDAO.deleteUserTestDocuments(params);
+            logger.info("사용자 테스트 데이터 삭제 완료: USR_ID={}, 결과 삭제={}, 문서 삭제={}", 
+                usrId, totalResultDeleted, docDeleted);
+            
+            return docDeleted;
+            
+        } catch (Exception e) {
+            logger.error("사용자 테스트 데이터 삭제 실패: USR_ID={}", usrId, e);
+            throw new RuntimeException("테스트 데이터 삭제 중 오류가 발생했습니다.", e);
+        }
+    }
+    
     /**
      * 파라미터 검증 및 기본값 설정
      */

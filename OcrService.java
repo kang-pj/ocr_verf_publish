@@ -34,4 +34,14 @@ public interface OcrService {
     String getNextCtrlNo(String instCd, String prdtCd);
     
     int insertOcrDocument(java.util.Map<String, Object> params);
+    
+    int deleteOcrDocument(String ocrDocNo);
+    
+    boolean deleteOcrDocumentWithFile(java.util.Map<String, Object> params);
+    
+    java.util.List<String> getUserTestFileList(String usrId);
+    
+    void deleteFileFromExternalApi(java.util.List<String> filePaths);
+    
+    int deleteUserTestData(String usrId);
 }

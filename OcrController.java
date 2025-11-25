@@ -499,5 +499,70 @@ public class OcrController {
         }
     }
     
+    /**
+     * 히스토리 삭제 (현재 사용자의 테스트 데이터만 삭제)
+     */
+    @PostMapping(value = "/deleteHistory.do")
+    public ResponseEntity<Map<String, Object>> deleteHistory(HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            // 로그인 정보 조회
+            LoginVO loginVO = (LoginVO) session.getAttribute("USER");
+            if (loginVO == null) {
+                result.put("success", false);
+                result.put("message", "로그인 정보가 없습니다.");
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+            }
+            
+            String usrId = loginVO.getUsrId();
+            logger.info("히스토리 삭제 요청 - 사용자: {}", usrId);
+            
+            // 1. 현재 사용자의 파일 리스트 조회
+            List<String> filePathList = ocrService.getUserTestFileList(usrId);
+            
+            // 2. 파일 삭제 API 호출
+            if (filePathList != null && !filePathList.isEmpty()) {
+                try {
+                    ocrService.deleteFileFromExternalApi(filePathList);
+                    logger.info("파일 삭제 API 호출 완료 - 파일 개수: {}", filePathList.size());
+                } catch (Exception e) {
+                    logger.warn("파일 삭제 API 호출 실패 (DB 삭제는 진행됨): {}", e.getMessage());
+                    // 파일 삭제 실패해도 DB 삭제는 진행
+                }
+            }
+            
+            // 3. Service에서 현재 사용자의 테스트 데이터 삭제
+            int deleteCount = ocrService.deleteUserTestData(usrId);
+            
+            if (deleteCount > 0) {
+                result.put("success", true);
+                result.put("message", deleteCount + "개의 테스트 데이터가 삭제되었습니다.");
+                result.put("data", new HashMap<String, Object>() {{
+                    put("delete_count", deleteCount);
+                    put("delete_time", System.currentTimeMillis());
+                }});
+                
+                logger.info("히스토리 삭제 완료 - 사용자: {}, 삭제 건수: {}", usrId, deleteCount);
+            } else {
+                result.put("success", false);
+                result.put("message", "삭제할 테스트 데이터가 없습니다.");
+            }
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+            
+        } catch (Exception e) {
+            logger.error("히스토리 삭제 실패", e);
+            result.put("success", false);
+            result.put("message", "히스토리 삭제 중 오류가 발생했습니다: " + e.getMessage());
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+    
 }
 
