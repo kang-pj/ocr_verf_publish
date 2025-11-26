@@ -24,6 +24,8 @@ public interface OcrDAO {
     
     int updateVerificationStatus(Map<String, Object> params);
     
+    int updateOcrStatus(Map<String, Object> params);
+    
     OcrInfoVO getImageInfo(Map<String, Object> params);
     
     String getSysClsCd(Map<String, Object> params);

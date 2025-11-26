@@ -35,6 +35,7 @@ import javax.servlet.http.HttpSession;
 
 import com.refine.ocr.service.OcrService;
 import com.refine.ocr.vo.OcrInfoVO;
+import com.refine.ocr.vo.ApiResponse;
 import com.refine.common.vo.LoginVO;
 
 /**
@@ -169,6 +170,55 @@ public class OcrController {
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(result);
+        }
+    }
+    
+    /**
+     * OCR 상태 업데이트 (ocr_yn 변경)
+     */
+    @PostMapping(value = "/updateOcrStatus.do")
+    public ResponseEntity<Map<String, Object>> updateOcrStatus(@RequestBody Map<String, Object> params) {
+        try {
+            String ocrDocNo = (String) params.get("ocr_doc_no");
+            String ocrYn = (String) params.get("ocr_yn");
+            
+            if (ocrDocNo == null || ocrDocNo.isEmpty()) {
+                return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.fail("OCR 문서 번호가 필요합니다.").toMap());
+            }
+            
+            if (ocrYn == null || ocrYn.isEmpty()) {
+                return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.fail("OCR 상태 값이 필요합니다.").toMap());
+            }
+            
+            logger.info("OCR 상태 업데이트 요청 - OCR_DOC_NO: {}, OCR_YN: {}", ocrDocNo, ocrYn);
+            
+            // OCR 상태 업데이트
+            Map<String, Object> updateParams = new HashMap<>();
+            updateParams.put("ocr_doc_no", ocrDocNo);
+            updateParams.put("ocr_yn", ocrYn);
+            
+            int updateResult = ocrService.updateOcrStatus(updateParams);
+            
+            if (updateResult > 0) {
+                logger.info("OCR 상태 업데이트 완료 - OCR_DOC_NO: {}", ocrDocNo);
+                return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.success("OCR 상태가 업데이트되었습니다.").toMap());
+            } else {
+                return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.fail("OCR 상태 업데이트에 실패했습니다.").toMap());
+            }
+            
+        } catch (Exception e) {
+            logger.error("OCR 상태 업데이트 실패", e);
+            return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(ApiResponse.fail("OCR 상태 업데이트 중 오류가 발생했습니다: " + e.getMessage()).toMap());
         }
     }
     

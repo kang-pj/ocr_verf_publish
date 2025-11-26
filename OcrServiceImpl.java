@@ -140,6 +140,24 @@ public class OcrServiceImpl implements OcrService {
     }
     
     @Override
+    @Transactional(readOnly = false)
+    public int updateOcrStatus(Map<String, Object> params) {
+        logger.info("OCR 상태 업데이트: {}", params);
+        
+        try {
+            int result = ocrDAO.updateOcrStatus(params);
+            
+            logger.info("OCR 상태 업데이트 완료: {} 건", result);
+            
+            return result;
+            
+        } catch (Exception e) {
+            logger.error("OCR 상태 업데이트 중 오류 발생", e);
+            throw new RuntimeException("데이터베이스 업데이트 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
     public OcrInfoVO getImageInfo(Map<String, Object> params) {
         logger.debug("이미지 정보 조회: {}", params);
         

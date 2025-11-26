@@ -211,6 +211,22 @@
         background-color: #e2e3e5 !important;
         color: #6c757d !important;
     }
+    /* OCR 재실행 버튼 */
+    .btn-ocr-reset {
+        background-color: #f8f9fa;
+        border: 1px solid #d1d3e2;
+        color: #5a5c69;
+        font-size: 0.8rem;
+        padding: 0.375rem 0.75rem;
+    }
+    .btn-ocr-reset:hover {
+        background-color: #eaecf4;
+        border-color: #c5c7d4;
+        color: #5a5c69;
+    }
+    .btn-ocr-reset i {
+        margin-right: 4px;
+    }
 </style>
 
 <!-- Content Wrapper -->
@@ -224,9 +240,15 @@
                 <h4 class="mb-0 text-gray-800">
                     <i class="fas fa-file-alt"></i> OCR 문서 상세
                 </h4>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="window.close()">
-                    <i class="fas fa-times"></i> 닫기
-                </button>
+                <div>
+                    <button type="button" class="btn btn-sm btn-ocr-reset mr-2" id="resetOcrBtn" onclick="resetOcrStatus()">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>OCR 재실행</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.close()">
+                        <i class="fas fa-times"></i> 닫기
+                    </button>
+                </div>
             </div>
 
             <!-- 상단: 서류 정보 (4x3 테이블) -->
@@ -330,6 +352,7 @@
     // 전역 변수
     var ocrDocNoList = [];
     var currentIndex = 0;
+    var currentOcrDocNo = null;
 
     $(document).ready(function() {
         // URL 파라미터에서 관리번호 정보 가져오기
@@ -372,6 +395,7 @@
                     // 전역 변수에 저장
                     ocrDocNoList = response.ocrDocNoList || [];
                     currentIndex = response.currentIndex || 0;
+                    currentOcrDocNo = response.data.ocr_doc_no;
 
                     // 기본 정보 표시
                     displayDocumentInfo(response.data);
@@ -754,6 +778,7 @@
                                         // 해당 인덱스의 ocr_doc_no 가져오기
                                         if (ocrDocNoList && ocrDocNoList[newIndex]) {
                                             var newOcrDocNo = ocrDocNoList[newIndex];
+                                            currentOcrDocNo = newOcrDocNo;
                                             console.log('OCR 결과 업데이트 - OCR_DOC_NO:', newOcrDocNo);
                                             
                                             // OCR 결과 조회
@@ -855,8 +880,47 @@
         $('#imageViewer').html(html);
     }
 
-
-
+    /**
+     * OCR 상태 초기화 (재실행)
+     */
+    function resetOcrStatus() {
+        if (!currentOcrDocNo) {
+            alert('문서 정보가 없습니다.');
+            return;
+        }
+        
+        if (!confirm('현재 문서의 OCR 상태를 초기화하시겠습니까?\nOCR이 다시 실행됩니다.')) {
+            return;
+        }
+        
+        console.log('OCR 상태 초기화 - OCR_DOC_NO:', currentOcrDocNo);
+        
+        $.ajax({
+            url: '/rf-ocr-verf/api/updateOcrStatus.do',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                ocr_doc_no: currentOcrDocNo,
+                ocr_yn: 'N'
+            }),
+            success: function(response) {
+                console.log('OCR 상태 업데이트 응답:', response);
+                
+                if (response.success) {
+                    alert('OCR 상태가 초기화되었습니다.\nOCR이 재실행됩니다.');
+                    
+                    // 페이지 새로고침
+                    location.reload();
+                } else {
+                    alert('OCR 상태 초기화에 실패했습니다.\n' + (response.message || ''));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('OCR 상태 업데이트 오류:', error);
+                alert('OCR 상태 초기화 중 오류가 발생했습니다.');
+            }
+        });
+    }
 
 
 </script>

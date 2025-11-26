@@ -158,6 +158,22 @@
             font-size: 13px;
             font-weight: 600;
         }
+        /* OCR 재실행 버튼 */
+        .btn-ocr-reset {
+            background-color: #f8f9fa;
+            border: 1px solid #d1d3e2;
+            color: #5a5c69;
+            font-size: 0.8rem;
+            padding: 0.375rem 0.75rem;
+        }
+        .btn-ocr-reset:hover {
+            background-color: #eaecf4;
+            border-color: #c5c7d4;
+            color: #5a5c69;
+        }
+        .btn-ocr-reset i {
+            margin-right: 4px;
+        }
     </style>
 </head>
 <script type="text/javascript">
@@ -239,8 +255,12 @@
                 <!-- 테이블 결과 영역 (35%) -->
                 <div style="width: 35%; padding-left: 10px; padding-right: 15px">
                     <div class="card shadow mb-4">
-                        <div class="card-header py-3">
+                        <div class="card-header py-3" style="display: flex; justify-content: space-between; align-items: center;">
                             <h6 class="m-0 font-weight-bold text-primary">OCR 결과</h6>
+                            <button type="button" class="btn btn-sm btn-ocr-reset" id="resetOcrBtnTest" onclick="resetOcrStatusTest()" style="display: none;">
+                                <i class="fas fa-sync-alt"></i>
+                                <span>OCR 재실행</span>
+                            </button>
                         </div>
                         <div class="card-body" style="min-height: 800px;">
                             <div id="resultSection" style="display: none;">
@@ -387,13 +407,33 @@
 
     // 히스토리 상세 표시
     function displayHistoryDetail(item) {
+        console.log('=== displayHistoryDetail 시작 ===');
+        console.log('전체 item 객체:', item);
+        console.log('item.ocr_doc_no:', item.ocr_doc_no);
+        console.log('item.ocrDocNo:', item.ocrDocNo);
+        
         const resultSection = document.getElementById('resultSection');
         const emptyResult = document.getElementById('emptyResult');
         const resultTableBody = document.getElementById('resultTableBody');
         const imagePreview = document.getElementById('imagePreview');
         const detailViewBtn = document.getElementById('detailViewBtn');
+        const resetOcrBtnTest = document.getElementById('resetOcrBtnTest');
 
         resultTableBody.innerHTML = '';
+
+        // 현재 선택된 문서 정보 저장 (snake_case와 camelCase 모두 지원)
+        currentSelectedOcrDocNo = item.ocr_doc_no || item.ocrDocNo;
+        console.log('설정된 currentSelectedOcrDocNo:', currentSelectedOcrDocNo);
+        console.log('resetOcrBtnTest 요소:', resetOcrBtnTest);
+
+        // OCR 재실행 버튼 표시
+        if (currentSelectedOcrDocNo) {
+            console.log('OCR 재실행 버튼 표시');
+            resetOcrBtnTest.style.display = 'block';
+        } else {
+            console.log('OCR 재실행 버튼 숨김 - ocr_doc_no 없음');
+            resetOcrBtnTest.style.display = 'none';
+        }
 
         // 상세보기 버튼 설정
         if (item.ocr_doc_no) {
@@ -722,5 +762,56 @@
         const emptyResult = document.getElementById('emptyResult');
         resultSection.style.display = 'none';
         emptyResult.style.display = 'flex';
+    }
+
+    // 전역 변수로 현재 선택된 문서 정보 저장
+    var currentSelectedOcrDocNo = null;
+
+    /**
+     * OCR 상태 초기화 (재실행) - 테스트 페이지용
+     */
+    function resetOcrStatusTest() {
+        console.log('resetOcrStatusTest 호출됨');
+        console.log('currentSelectedOcrDocNo:', currentSelectedOcrDocNo);
+        
+        if (!currentSelectedOcrDocNo) {
+            console.error('currentSelectedOcrDocNo가 없습니다!');
+            alert('문서 정보가 없습니다.\n히스토리에서 항목을 먼저 선택해주세요.');
+            return;
+        }
+        
+        if (!confirm('현재 문서의 OCR 상태를 초기화하시겠습니까?\nOCR이 다시 실행됩니다.')) {
+            return;
+        }
+        
+        console.log('OCR 상태 초기화 - OCR_DOC_NO:', currentSelectedOcrDocNo);
+        
+        fetch('/rf-ocr-verf/api/updateOcrStatus.do', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ocr_doc_no: currentSelectedOcrDocNo,
+                ocr_yn: 'N'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('OCR 상태 업데이트 응답:', data);
+            
+            if (data.success) {
+                alert('OCR 상태가 초기화되었습니다.\nOCR이 재실행됩니다.');
+                
+                // 히스토리 새로고침
+                loadHistory();
+            } else {
+                alert('OCR 상태 초기화에 실패했습니다.\n' + (data.message || ''));
+            }
+        })
+        .catch(error => {
+            console.error('OCR 상태 업데이트 오류:', error);
+            alert('OCR 상태 초기화 중 오류가 발생했습니다.');
+        });
     }
 </script>

@@ -21,6 +21,8 @@ public interface OcrService {
     
     int updateVerificationStatus(Map<String, Object> params);
     
+    int updateOcrStatus(Map<String, Object> params);
+    
     OcrInfoVO getImageInfo(Map<String, Object> params);
     
     byte[] getOcrImage(String instCd, String prdtCd, String imagePath);

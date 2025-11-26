@@ -101,6 +101,14 @@
         WHERE ocr_doc_no = #{ocr_doc_no}
     </update>
     
+    <!-- OCR 상태 업데이트 -->
+    <update id="updateOcrStatus" parameterType="map">
+        UPDATE ocr_doc_inf
+        SET ocr_yn = #{ocr_yn},
+            upd_dttm = NOW()
+        WHERE ocr_doc_no = #{ocr_doc_no}
+    </update>
+    
     <!-- 이미지 정보 조회 -->
     <select id="getImageInfo" parameterType="map" resultType="com.refine.ocr.vo.OcrInfoVO">
         SELECT *
