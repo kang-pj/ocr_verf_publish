@@ -273,7 +273,7 @@
                             <h6 class="m-0 font-weight-bold text-primary">이미지 뷰어</h6>
                         </div>
                         <div class="card-body d-flex flex-column" style="flex: 1; overflow: hidden; background-color: #f8f9fa; position: relative;">
-                            <div id="imageViewer" class="text-center" style="flex: 1; overflow: auto; width: 100%;">
+                            <div id="imageViewer" class="text-center" style="flex: 1; overflow: hidden; width: 100%; height: 100%;">
                                 <p class="text-muted">이미지를 불러오는 중...</p>
                             </div>
                             <div id="pageNavigation" style="padding: 10px; text-align: center; border-top: 1px solid #e3e6f0; flex-shrink: 0;"></div>
@@ -720,14 +720,14 @@
                     
                     // 컨테이너 div 생성
                     var html = '<div id="viewerContainer" style="width: 100%; height: 100%;">';
-                    html += '<ul style="list-style: none; padding: 0; margin: 0;">';
+                    html += '<ul style="list-style: none; padding: 0; margin: 0; display: none;">';
                     
                     response.data.forEach(function(imageData, index) {
                         console.log('이미지 ' + index + ' 처리 중...');
                         
                         if (imageData && imageData.startsWith('data:image')) {
-                            html += '<li style="display: inline-block;">';
-                            html += '<img src="' + imageData + '" alt="Page ' + (index + 1) + '" style="max-width: 100%; height: auto;">';
+                            html += '<li>';
+                            html += '<img src="' + imageData + '" alt="Page ' + (index + 1) + '">';
                             html += '</li>';
                         } else {
                             console.warn('이미지 ' + index + '이 base64 형식이 아닙니다.');

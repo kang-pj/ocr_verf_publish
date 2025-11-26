@@ -435,11 +435,13 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.data) {
-                        imagePreview.innerHTML = '<img id="viewerImage" src="' + data.data + '" style="max-width: 100%; max-height: 800px;">';
+                        // 컨테이너 생성 (이미지는 숨김)
+                        imagePreview.innerHTML = '<div id="viewerContainer" style="width: 100%; height: 800px;"><img id="viewerImage" src="' + data.data + '" style="display: none;"></div>';
+                        
                         setTimeout(function() {
-                            const viewerImage = document.getElementById('viewerImage');
-                            if (viewerImage && !viewerImage.viewer) {
-                                new Viewer(viewerImage, {
+                            const viewerContainer = document.getElementById('viewerContainer');
+                            if (viewerContainer) {
+                                new Viewer(viewerContainer, {
                                     inline: true,
                                     autoCrop: false,
                                     background: false,
