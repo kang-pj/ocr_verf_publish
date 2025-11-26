@@ -173,6 +173,112 @@ public class OcrController {
     }
     
     /**
+     * 여러 OCR 문서의 이미지 정보 조회 (ocr_doc_no 리스트 기반)
+     */
+    @PostMapping(value = "/getOcrDocumentImages.do")
+    public ResponseEntity<Map<String, Object>> getOcrDocumentImages(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            List<String> ocrDocNoList = (List<String>) params.get("ocr_doc_no_list");
+            
+            if (ocrDocNoList == null || ocrDocNoList.isEmpty()) {
+                result.put("success", false);
+                result.put("message", "OCR 문서 번호 리스트가 필요합니다.");
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+            }
+            
+            logger.info("OCR 문서 이미지 정보 조회 - 문서 개수: {}", ocrDocNoList.size());
+            
+            // 각 ocr_doc_no의 이미지 정보 조회
+            List<Map<String, Object>> imageInfoList = new ArrayList<>();
+            for (String ocrDocNo : ocrDocNoList) {
+                Map<String, Object> docParams = new HashMap<>();
+                docParams.put("ocr_doc_no", ocrDocNo);
+                
+                OcrInfoVO docInfo = ocrService.getOcrDocumentDetail(docParams);
+                if (docInfo != null && docInfo.getDoc_fl_sav_pth_nm() != null) {
+                    Map<String, Object> imageInfo = new HashMap<>();
+                    imageInfo.put("ocr_doc_no", ocrDocNo);
+                    imageInfo.put("image_path", docInfo.getDoc_fl_sav_pth_nm());
+                    imageInfo.put("ext", docInfo.getDoc_fl_ext());
+                    imageInfo.put("inst_cd", docInfo.getInst_cd());
+                    imageInfo.put("prdt_cd", docInfo.getPrdt_cd());
+                    imageInfoList.add(imageInfo);
+                }
+            }
+            
+            result.put("success", true);
+            result.put("data", imageInfoList);
+            
+            logger.info("OCR 문서 이미지 정보 조회 완료: {} 건", imageInfoList.size());
+            
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+            
+        } catch (Exception e) {
+            logger.error("OCR 문서 이미지 정보 조회 실패", e);
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+        }
+    }
+    
+    /**
+     * 여러 이미지 로딩 (Viewer.js용)
+     */
+    @PostMapping(value = "/getOcrImages.do")
+    public ResponseEntity<Map<String, Object>> getOcrImages(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            String instCd = (String) params.get("inst_cd");
+            String prdtCd = (String) params.get("prdt_cd");
+            List<Map<String, Object>> imageList = (List<Map<String, Object>>) params.get("image_list");
+            
+            if (imageList == null || imageList.isEmpty()) {
+                result.put("success", false);
+                result.put("message", "이미지 목록이 필요합니다.");
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+            }
+            
+            List<String> images = new ArrayList<>();
+            String baseUrl = "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/preview-image-all";
+            
+            for (Map<String, Object> imageInfo : imageList) {
+                String imagePath = (String) imageInfo.get("image_path");
+                String ext = (String) imageInfo.get("ext");
+                
+                if (imagePath == null || ext == null) {
+                    continue;
+                }
+                
+                try {
+                    String encodedPath = URLEncoder.encode(Base64.getEncoder().encodeToString(imagePath.getBytes()), "UTF-8");
+                    String trgtURL = baseUrl + "?instCd=" + instCd + "&prdtCd=" + prdtCd + "&imagePath=" + encodedPath;
+                    
+                    byte[] fileArray = downloadImageFromUrl(trgtURL);
+                    String base64Image = convertToBase64Image(fileArray, ext);
+                    images.add(base64Image);
+                } catch (Exception e) {
+                    logger.warn("이미지 로딩 실패, 경로만 추가: {}", imagePath);
+                    images.add(imagePath);
+                }
+            }
+            
+            result.put("success", true);
+            result.put("data", images);
+            
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+            
+        } catch (Exception e) {
+            logger.error("여러 이미지 로딩 실패", e);
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+        }
+    }
+    
+    /**
      * 이미지 로딩 및 변환
      */
     @PostMapping(value = "/getOcrImage.do")

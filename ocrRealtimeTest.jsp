@@ -1,1 +1,724 @@
-<%@ page pageEncoding="utf-8" %><!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"><%--viewer.js v.1.11.17--%><link rel="stylesheet" href="${pageContext.request.contextPath}/resources/viewerjs/1.11.7/viewer.min.css"><script src="${pageContext.request.contextPath}/resources/viewerjs/1.11.7/viewer.min.js"></script><title>이미지 전산화 검증</title><style>body {font-family: 'Noto Sans KR', sans-serif;min-width: 1200px;}#wrapper {display: flex;}.sidebar {min-height: 100vh;width: 250px;background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);}.sidebar-brand {height: 80px;text-decoration: none;color: white !important;}.sidebar-brand-icon i {color: white;}.sidebar-brand-text {font-size: 12px;font-weight: 600;}.sidebar .nav-item .nav-link {color: rgba(255, 255, 255, 0.8);padding: 1rem;}.sidebar .nav-item .nav-link:hover {color: white;background-color: rgba(255, 255, 255, 0.1);}.sidebar .nav-item.active .nav-link {color: white;background-color: rgba(255, 255, 255, 0.15);}.sidebar-divider {border-top: 1px solid rgba(255, 255, 255, 0.15);margin: 0;}.bg-gradient-primary {background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);}#content-wrapper {flex: 1;background-color: #f8f9fc;display: flex;flex-direction: column;min-height: 100vh;}#content {flex: 1;}.topbar {background-color: white;box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);}.custom-navbar-height {height: 60px;}.sticky-footer {background-color: white;padding: 1rem 0;}.scroll-to-top {position: fixed;right: 1rem;bottom: 1rem;display: none;width: 2.75rem;height: 2.75rem;text-align: center;color: white;background: rgba(90, 92, 105, 0.5);line-height: 46px;border-radius: 50%;}.scroll-to-top:hover {background: rgba(90, 92, 105, 0.7);color: white;text-decoration: none;}.card-body {padding: 1.25rem !important;}.loading-overlay {display: none;position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0, 0, 0, 0.5);z-index: 9999;justify-content: center;align-items: center;}.loading-overlay.active {display: flex;}.loading-spinner {background: white;padding: 30px;border-radius: 10px;text-align: center;box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}.loading-spinner .spinner-border {width: 50px;height: 50px;margin-bottom: 15px;}.loading-spinner p {margin: 0;color: #333;font-weight: 600;}.file-input-wrapper {position: relative;overflow: hidden;}.file-input-wrapper input[type="file"] {position: absolute;left: -9999px;}.file-input-label {display: block;padding: 20px;background: #f8f9fc;border: 2px dashed #ddd;border-radius: 5px;text-align: center;cursor: pointer;transition: all 0.3s;color: #666;}.file-input-label:hover {border-color: #4e73df;background: #f0f4ff;}.file-name {margin-top: 10px;color: #4e73df;font-size: 13px;font-weight: 600;}</style></head><script type="text/javascript">// 마우스 우클릭 방지, 드래그 방지, 선택 방지/*$(document).ready(function() {$(document).on('contextmenu dragstart selectstart', function() {return false;});});*/</script><body id="page-top"><!-- 로딩 오버레이 --><div id="loadingOverlay" class="loading-overlay"><div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="sr-only">로딩 중...</span></div><p>업로드 중입니다...</p></div></div><div class="container-fluid"><div class="row"><!-- 좌측: 테스트 폼 및 결과 --><div class="col-md-9" style="padding: 0px !important;"><!-- 테스트 폼 --><div class="card shadow mb-4"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">OCR 실시간 테스트</h6></div><div class="card-body"><form id="ocrTestForm" enctype="multipart/form-data"><div class="form-row"><div class="col-md-12 mb-3"><label>파일 선택 *</label><div class="file-input-wrapper"><input type="file" id="fileInput" name="file" accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff" multiple required><label for="fileInput" class="file-input-label"><i class="fas fa-cloud-upload-alt fa-2x mb-2"></i><p class="mb-0">파일을 선택하거나 여기에 드래그하세요 (여러 파일 선택 가능)</p></label><div class="file-name" id="fileName"></div></div></div></div><div class="form-row"><div class="col-md-12"><button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-play"></i> 테스트 시작</button><button type="reset" class="btn btn-secondary btn-sm"><i class="fas fa-redo"></i> 초기화</button></div></div></form></div></div><!-- 이미지 및 결과 --><div class="row"><!-- 이미지 영역 (65%) --><div style="width: 65%; padding-right: 10px; padding-left: 15px"><div class="card shadow mb-4"><div class="card-header py-3" style="display: flex; justify-content: space-between; align-items: center;"><h6 class="m-0 font-weight-bold text-primary">이미지 미리보기</h6><button type="button" class="btn btn-sm btn-primary" id="detailViewBtn" style="display: none;"><i class="fas fa-external-link-alt"></i> 상세보기</button></div><div class="card-body" style="text-align: center; min-height: 800px; display: flex; align-items: center; justify-content: center;"><div id="imagePreview" style="width: 100%; max-height: 800px;"><p class="text-muted">이미지가 표시됩니다</p></div></div></div></div><!-- 테이블 결과 영역 (35%) --><div style="width: 35%; padding-left: 10px; padding-right: 15px"><div class="card shadow mb-4"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">OCR 결과</h6></div><div class="card-body" style="min-height: 800px;"><div id="resultSection" style="display: none;"><div style="border-radius: 2px; min-height: 800px; overflow-y: auto;"><table class="table table-sm table-bordered mb-0" style="font-size: 12px;"><tbody id="resultTableBody"></tbody></table></div></div><div id="emptyResult" style="display: flex; align-items: center; justify-content: center; height: 100%;"><p class="text-muted">결과가 표시됩니다</p></div></div></div></div></div></div><!-- 우측: 히스토리 --><div class="col-md-3"><div class="card shadow mb-4" style="height: 1000px; display: flex; flex-direction: column;"><div class="card-header py-3" style="display: flex; justify-content: space-between; align-items: center;"><h6 class="m-0 font-weight-bold text-primary">테스트 히스토리</h6><button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmClearHistory()"><i class="fas fa-trash"></i></button></div><div class="card-body" style="flex: 1; overflow-y: auto; padding: 0;"><div id="historyList" style="font-size: 13px; background-color: #fff; color: #333;"><p class="text-muted text-center" style="padding: 20px 10px; margin: 0;">테스트 기록이 없습니다.</p></div></div></div></div></div></div><!-- Scroll to Top Button--><a class="scroll-to-top rounded" href="#page-top"><i class="fas fa-angle-up"></i></a></body></html><script>// 페이지 로드 시 히스토리 조회document.addEventListener('DOMContentLoaded', function() {loadHistory();});// 히스토리 조회function loadHistory() {console.log('히스토리 조회 시작');fetch('/rf-ocr-verf/api/getOcrTestHistory.do', {method: 'POST',headers: {'Content-Type': 'application/json'}}).then(response => {console.log('응답 상태:', response.status);return response.json();}).then(data => {console.log('히스토리 데이터:', data);if (data.success && data.data && data.data.length > 0) {console.log('히스토리 개수:', data.data.length);displayHistoryList(data.data);} else {console.log('히스토리 없음');document.getElementById('historyList').innerHTML = '<p class="text-muted text-center">테스트 기록이 없습니다.</p>';}}).catch(error => {console.error('히스토리 조회 실패:', error);document.getElementById('historyList').innerHTML = '<p class="text-muted text-center">히스토리 조회 중 오류가 발생했습니다.</p>';});}// 히스토리 목록 표시function displayHistoryList(historyData) {console.log('히스토리 목록 표시 시작, 개수:', historyData.length);const historyList = document.getElementById('historyList');historyList.innerHTML = '';if (!historyData || historyData.length === 0) {historyList.innerHTML = '<p class="text-muted text-center">테스트 기록이 없습니다.</p>';return;}historyData.forEach(function(item, index) {console.log('히스토리 항목 ' + index + ':', item);const historyItem = document.createElement('div');historyItem.style.cssText = 'padding: 12px 10px; border-bottom: 1px solid #eee; cursor: pointer; background-color: #ffffff; transition: background-color 0.2s; color: #333;';historyItem.onmouseover = function() { this.style.backgroundColor = '#f8f9fc'; };historyItem.onmouseout = function() { this.style.backgroundColor = '#ffffff'; };const fileName = item.doc_fl_nm || item.ocr_doc_no || 'Unknown';const timestamp = item.ins_dttm ? new Date(item.ins_dttm).toLocaleString('ko-KR') : '';// ocr_yn에 따라 상태 배지 결정let statusBadge = '';let statusText = '';let badgeColor = '';if (item.ocr_yn === 'Y') {statusText = '완료';badgeColor = '#28a745';} else if (item.ocr_yn === 'N') {statusText = '대기';badgeColor = '#ffc107';} else if (item.ocr_yn === 'X') {statusText = '실패';badgeColor = '#dc3545';} else {statusText = '대기';badgeColor = '#ffc107';}statusBadge = '<span class="badge" style="font-size: 11px; background-color: ' + badgeColor + '; color: white;">' + statusText + '</span>';historyItem.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; color: #333;">' +'<div style="flex: 1; min-width: 0;">' +'<strong style="display: block; word-break: break-word; color: #333;">' + fileName + '</strong>' +'<div style="color: #999; font-size: 11px; margin-top: 3px;">' + timestamp + '</div>' +'</div>' +'<div style="flex-shrink: 0;">' +statusBadge +'</div>' +'</div>';historyItem.addEventListener('click', function() {console.log('히스토리 항목 클릭:', item);displayHistoryDetail(item);});historyList.appendChild(historyItem);console.log('히스토리 항목 추가됨:', fileName);});console.log('히스토리 목록 표시 완료');}// 히스토리 상세 표시function displayHistoryDetail(item) {const resultSection = document.getElementById('resultSection');const emptyResult = document.getElementById('emptyResult');const resultTableBody = document.getElementById('resultTableBody');const imagePreview = document.getElementById('imagePreview');const detailViewBtn = document.getElementById('detailViewBtn');resultTableBody.innerHTML = '';// 상세보기 버튼 설정if (item.ocr_doc_no) {detailViewBtn.style.display = 'block';detailViewBtn.onclick = function() {// detail 페이지로 이동 (새탭)const detailUrl = '/rf-ocr-verf/main?pageChange=/ocrRsltDetail' +'&ctrl_yr=' + item.ctrl_yr +'&inst_cd=' + item.inst_cd +'&prdt_cd=' + item.prdt_cd +'&ctrl_no=' + item.ctrl_no +'&doc_tp_cd=' + item.doc_tp_cd;window.open(detailUrl, '_blank');};} else {detailViewBtn.style.display = 'none';}resultTableBody.innerHTML = '';// 이미지 미리보기 표시if (item.doc_fl_sav_pth_nm) {// 이미지 경로가 있으면 미리보기 표시imagePreview.innerHTML = '<p class="text-muted">이미지 로딩 중...</p>';// 이미지 조회 API 호출fetch('/rf-ocr-verf/api/getOcrImage.do', {method: 'POST',headers: {'Content-Type': 'application/json'},body: JSON.stringify({inst_cd: item.inst_cd,prdt_cd: item.prdt_cd,image_path: item.doc_fl_sav_pth_nm,ext: item.doc_fl_ext})}).then(response => response.json()).then(data => {if (data.success && data.data) {imagePreview.innerHTML = '<img src="' + data.data + '" style="max-width: 100%; max-height: 800px;">';} else {imagePreview.innerHTML = '<p class="text-muted">이미지를 로드할 수 없습니다.</p>';}}).catch(error => {console.error('이미지 조회 실패:', error);imagePreview.innerHTML = '<p class="text-muted">이미지 조회 중 오류가 발생했습니다.</p>';});} else {imagePreview.innerHTML = '<p class="text-muted">이미지 정보가 없습니다.</p>';}// OCR 결과 조회if (item.ocr_doc_no) {fetch('/rf-ocr-verf/api/getOcrResultText.do', {method: 'POST',headers: {'Content-Type': 'application/json'},body: JSON.stringify({ocr_doc_no: item.ocr_doc_no})}).then(response => response.json()).then(data => {console.log('OCR 결과:', data);if (data.success && data.data && data.data.length > 0) {// OCR 결과가 있으면 테이블에 추가data.data.forEach(function(ocrItem) {const row = document.createElement('tr');const itemNm = ocrItem.item_nm || ocrItem.item_cd || '-';const itemValue = ocrItem.item_value || '-';row.innerHTML = '<td style="font-weight: 600; width: 30%; word-break: break-word; padding: 2px 8px !important; background-color: #f8f9fc;">' + itemNm + '</td>' +'<td style="width: 70%; word-break: break-word; padding: 2px 8px !important;background-color: #fff">' + itemValue + '</td>';resultTableBody.appendChild(row);});}}).catch(error => {console.error('OCR 결과 조회 실패:', error);});}resultSection.style.display = 'block';emptyResult.style.display = 'none';}// 드래그 앤 드롭 처리const fileInputLabel = document.querySelector('.file-input-label');const fileInput = document.getElementById('fileInput');// 드래그 오버 이벤트fileInputLabel.addEventListener('dragover', function(e) {e.preventDefault();e.stopPropagation();fileInputLabel.style.borderColor = '#4e73df';fileInputLabel.style.backgroundColor = '#f0f4ff';});// 드래그 리브 이벤트fileInputLabel.addEventListener('dragleave', function(e) {e.preventDefault();e.stopPropagation();fileInputLabel.style.borderColor = '#ddd';fileInputLabel.style.backgroundColor = '#f8f9fc';});// 드롭 이벤트fileInputLabel.addEventListener('drop', function(e) {e.preventDefault();e.stopPropagation();fileInputLabel.style.borderColor = '#ddd';fileInputLabel.style.backgroundColor = '#f8f9fc';const files = e.dataTransfer.files;if (files.length > 0) {fileInput.files = files;// change 이벤트 트리거const event = new Event('change', { bubbles: true });fileInput.dispatchEvent(event);}});// 파일 선택 처리fileInput.addEventListener('change', function(e) {const files = e.target.files;if (files.length === 0) {document.getElementById('fileName').textContent = '';} else if (files.length === 1) {document.getElementById('fileName').textContent = '✓ ' + files[0].name;} else {document.getElementById('fileName').textContent = '✓ ' + files.length + '개 파일 선택됨';}});// 폼 제출 처리document.getElementById('ocrTestForm').addEventListener('submit', function(e) {e.preventDefault();const fileInput = document.getElementById('fileInput');if (!fileInput.files || fileInput.files.length === 0) {alert('파일을 선택해주세요.');return;}const files = fileInput.files;const currentYear = new Date().getFullYear().toString();const ctrlYr = currentYear.substring(2);// 로딩 바 표시document.getElementById('loadingOverlay').classList.add('active');// 각 파일을 순차적으로 업로드let uploadCount = 0;for (let i = 0; i < files.length; i++) {const file = files[i];const formData = new FormData();formData.append('file', file);formData.append('instCd', '99');formData.append('prdtCd', 'OCR');formData.append('ctrlYr', ctrlYr);formData.append('docTpCd', '01');// 서버에 파일 업로드fetch('/rf-ocr-verf/api/ocrRealtimeTest.do', {method: 'POST',body: formData}).then(response => response.json()).then(data => {console.log('업로드 성공:', data);displayResult(data, file.name);uploadCount++;if (uploadCount === files.length) {// 로딩 바 숨김document.getElementById('loadingOverlay').classList.remove('active');alert('파일 업로드가 완료되었습니다.');location.reload();}}).catch(error => {// 로딩 바 숨김document.getElementById('loadingOverlay').classList.remove('active');console.error('업로드 실패:', error);alert(file.name + ' 파일 업로드 중 오류가 발생했습니다.');});}});// 결과 표시function displayResult(data, fileName) {const resultSection = document.getElementById('resultSection');const emptyResult = document.getElementById('emptyResult');const resultTableBody = document.getElementById('resultTableBody');const historyList = document.getElementById('historyList');resultTableBody.innerHTML = '';function addTableRows(obj, prefix = '') {for (const key in obj) {if (obj.hasOwnProperty(key)) {const value = obj[key];const displayKey = prefix ? `${prefix}.${key}` : key;if (typeof value === 'object' && value !== null) {addTableRows(value, displayKey);} else {const row = document.createElement('tr');row.innerHTML = `<td style="font-weight: 600; width: 40%; word-break: break-word;">${displayKey}</td><td style="width: 60%; word-break: break-word;">${value}</td>`;resultTableBody.appendChild(row);}}}}addTableRows(data);resultSection.style.display = 'block';emptyResult.style.display = 'none';// 히스토리에 추가const now = new Date();const timestamp = now.toLocaleString('ko-KR');const statusBadge = data.success ? '<span class="badge badge-success" style="font-size: 11px;">성공</span>' : '<span class="badge badge-danger" style="font-size: 11px;">실패</span>';const historyItem = document.createElement('div');historyItem.style.cssText = 'padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;';historyItem.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><div><strong>${fileName}</strong><div style="color: #999; font-size: 11px; margin-top: 3px;">${timestamp}</div></div>${statusBadge}</div>`;historyItem.addEventListener('click', function() {resultTableBody.innerHTML = '';addTableRows(data);resultSection.style.display = 'block';emptyResult.style.display = 'none';});if (historyList.querySelector('.text-muted')) {historyList.innerHTML = '';}historyList.insertBefore(historyItem, historyList.firstChild);}// 히스토리 삭제 (개별)function deleteHistoryItem(ocrDocNo, docFlSavPthNm) {document.getElementById('loadingOverlay').classList.add('active');fetch('/rf-ocr-verf/api/deleteHistory.do', {method: 'POST',headers: {'Content-Type': 'application/json'},body: JSON.stringify({ocr_doc_no: ocrDocNo,doc_fl_sav_pth_nm: docFlSavPthNm})}).then(response => response.json()).then(data => {if (data.success) {document.getElementById('loadingOverlay').classList.remove('active');alert('삭제되었습니다.');location.reload();} else {document.getElementById('loadingOverlay').classList.remove('active');alert('삭제 실패: ' + data.message);}}).catch(error => {document.getElementById('loadingOverlay').classList.remove('active');console.error('삭제 실패:', error);alert('삭제 중 오류가 발생했습니다.');});}// 히스토리 초기화 (전체)function confirmClearHistory() {if (confirm('모든 테스트 기록을 삭제하시겠습니까?')) {deleteHistoryItem();}}function clearHistory() {const historyList = document.getElementById('historyList');historyList.innerHTML = '<p class="text-muted text-center">테스트 기록이 없습니다.</p>';const resultSection = document.getElementById('resultSection');const emptyResult = document.getElementById('emptyResult');resultSection.style.display = 'none';emptyResult.style.display = 'flex';}</script>
+<%@ page pageEncoding="utf-8" %>
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <%--viewer.js v.1.11.17--%>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/viewerjs/1.11.7/viewer.min.css">
+    <script src="${pageContext.request.contextPath}/resources/viewerjs/1.11.7/viewer.min.js"></script>
+
+
+    <title>이미지 전산화 검증</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            min-width: 1200px;
+        }
+        #wrapper {
+            display: flex;
+        }
+        .sidebar {
+            min-height: 100vh;
+            width: 250px;
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        }
+        .sidebar-brand {
+            height: 80px;
+            text-decoration: none;
+            color: white !important;
+        }
+        .sidebar-brand-icon i {
+            color: white;
+        }
+        .sidebar-brand-text {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .sidebar .nav-item .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem;
+        }
+        .sidebar .nav-item .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar .nav-item.active .nav-link {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        .sidebar-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 0;
+        }
+        .bg-gradient-primary {
+            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+        }
+        #content-wrapper {
+            flex: 1;
+            background-color: #f8f9fc;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        #content {
+            flex: 1;
+        }
+        .topbar {
+            background-color: white;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        .custom-navbar-height {
+            height: 60px;
+        }
+        .sticky-footer {
+            background-color: white;
+            padding: 1rem 0;
+        }
+        .scroll-to-top {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            display: none;
+            width: 2.75rem;
+            height: 2.75rem;
+            text-align: center;
+            color: white;
+            background: rgba(90, 92, 105, 0.5);
+            line-height: 46px;
+            border-radius: 50%;
+        }
+        .scroll-to-top:hover {
+            background: rgba(90, 92, 105, 0.7);
+            color: white;
+            text-decoration: none;
+        }
+        .card-body {
+            padding: 1.25rem !important;
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
+        .loading-spinner {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .loading-spinner .spinner-border {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 15px;
+        }
+        .loading-spinner p {
+            margin: 0;
+            color: #333;
+            font-weight: 600;
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+        .file-input-label {
+            display: block;
+            padding: 20px;
+            background: #f8f9fc;
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+        }
+        .file-input-label:hover {
+            border-color: #4e73df;
+            background: #f0f4ff;
+        }
+        .file-name {
+            margin-top: 10px;
+            color: #4e73df;
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<script type="text/javascript">
+    // 마우스 우클릭 방지, 드래그 방지, 선택 방지
+    /*$(document).ready(function() {
+        $(document).on('contextmenu dragstart selectstart', function() {
+            return false;
+        });
+    });*/
+</script>
+<body id="page-top">
+<!-- 로딩 오버레이 -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">로딩 중...</span>
+        </div>
+        <p>업로드 중입니다...</p>
+    </div>
+</div>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 좌측: 테스트 폼 및 결과 -->
+        <div class="col-md-9" style="padding: 0px !important;">
+            <!-- 테스트 폼 -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">OCR 실시간 테스트</h6>
+                </div>
+                <div class="card-body">
+                    <form id="ocrTestForm" enctype="multipart/form-data">
+                        <div class="form-row">
+                            <div class="col-md-12 mb-3">
+                                <label>파일 선택 *</label>
+                                <div class="file-input-wrapper">
+                                    <input type="file" id="fileInput" name="file" accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff" multiple required>
+                                    <label for="fileInput" class="file-input-label">
+                                        <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
+                                        <p class="mb-0">파일을 선택하거나 여기에 드래그하세요 (여러 파일 선택 가능)</p>
+                                    </label>
+                                    <div class="file-name" id="fileName"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play"></i> 테스트 시작
+                                </button>
+                                <button type="reset" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-redo"></i> 초기화
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 이미지 및 결과 -->
+            <div class="row">
+                <!-- 이미지 영역 (65%) -->
+                <div style="width: 65%; padding-right: 10px; padding-left: 15px">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3" style="display: flex; justify-content: space-between; align-items: center;">
+                            <h6 class="m-0 font-weight-bold text-primary">이미지 미리보기</h6>
+                            <button type="button" class="btn btn-sm btn-primary" id="detailViewBtn" style="display: none;">
+                                <i class="fas fa-external-link-alt"></i> 상세보기
+                            </button>
+                        </div>
+                        <div class="card-body" style="text-align: center; min-height: 800px; display: flex; align-items: center; justify-content: center;">
+                            <div id="imagePreview" style="width: 100%; max-height: 800px;">
+                                <p class="text-muted">이미지가 표시됩니다</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 테이블 결과 영역 (35%) -->
+                <div style="width: 35%; padding-left: 10px; padding-right: 15px">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">OCR 결과</h6>
+                        </div>
+                        <div class="card-body" style="min-height: 800px;">
+                            <div id="resultSection" style="display: none;">
+                                <div style="border-radius: 2px; min-height: 800px; overflow-y: auto;">
+                                    <table class="table table-sm table-bordered mb-0" style="font-size: 12px;">
+                                        <tbody id="resultTableBody">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="emptyResult" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                                <p class="text-muted">결과가 표시됩니다</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 우측: 히스토리 -->
+        <div class="col-md-3">
+            <div class="card shadow mb-4" style="height: 1000px; display: flex; flex-direction: column;">
+                <div class="card-header py-3" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h6 class="m-0 font-weight-bold text-primary">테스트 히스토리</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmClearHistory()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="card-body" style="flex: 1; overflow-y: auto; padding: 0;">
+                    <div id="historyList" style="font-size: 13px; background-color: #fff; color: #333;">
+                        <p class="text-muted text-center" style="padding: 20px 10px; margin: 0;">테스트 기록이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scroll to Top Button-->
+<a class="scroll-to-top rounded" href="#page-top">
+    <i class="fas fa-angle-up"></i>
+</a>
+</body>
+</html>
+
+
+<script>
+    // 페이지 로드 시 히스토리 조회
+    document.addEventListener('DOMContentLoaded', function() {
+        loadHistory();
+    });
+
+    // 히스토리 조회
+    function loadHistory() {
+        console.log('히스토리 조회 시작');
+        fetch('/rf-ocr-verf/api/getOcrTestHistory.do', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => {
+                console.log('응답 상태:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('히스토리 데이터:', data);
+                if (data.success && data.data && data.data.length > 0) {
+                    console.log('히스토리 개수:', data.data.length);
+                    displayHistoryList(data.data);
+                } else {
+                    console.log('히스토리 없음');
+                    document.getElementById('historyList').innerHTML = '<p class="text-muted text-center">테스트 기록이 없습니다.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('히스토리 조회 실패:', error);
+                document.getElementById('historyList').innerHTML = '<p class="text-muted text-center">히스토리 조회 중 오류가 발생했습니다.</p>';
+            });
+    }
+
+    // 히스토리 목록 표시
+    function displayHistoryList(historyData) {
+        console.log('히스토리 목록 표시 시작, 개수:', historyData.length);
+        const historyList = document.getElementById('historyList');
+        historyList.innerHTML = '';
+
+        if (!historyData || historyData.length === 0) {
+            historyList.innerHTML = '<p class="text-muted text-center">테스트 기록이 없습니다.</p>';
+            return;
+        }
+
+        historyData.forEach(function(item, index) {
+            console.log('히스토리 항목 ' + index + ':', item);
+            const historyItem = document.createElement('div');
+            historyItem.style.cssText = 'padding: 12px 10px; border-bottom: 1px solid #eee; cursor: pointer; background-color: #ffffff; transition: background-color 0.2s; color: #333;';
+            historyItem.onmouseover = function() { this.style.backgroundColor = '#f8f9fc'; };
+            historyItem.onmouseout = function() { this.style.backgroundColor = '#ffffff'; };
+
+            const fileName = item.doc_fl_nm || item.ocr_doc_no || 'Unknown';
+            const timestamp = item.ins_dttm ? new Date(item.ins_dttm).toLocaleString('ko-KR') : '';
+            // ocr_yn에 따라 상태 배지 결정
+            let statusBadge = '';
+            let statusText = '';
+            let badgeColor = '';
+
+            if (item.ocr_yn === 'Y') {
+                statusText = '완료';
+                badgeColor = '#28a745';
+            } else if (item.ocr_yn === 'N') {
+                statusText = '대기';
+                badgeColor = '#ffc107';
+            } else if (item.ocr_yn === 'X') {
+                statusText = '실패';
+                badgeColor = '#dc3545';
+            } else {
+                statusText = '대기';
+                badgeColor = '#ffc107';
+            }
+
+            statusBadge = '<span class="badge" style="font-size: 11px; background-color: ' + badgeColor + '; color: white;">' + statusText + '</span>';
+
+            historyItem.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; color: #333;">' +
+                '<div style="flex: 1; min-width: 0;">' +
+                '<strong style="display: block; word-break: break-word; color: #333;">' + fileName + '</strong>' +
+                '<div style="color: #999; font-size: 11px; margin-top: 3px;">' + timestamp + '</div>' +
+                '</div>' +
+                '<div style="flex-shrink: 0;">' +
+                statusBadge +
+                '</div>' +
+                '</div>';
+
+
+            historyItem.addEventListener('click', function() {
+                console.log('히스토리 항목 클릭:', item);
+                displayHistoryDetail(item);
+            });
+
+            historyList.appendChild(historyItem);
+            console.log('히스토리 항목 추가됨:', fileName);
+        });
+        console.log('히스토리 목록 표시 완료');
+    }
+
+    // 히스토리 상세 표시
+    function displayHistoryDetail(item) {
+        const resultSection = document.getElementById('resultSection');
+        const emptyResult = document.getElementById('emptyResult');
+        const resultTableBody = document.getElementById('resultTableBody');
+        const imagePreview = document.getElementById('imagePreview');
+        const detailViewBtn = document.getElementById('detailViewBtn');
+
+        resultTableBody.innerHTML = '';
+
+        // 상세보기 버튼 설정
+        if (item.ocr_doc_no) {
+            detailViewBtn.style.display = 'block';
+            detailViewBtn.onclick = function() {
+                // detail 페이지로 이동 (새탭)
+                const detailUrl = '/rf-ocr-verf/main?pageChange=/ocrRsltDetail' +
+                    '&ctrl_yr=' + item.ctrl_yr +
+                    '&inst_cd=' + item.inst_cd +
+                    '&prdt_cd=' + item.prdt_cd +
+                    '&ctrl_no=' + item.ctrl_no +
+                    '&doc_tp_cd=' + item.doc_tp_cd;
+                window.open(detailUrl, '_blank');
+            };
+        } else {
+            detailViewBtn.style.display = 'none';
+        }
+
+        resultTableBody.innerHTML = '';
+
+        // 이미지 미리보기 표시
+        if (item.doc_fl_sav_pth_nm) {
+            // 이미지 경로가 있으면 미리보기 표시
+            imagePreview.innerHTML = '<p class="text-muted">이미지 로딩 중...</p>';
+
+            // 이미지 조회 API 호출
+            fetch('/rf-ocr-verf/api/getOcrImage.do', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    inst_cd: item.inst_cd,
+                    prdt_cd: item.prdt_cd,
+                    image_path: item.doc_fl_sav_pth_nm,
+                    ext: item.doc_fl_ext
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        imagePreview.innerHTML = '<img id="viewerImage" src="' + data.data + '" style="max-width: 100%; max-height: 800px;">';
+                        setTimeout(function() {
+                            const viewerImage = document.getElementById('viewerImage');
+                            if (viewerImage && !viewerImage.viewer) {
+                                new Viewer(viewerImage, {
+                                    inline: true,
+                                    autoCrop: false,
+                                    background: false,
+                                    toolbar: {
+                                        zoomIn: true,
+                                        zoomOut: true,
+                                        oneToOne: true,
+                                        reset: true,
+                                        prev: false,
+                                        play: false,
+                                        next: false,
+                                        rotateLeft: true,
+                                        rotateRight: true,
+                                        flipHorizontal: true,
+                                        flipVertical: true
+                                    }
+                                });
+                            }
+                        }, 100);
+                    } else {
+                        imagePreview.innerHTML = '<p class="text-muted">이미지를 로드할 수 없습니다.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('이미지 조회 실패:', error);
+                    imagePreview.innerHTML = '<p class="text-muted">이미지 조회 중 오류가 발생했습니다.</p>';
+                });
+        } else {
+            imagePreview.innerHTML = '<p class="text-muted">이미지 정보가 없습니다.</p>';
+        }
+
+        // OCR 결과 조회
+        if (item.ocr_doc_no) {
+            fetch('/rf-ocr-verf/api/getOcrResultText.do', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ocr_doc_no: item.ocr_doc_no
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('OCR 결과:', data);
+                    if (data.success && data.data && data.data.length > 0) {
+                        // OCR 결과가 있으면 테이블에 추가
+                        data.data.forEach(function(ocrItem) {
+                            const row = document.createElement('tr');
+                            const itemNm = ocrItem.item_nm || ocrItem.item_cd || '-';
+                            const itemValue = ocrItem.item_value || '-';
+                            row.innerHTML = '<td style="font-weight: 600; width: 30%; word-break: break-word; padding: 2px 8px !important; background-color: #f8f9fc;">' + itemNm + '</td>' +
+                                '<td style="width: 70%; word-break: break-word; padding: 2px 8px !important;background-color: #fff">' + itemValue + '</td>';
+                            resultTableBody.appendChild(row);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('OCR 결과 조회 실패:', error);
+                });
+        }
+
+        resultSection.style.display = 'block';
+        emptyResult.style.display = 'none';
+    }
+
+
+    // 드래그 앤 드롭 처리
+    const fileInputLabel = document.querySelector('.file-input-label');
+    const fileInput = document.getElementById('fileInput');
+
+    // 드래그 오버 이벤트
+    fileInputLabel.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInputLabel.style.borderColor = '#4e73df';
+        fileInputLabel.style.backgroundColor = '#f0f4ff';
+    });
+
+    // 드래그 리브 이벤트
+    fileInputLabel.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInputLabel.style.borderColor = '#ddd';
+        fileInputLabel.style.backgroundColor = '#f8f9fc';
+    });
+
+    // 드롭 이벤트
+    fileInputLabel.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInputLabel.style.borderColor = '#ddd';
+        fileInputLabel.style.backgroundColor = '#f8f9fc';
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+
+            // change 이벤트 트리거
+            const event = new Event('change', { bubbles: true });
+            fileInput.dispatchEvent(event);
+        }
+    });
+
+    // 파일 선택 처리
+    fileInput.addEventListener('change', function(e) {
+        const files = e.target.files;
+        if (files.length === 0) {
+            document.getElementById('fileName').textContent = '';
+        } else if (files.length === 1) {
+            document.getElementById('fileName').textContent = '✓ ' + files[0].name;
+        } else {
+            document.getElementById('fileName').textContent = '✓ ' + files.length + '개 파일 선택됨';
+        }
+    });
+
+    // 폼 제출 처리
+    document.getElementById('ocrTestForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const fileInput = document.getElementById('fileInput');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert('파일을 선택해주세요.');
+            return;
+        }
+
+        const files = fileInput.files;
+        const currentYear = new Date().getFullYear().toString();
+        const ctrlYr = currentYear.substring(2);
+
+        // 로딩 바 표시
+        document.getElementById('loadingOverlay').classList.add('active');
+
+        // 각 파일을 순차적으로 업로드
+        let uploadCount = 0;
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('instCd', '99');
+            formData.append('prdtCd', 'OCR');
+            formData.append('ctrlYr', ctrlYr);
+            formData.append('docTpCd', '01');
+
+            // 서버에 파일 업로드
+            fetch('/rf-ocr-verf/api/ocrRealtimeTest.do', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('업로드 성공:', data);
+                    displayResult(data, file.name);
+                    uploadCount++;
+                    if (uploadCount === files.length) {
+                        // 로딩 바 숨김
+                        document.getElementById('loadingOverlay').classList.remove('active');
+                        alert('파일 업로드가 완료되었습니다.');
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    // 로딩 바 숨김
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    console.error('업로드 실패:', error);
+                    alert(file.name + ' 파일 업로드 중 오류가 발생했습니다.');
+                });
+        }
+    });
+
+    // 결과 표시
+    function displayResult(data, fileName) {
+        const resultSection = document.getElementById('resultSection');
+        const emptyResult = document.getElementById('emptyResult');
+        const resultTableBody = document.getElementById('resultTableBody');
+        const historyList = document.getElementById('historyList');
+
+        resultTableBody.innerHTML = '';
+
+        function addTableRows(obj, prefix = '') {
+            for (const key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    const value = obj[key];
+                    const displayKey = prefix ? `${prefix}.${key}` : key;
+
+                    if (typeof value === 'object' && value !== null) {
+                        addTableRows(value, displayKey);
+                    } else {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                                <td style="font-weight: 600; width: 40%; word-break: break-word;">${displayKey}</td>
+                                <td style="width: 60%; word-break: break-word;">${value}</td>
+                            `;
+                        resultTableBody.appendChild(row);
+                    }
+                }
+            }
+        }
+
+        addTableRows(data);
+        resultSection.style.display = 'block';
+        emptyResult.style.display = 'none';
+
+        // 히스토리에 추가
+        const now = new Date();
+        const timestamp = now.toLocaleString('ko-KR');
+        const statusBadge = data.success ? '<span class="badge badge-success" style="font-size: 11px;">성공</span>' : '<span class="badge badge-danger" style="font-size: 11px;">실패</span>';
+
+        const historyItem = document.createElement('div');
+        historyItem.style.cssText = 'padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;';
+        historyItem.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>${fileName}</strong>
+                        <div style="color: #999; font-size: 11px; margin-top: 3px;">${timestamp}</div>
+                    </div>
+                    ${statusBadge}
+                </div>
+            `;
+
+        historyItem.addEventListener('click', function() {
+            resultTableBody.innerHTML = '';
+            addTableRows(data);
+            resultSection.style.display = 'block';
+            emptyResult.style.display = 'none';
+        });
+
+        if (historyList.querySelector('.text-muted')) {
+            historyList.innerHTML = '';
+        }
+
+        historyList.insertBefore(historyItem, historyList.firstChild);
+    }
+
+    // 히스토리 삭제 (개별)
+    function deleteHistoryItem(ocrDocNo, docFlSavPthNm) {
+        document.getElementById('loadingOverlay').classList.add('active');
+        fetch('/rf-ocr-verf/api/deleteHistory.do', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ocr_doc_no: ocrDocNo,
+                doc_fl_sav_pth_nm: docFlSavPthNm
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    alert('삭제되었습니다.');
+                    location.reload();
+                } else {
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    alert('삭제 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                document.getElementById('loadingOverlay').classList.remove('active');
+                console.error('삭제 실패:', error);
+                alert('삭제 중 오류가 발생했습니다.');
+            });
+
+    }
+
+    // 히스토리 초기화 (전체)
+    function confirmClearHistory() {
+        if (confirm('모든 테스트 기록을 삭제하시겠습니까?')) {
+            deleteHistoryItem();
+        }
+    }
+
+    function clearHistory() {
+        const historyList = document.getElementById('historyList');
+        historyList.innerHTML = '<p class="text-muted text-center">테스트 기록이 없습니다.</p>';
+        const resultSection = document.getElementById('resultSection');
+        const emptyResult = document.getElementById('emptyResult');
+        resultSection.style.display = 'none';
+        emptyResult.style.display = 'flex';
+    }
+</script>
