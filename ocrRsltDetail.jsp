@@ -276,7 +276,6 @@
                             <div id="imageViewer" class="text-center" style="flex: 1; overflow: hidden; width: 100%; height: 100%;">
                                 <p class="text-muted">이미지를 불러오는 중...</p>
                             </div>
-                            <div id="pageNavigation" style="padding: 10px; text-align: center; border-top: 1px solid #e3e6f0; flex-shrink: 0;"></div>
                         </div>
                     </div>
                 </div>
@@ -385,9 +384,6 @@
 
                     // 복수 이미지 정보 표시 (비동기)
                     displayMultipleImages(response.data, response.documentList || []);
-
-                    // 페이지 네비게이션 표시
-                    displayPageNavigation(response.totalPages || 1);
                 } else {
                     alert('문서 정보를 불러올 수 없습니다.');
                     $('#documentTypeList').html('<p class="text-center text-danger">데이터를 불러오지 못했습니다.</p>');
@@ -747,8 +743,38 @@
                         if (container) {
                             var viewer = new Viewer(container, {
                                 inline: true,
-                                viewed: function() {
-                                    console.log('Viewer.js viewed 이벤트 - 현재 인덱스:', viewer.index);
+                                viewed: function(event) {
+                                    var newIndex = event.detail.index;
+                                    console.log('Viewer.js viewed 이벤트 - 현재 인덱스:', newIndex);
+                                    
+                                    // 인덱스가 변경되었을 때만 OCR 결과 업데이트
+                                    if (newIndex !== currentIndex) {
+                                        currentIndex = newIndex;
+                                        
+                                        // 해당 인덱스의 ocr_doc_no 가져오기
+                                        if (ocrDocNoList && ocrDocNoList[newIndex]) {
+                                            var newOcrDocNo = ocrDocNoList[newIndex];
+                                            console.log('OCR 결과 업데이트 - OCR_DOC_NO:', newOcrDocNo);
+                                            
+                                            // OCR 결과 조회
+                                            $.ajax({
+                                                url: '/rf-ocr-verf/api/getOcrResultText.do',
+                                                type: 'POST',
+                                                contentType: 'application/json',
+                                                data: JSON.stringify({
+                                                    ocr_doc_no: newOcrDocNo
+                                                }),
+                                                success: function(response) {
+                                                    if (response.success && response.data) {
+                                                        displayOcrResults(response.data);
+                                                    }
+                                                },
+                                                error: function(xhr, status, error) {
+                                                    console.error('OCR 결과 조회 실패:', error);
+                                                }
+                                            });
+                                        }
+                                    }
                                 },
                                 toolbar: {
                                     zoomIn: 4,
