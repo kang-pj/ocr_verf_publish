@@ -248,13 +248,38 @@ public class OcrController {
                 
                 OcrInfoVO docInfo = ocrService.getOcrDocumentDetail(docParams);
                 if (docInfo != null && docInfo.getDoc_fl_sav_pth_nm() != null) {
-                    Map<String, Object> imageInfo = new HashMap<>();
-                    imageInfo.put("ocr_doc_no", ocrDocNo);
-                    imageInfo.put("image_path", docInfo.getDoc_fl_sav_pth_nm());
-                    imageInfo.put("ext", docInfo.getDoc_fl_ext());
-                    imageInfo.put("inst_cd", docInfo.getInst_cd());
-                    imageInfo.put("prdt_cd", docInfo.getPrdt_cd());
-                    imageInfoList.add(imageInfo);
+                    String ext = docInfo.getDoc_fl_ext();
+                    
+                    // PDF인 경우 페이지 수만큼 이미지 정보 추가
+                    if ("pdf".equalsIgnoreCase(ext)) {
+                        // PDF 페이지 수 조회
+                        int pageCount = getPdfPageCount(docInfo.getInst_cd(), docInfo.getPrdt_cd(), docInfo.getDoc_fl_sav_pth_nm());
+                        
+                        logger.info("PDF 페이지 수: {} - OCR_DOC_NO: {}", pageCount, ocrDocNo);
+                        
+                        for (int i = 0; i < pageCount; i++) {
+                            Map<String, Object> imageInfo = new HashMap<>();
+                            imageInfo.put("ocr_doc_no", ocrDocNo);
+                            imageInfo.put("image_path", docInfo.getDoc_fl_sav_pth_nm());
+                            imageInfo.put("ext", ext);
+                            imageInfo.put("inst_cd", docInfo.getInst_cd());
+                            imageInfo.put("prdt_cd", docInfo.getPrdt_cd());
+                            imageInfo.put("page_number", i + 1);
+                            imageInfo.put("is_pdf", true);
+                            imageInfoList.add(imageInfo);
+                        }
+                    } else {
+                        // 이미지 파일은 1개만 추가
+                        Map<String, Object> imageInfo = new HashMap<>();
+                        imageInfo.put("ocr_doc_no", ocrDocNo);
+                        imageInfo.put("image_path", docInfo.getDoc_fl_sav_pth_nm());
+                        imageInfo.put("ext", ext);
+                        imageInfo.put("inst_cd", docInfo.getInst_cd());
+                        imageInfo.put("prdt_cd", docInfo.getPrdt_cd());
+                        imageInfo.put("page_number", 1);
+                        imageInfo.put("is_pdf", false);
+                        imageInfoList.add(imageInfo);
+                    }
                 }
             }
             
@@ -294,9 +319,17 @@ public class OcrController {
             List<String> images = new ArrayList<>();
             String baseUrl = "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/preview-image-all";
             
+            // PDF 파일 캐싱을 위한 맵 (같은 파일을 여러 번 다운로드하지 않도록)
+            Map<String, byte[]> pdfCache = new HashMap<>();
+            
             for (Map<String, Object> imageInfo : imageList) {
                 String imagePath = (String) imageInfo.get("image_path");
                 String ext = (String) imageInfo.get("ext");
+                Boolean isPdf = (Boolean) imageInfo.get("is_pdf");
+                Integer pageNumber = (Integer) imageInfo.get("page_number");
+                
+                logger.info("이미지 정보 - PATH: {}, EXT: {}, IS_PDF: {}, PAGE: {}", 
+                    imagePath, ext, isPdf, pageNumber);
                 
                 if (imagePath == null || ext == null) {
                     continue;
@@ -306,11 +339,36 @@ public class OcrController {
                     String encodedPath = URLEncoder.encode(Base64.getEncoder().encodeToString(imagePath.getBytes()), "UTF-8");
                     String trgtURL = baseUrl + "?instCd=" + instCd + "&prdtCd=" + prdtCd + "&imagePath=" + encodedPath;
                     
-                    byte[] fileArray = downloadImageFromUrl(trgtURL);
-                    String base64Image = convertToBase64Image(fileArray, ext);
+                    // 캐시 확인 (PDF인 경우)
+                    byte[] fileArray;
+                    if (isPdf != null && isPdf && pdfCache.containsKey(imagePath)) {
+                        logger.info("PDF 캐시 사용: {}", imagePath);
+                        fileArray = pdfCache.get(imagePath);
+                    } else {
+                        // 외부 API에서 파일 다운로드
+                        logger.info("파일 다운로드: {}", imagePath);
+                        fileArray = downloadImageFromUrl(trgtURL);
+                        
+                        // PDF인 경우 캐시에 저장
+                        if (isPdf != null && isPdf) {
+                            pdfCache.put(imagePath, fileArray);
+                        }
+                    }
+                    
+                    // PDF인 경우 페이지 번호를 사용하여 변환
+                    String base64Image;
+                    if (isPdf != null && isPdf && pageNumber != null) {
+                        logger.info("PDF 페이지 변환 시작: 페이지 {}", pageNumber);
+                        base64Image = convertToBase64Image(fileArray, ext, pageNumber);
+                        logger.info("PDF 페이지 변환 완료: 페이지 {}", pageNumber);
+                    } else {
+                        logger.info("이미지 변환 (PDF 아님)");
+                        base64Image = convertToBase64Image(fileArray, ext);
+                    }
+                    
                     images.add(base64Image);
                 } catch (Exception e) {
-                    logger.warn("이미지 로딩 실패, 경로만 추가: {}", imagePath);
+                    logger.error("이미지 로딩 실패: {} - {}", imagePath, e.getMessage(), e);
                     images.add(imagePath);
                 }
             }
@@ -380,6 +438,28 @@ public class OcrController {
     }
     
     /**
+     * PDF 페이지 수 조회
+     */
+    private int getPdfPageCount(String instCd, String prdtCd, String imagePath) {
+        try {
+            String baseUrl = "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/preview-image-all";
+            String encodedPath = URLEncoder.encode(Base64.getEncoder().encodeToString(imagePath.getBytes()), "UTF-8");
+            String trgtURL = baseUrl + "?instCd=" + instCd + "&prdtCd=" + prdtCd + "&imagePath=" + encodedPath;
+            
+            byte[] fileArray = downloadImageFromUrl(trgtURL);
+            
+            PDDocument document = PDDocument.load(fileArray);
+            int pageCount = document.getNumberOfPages();
+            document.close();
+            
+            return pageCount;
+        } catch (Exception e) {
+            logger.warn("PDF 페이지 수 조회 실패, 기본값 1 반환: {}", e.getMessage());
+            return 1;
+        }
+    }
+    
+    /**
      * URL에서 이미지 다운로드
      */
     private byte[] downloadImageFromUrl(String urlString) throws IOException {
@@ -395,6 +475,13 @@ public class OcrController {
      * 이미지를 Base64로 변환
      */
     private String convertToBase64Image(byte[] fileArray, String ext) throws IOException {
+        return convertToBase64Image(fileArray, ext, 1);
+    }
+    
+    /**
+     * 이미지를 Base64로 변환 (페이지 번호 지정 가능)
+     */
+    private String convertToBase64Image(byte[] fileArray, String ext, int pageNumber) throws IOException {
         String mimeType = "image/jpeg";
         String outputFormat = "JPEG";
         byte[] outputArray = fileArray;
@@ -402,8 +489,22 @@ public class OcrController {
         try {
             if ("pdf".equalsIgnoreCase(ext)) {
                 PDDocument document = PDDocument.load(fileArray);
-                BufferedImage image = new PDFRenderer(document).renderImageWithDPI(0, 300);
+                int totalPages = document.getNumberOfPages();
+                int pageIndex = pageNumber - 1; // 0-based index
+                
+                logger.info("PDF 변환 - 요청 페이지: {}, 전체 페이지: {}, 인덱스: {}", 
+                    pageNumber, totalPages, pageIndex);
+                
+                // 페이지 번호 유효성 검사
+                if (pageIndex < 0 || pageIndex >= totalPages) {
+                    logger.warn("잘못된 페이지 번호, 첫 페이지로 변경: {} -> 0", pageIndex);
+                    pageIndex = 0;
+                }
+                
+                BufferedImage image = new PDFRenderer(document).renderImageWithDPI(pageIndex, 300);
                 document.close();
+                
+                logger.info("PDF 페이지 {} 렌더링 완료", pageIndex + 1);
                 
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 ImageIO.write(image, "JPEG", baos);
@@ -463,10 +564,10 @@ public class OcrController {
                 throw new IllegalArgumentException("관리번호 정보가 필요합니다.");
             }
             
-            // OCR 문서 번호 리스트 조회
-            List<String> ocrDocNoList = ocrService.getOcrDocNoList(params);
+            // OCR 문서 번호 리스트 조회 (원본)
+            List<String> originalOcrDocNoList = ocrService.getOcrDocNoList(params);
             
-            if (ocrDocNoList == null || ocrDocNoList.isEmpty()) {
+            if (originalOcrDocNoList == null || originalOcrDocNoList.isEmpty()) {
                 throw new RuntimeException("해당 조건의 문서가 없습니다.");
             }
             
@@ -474,14 +575,61 @@ public class OcrController {
             String currentOcrDocNo = (String) params.get("ocr_doc_no");
             if (currentOcrDocNo == null || currentOcrDocNo.isEmpty()) {
                 // ocr_doc_no가 없으면 첫 번째 문서
-                currentOcrDocNo = ocrDocNoList.get(0);
+                currentOcrDocNo = originalOcrDocNoList.get(0);
             }
             
-            // 현재 인덱스 찾기
-            int currentIndex = ocrDocNoList.indexOf(currentOcrDocNo);
+            // PDF 페이지 수를 고려한 확장된 리스트 및 이미지 정보 생성
+            List<String> expandedOcrDocNoList = new ArrayList<>();
+            List<Map<String, Object>> imageInfoList = new ArrayList<>();
+            
+            for (String ocrDocNo : originalOcrDocNoList) {
+                Map<String, Object> docParams = new HashMap<>();
+                docParams.put("ocr_doc_no", ocrDocNo);
+                
+                OcrInfoVO docInfo = ocrService.getOcrDocumentDetail(docParams);
+                if (docInfo != null && docInfo.getDoc_fl_sav_pth_nm() != null) {
+                    String ext = docInfo.getDoc_fl_ext();
+                    
+                    if ("pdf".equalsIgnoreCase(ext)) {
+                        // PDF인 경우 페이지 수만큼 추가
+                        int pageCount = getPdfPageCount(docInfo.getInst_cd(), docInfo.getPrdt_cd(), docInfo.getDoc_fl_sav_pth_nm());
+                        logger.info("PDF 페이지 수: {} - OCR_DOC_NO: {}", pageCount, ocrDocNo);
+                        
+                        for (int i = 0; i < pageCount; i++) {
+                            expandedOcrDocNoList.add(ocrDocNo);
+                            
+                            Map<String, Object> imageInfo = new HashMap<>();
+                            imageInfo.put("ocr_doc_no", ocrDocNo);
+                            imageInfo.put("image_path", docInfo.getDoc_fl_sav_pth_nm());
+                            imageInfo.put("ext", ext);
+                            imageInfo.put("inst_cd", docInfo.getInst_cd());
+                            imageInfo.put("prdt_cd", docInfo.getPrdt_cd());
+                            imageInfo.put("page_number", i + 1);
+                            imageInfo.put("is_pdf", true);
+                            imageInfoList.add(imageInfo);
+                        }
+                    } else {
+                        // 이미지는 1개만 추가
+                        expandedOcrDocNoList.add(ocrDocNo);
+                        
+                        Map<String, Object> imageInfo = new HashMap<>();
+                        imageInfo.put("ocr_doc_no", ocrDocNo);
+                        imageInfo.put("image_path", docInfo.getDoc_fl_sav_pth_nm());
+                        imageInfo.put("ext", ext);
+                        imageInfo.put("inst_cd", docInfo.getInst_cd());
+                        imageInfo.put("prdt_cd", docInfo.getPrdt_cd());
+                        imageInfo.put("page_number", 1);
+                        imageInfo.put("is_pdf", false);
+                        imageInfoList.add(imageInfo);
+                    }
+                }
+            }
+            
+            // 확장된 리스트에서 현재 인덱스 찾기 (첫 번째 매칭)
+            int currentIndex = expandedOcrDocNoList.indexOf(currentOcrDocNo);
             if (currentIndex == -1) {
                 currentIndex = 0;
-                currentOcrDocNo = ocrDocNoList.get(0);
+                currentOcrDocNo = expandedOcrDocNoList.get(0);
             }
             
             // 상세 정보 조회
@@ -507,7 +655,7 @@ public class OcrController {
             List<OcrInfoVO> ocrResults = ocrService.getOcrResultText(ocrParams);
             
             logger.info("OCR 결과 조회 - OCR_DOC_NO: {}, 현재 인덱스: {}/{}", 
-                currentOcrDocNo, currentIndex + 1, ocrDocNoList.size());
+                currentOcrDocNo, currentIndex + 1, expandedOcrDocNoList.size());
             
             logger.info("OCR 결과 개수: {}", ocrResults != null ? ocrResults.size() : 0);
             if (ocrResults != null && !ocrResults.isEmpty()) {
@@ -520,9 +668,10 @@ public class OcrController {
             result.put("data", detail);
             result.put("documentList", documentList);
             result.put("ocrResults", ocrResults);
-            result.put("ocrDocNoList", ocrDocNoList);
+            result.put("ocrDocNoList", expandedOcrDocNoList);
+            result.put("imageInfoList", imageInfoList);
             result.put("currentIndex", currentIndex);
-            result.put("totalPages", ocrDocNoList.size());
+            result.put("totalPages", expandedOcrDocNoList.size());
             
             logger.info("OCR 문서 상세 조회 완료: {}-{}-{}-{}", ctrlYr, instCd, prdtCd, ctrlNo);
             

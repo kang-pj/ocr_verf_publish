@@ -438,8 +438,12 @@
                     // OCR 결과 표시
                     displayOcrResults(response.ocrResults || []);
 
-                    // 복수 이미지 정보 표시 (비동기)
-                    displayMultipleImages(response.data, response.documentList || []);
+                    // 복수 이미지 정보 표시 (서버에서 받은 imageInfoList 사용)
+                    if (response.imageInfoList && response.imageInfoList.length > 0) {
+                        loadMultipleImagesFromInfo(response.imageInfoList);
+                    } else {
+                        $('#imageViewer').html('<p class="text-muted">이미지 정보가 없습니다.</p>');
+                    }
 /*
                     // 페이지 네비게이션 표시 (이미지 로딩 상관없이 항상 표시)
                     setTimeout(function() {
@@ -662,46 +666,14 @@
 
 
     /**
-     * 복수 이미지 표시
+     * 복수 이미지 표시 (더 이상 사용하지 않음 - 서버에서 imageInfoList를 직접 받음)
      */
+    /*
     function displayMultipleImages(currentData, documentList) {
-        console.log('복수 이미지 로딩 시작');
-        console.log('currentData:', currentData);
-        console.log('ocrDocNoList:', ocrDocNoList);
-
-        if (!ocrDocNoList || ocrDocNoList.length === 0) {
-            $('#imageViewer').html('<p class="text-muted">이미지 정보가 없습니다.</p>');
-            return;
-        }
-
-        // 1단계: 각 ocr_doc_no의 이미지 정보 조회
-        $.ajax({
-            url: '/rf-ocr-verf/api/getOcrDocumentImages.do',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                ocr_doc_no_list: ocrDocNoList
-            }),
-            success: function(response) {
-                console.log('이미지 정보 조회 응답:', response);
-
-                if (response.success && response.data && response.data.length > 0) {
-                    var imageInfoList = response.data;
-                    console.log('조회된 이미지 정보:', imageInfoList);
-
-                    // 2단계: 이미지 로딩
-                    loadMultipleImagesFromInfo(imageInfoList);
-                } else {
-                    console.error('이미지 정보 조회 실패');
-                    $('#imageViewer').html('<p class="text-muted">이미지 정보를 불러올 수 없습니다.</p>');
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('이미지 정보 조회 오류:', error);
-                $('#imageViewer').html('<p class="text-danger">이미지 정보 조회 중 오류가 발생했습니다.</p>');
-            }
-        });
+        // 이 함수는 더 이상 사용하지 않습니다.
+        // getOcrDocumentDetail API에서 imageInfoList를 직접 받아서 사용합니다.
     }
+    */
 
     /**
      * 이미지 정보 기반으로 복수 이미지 로딩
@@ -773,33 +745,40 @@
                                     var newIndex = event.detail.index;
                                     console.log('Viewer.js viewed 이벤트 - 현재 인덱스:', newIndex);
 
-                                    // 인덱스가 변경되었을 때만 OCR 결과 업데이트
+                                    // 인덱스가 변경되었을 때만 처리
                                     if (newIndex !== currentIndex) {
                                         currentIndex = newIndex;
 
                                         // 해당 인덱스의 ocr_doc_no 가져오기
                                         if (ocrDocNoList && ocrDocNoList[newIndex]) {
                                             var newOcrDocNo = ocrDocNoList[newIndex];
-                                            currentOcrDocNo = newOcrDocNo;
-                                            console.log('OCR 결과 업데이트 - OCR_DOC_NO:', newOcrDocNo);
+                                            
+                                            // ocr_doc_no가 실제로 변경되었을 때만 OCR 결과 갱신
+                                            // (PDF 여러 페이지인 경우 같은 ocr_doc_no가 반복되므로)
+                                            if (newOcrDocNo !== currentOcrDocNo) {
+                                                currentOcrDocNo = newOcrDocNo;
+                                                console.log('OCR 결과 업데이트 - OCR_DOC_NO:', newOcrDocNo);
 
-                                            // OCR 결과 조회
-                                            $.ajax({
-                                                url: '/rf-ocr-verf/api/getOcrResultText.do',
-                                                type: 'POST',
-                                                contentType: 'application/json',
-                                                data: JSON.stringify({
-                                                    ocr_doc_no: newOcrDocNo
-                                                }),
-                                                success: function(response) {
-                                                    if (response.success && response.data) {
-                                                        displayOcrResults(response.data);
+                                                // OCR 결과 조회
+                                                $.ajax({
+                                                    url: '/rf-ocr-verf/api/getOcrResultText.do',
+                                                    type: 'POST',
+                                                    contentType: 'application/json',
+                                                    data: JSON.stringify({
+                                                        ocr_doc_no: newOcrDocNo
+                                                    }),
+                                                    success: function(response) {
+                                                        if (response.success && response.data) {
+                                                            displayOcrResults(response.data);
+                                                        }
+                                                    },
+                                                    error: function(xhr, status, error) {
+                                                        console.error('OCR 결과 조회 실패:', error);
                                                     }
-                                                },
-                                                error: function(xhr, status, error) {
-                                                    console.error('OCR 결과 조회 실패:', error);
-                                                }
-                                            });
+                                                });
+                                            } else {
+                                                console.log('같은 OCR_DOC_NO - OCR 결과 갱신 생략:', newOcrDocNo);
+                                            }
                                         }
                                     }
                                 },
