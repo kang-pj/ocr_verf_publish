@@ -60,6 +60,11 @@ public class OcrDAOImpl implements OcrDAO {
     }
     
     @Override
+    public String getDocumentName(Map<String, Object> params) {
+        return sqlSession.selectOne("ocr.getDocumentName", params);
+    }
+    
+    @Override
     public OcrInfoVO getImageInfo(Map<String, Object> params) {
         return sqlSession.selectOne("ocr.getImageInfo", params);
     }

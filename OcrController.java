@@ -492,6 +492,15 @@ public class OcrController {
             // 같은 관리번호의 서류 목록 조회
             List<OcrInfoVO> documentList = ocrService.getDocumentListByCtrlNo(params);
             
+            // 서류 목록 로그 출력
+            if (documentList != null && !documentList.isEmpty()) {
+                logger.info("서류 목록 개수: {}", documentList.size());
+                for (OcrInfoVO doc : documentList) {
+                    logger.info("서류 - DOC_TP_CD: {}, DOC_KR_NM: {}, DOC_TITLE: {}", 
+                        doc.getDoc_tp_cd(), doc.getDoc_kr_nm(), doc.getDoc_title());
+                }
+            }
+            
             // OCR 결과 텍스트 조회
             Map<String, Object> ocrParams = new HashMap<>();
             ocrParams.put("ocr_doc_no", currentOcrDocNo);

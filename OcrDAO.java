@@ -26,6 +26,8 @@ public interface OcrDAO {
     
     int updateOcrStatus(Map<String, Object> params);
     
+    String getDocumentName(Map<String, Object> params);
+    
     OcrInfoVO getImageInfo(Map<String, Object> params);
     
     String getSysClsCd(Map<String, Object> params);

@@ -56,6 +56,19 @@ public class OcrServiceImpl implements OcrService {
         try {
             List<OcrInfoVO> list = ocrDAO.getOcrDocumentList(params);
             
+            // 각 항목에 대해 서류 한글명 설정
+            if (list != null && !list.isEmpty()) {
+                for (OcrInfoVO item : list) {
+                    String docName = getDocumentName(item.getInst_cd(), item.getPrdt_cd(), item.getDoc_tp_cd());
+                    if (docName != null) {
+                        item.setDoc_kr_nm(docName);
+                    }
+                    if(item.getPrdt_cd().equals("OCR") && item.getDoc_tp_cd().equals("01")) {
+                        item.setDoc_kr_nm("테스트");
+                    }
+                }
+            }
+            
             logger.debug("OCR 문서 목록 조회 완료: {} 건", list != null ? list.size() : 0);
             
             return list;
@@ -77,6 +90,17 @@ public class OcrServiceImpl implements OcrService {
                 throw new RuntimeException("해당 문서를 찾을 수 없습니다.");
             }
             
+            // 서류 한글명 설정 (doc_kr_nm) - 서류 코드의 한글명
+            String docName = getDocumentName(detail.getInst_cd(), detail.getPrdt_cd(), detail.getDoc_tp_cd());
+            if (docName != null) {
+                detail.setDoc_kr_nm(docName);
+            }
+            if(detail.getPrdt_cd().equals("OCR") && detail.getDoc_tp_cd().equals("01")) {
+                detail.setDoc_kr_nm("테스트");
+            }
+            
+            // doc_title은 쿼리에서 OCR 결과 JSON에서 추출하여 자동으로 설정됨
+            
             return detail;
             
         } catch (Exception e) {
@@ -90,7 +114,22 @@ public class OcrServiceImpl implements OcrService {
         logger.debug("서류 목록 조회: {}", params);
         
         try {
-            return ocrDAO.getDocumentListByCtrlNo(params);
+            List<OcrInfoVO> list = ocrDAO.getDocumentListByCtrlNo(params);
+            
+            // 각 항목에 대해 서류 한글명 설정
+            if (list != null && !list.isEmpty()) {
+                for (OcrInfoVO item : list) {
+                    String docName = getDocumentName(item.getInst_cd(), item.getPrdt_cd(), item.getDoc_tp_cd());
+                    if (docName != null) {
+                        item.setDoc_kr_nm(docName);
+                    }
+                    if(item.getPrdt_cd().equals("OCR") && item.getDoc_tp_cd().equals("01")) {
+                        item.setDoc_kr_nm("테스트");
+                    }
+                }
+            }
+            
+            return list;
         } catch (Exception e) {
             logger.error("서류 목록 조회 중 오류 발생", e);
             throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
@@ -154,6 +193,33 @@ public class OcrServiceImpl implements OcrService {
         } catch (Exception e) {
             logger.error("OCR 상태 업데이트 중 오류 발생", e);
             throw new RuntimeException("데이터베이스 업데이트 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
+    public String getDocumentName(String instCd, String prdtCd, String docTpCd) {
+        logger.debug("서류 한글명 조회: INST_CD={}, PRDT_CD={}, DOC_TP_CD={}", instCd, prdtCd, docTpCd);
+        
+        try {
+            // 프로시저를 포함한 쿼리로 한 번에 조회
+            Map<String, Object> params = new HashMap<>();
+            params.put("inst_cd", instCd);
+            params.put("prdt_cd", prdtCd);
+            params.put("doc_tp_cd", docTpCd);
+            
+            String docName = ocrDAO.getDocumentName(params);
+            
+            if (docName != null) {
+                logger.debug("조회된 서류명: {}", docName);
+            } else {
+                logger.warn("서류명을 찾을 수 없음: INST_CD={}, PRDT_CD={}, DOC_TP_CD={}", instCd, prdtCd, docTpCd);
+            }
+            
+            return docName;
+            
+        } catch (Exception e) {
+            logger.error("서류 한글명 조회 중 오류 발생", e);
+            return null;
         }
     }
     

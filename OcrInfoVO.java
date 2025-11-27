@@ -37,6 +37,10 @@ public class OcrInfoVO implements Serializable {
     private String doc_title;
     
     @Getter
+    @Setter
+    private String doc_kr_nm;
+    
+    @Getter
     private String sub_title;
     
     @Getter

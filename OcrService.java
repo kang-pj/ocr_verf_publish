@@ -23,6 +23,8 @@ public interface OcrService {
     
     int updateOcrStatus(Map<String, Object> params);
     
+    String getDocumentName(String instCd, String prdtCd, String docTpCd);
+    
     OcrInfoVO getImageInfo(Map<String, Object> params);
     
     byte[] getOcrImage(String instCd, String prdtCd, String imagePath);
