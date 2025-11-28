@@ -1,66 +1,57 @@
 package com.refine.ocr.service;
 
+import com.refine.ocr.vo.OcrInfoVO;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 import java.util.Map;
 
-import com.refine.ocr.vo.OcrInfoVO;
-
 public interface OcrService {
-    
-    int getOcrDocumentCount(Map<String, Object> params);
-    
-    List<OcrInfoVO> getOcrDocumentList(Map<String, Object> params);
-    
-    OcrInfoVO getOcrDocumentDetail(Map<String, Object> params);
-    
-    List<OcrInfoVO> getDocumentListByCtrlNo(Map<String, Object> params);
-    
-    List<OcrInfoVO> getOcrResultText(Map<String, Object> params);
-    
-    List<String> getOcrDocNoList(Map<String, Object> params);
-    
-    int updateVerificationStatus(Map<String, Object> params);
-    
-    int updateOcrStatus(Map<String, Object> params);
-    
-    String getDocumentName(String instCd, String prdtCd, String docTpCd);
-    
-    OcrInfoVO getImageInfo(Map<String, Object> params);
-    
-    byte[] getOcrImage(String instCd, String prdtCd, String imagePath);
-    
-    String getSysClsCd(String instCd, String prdtCd);
-    
-    void uploadFileToS3(org.springframework.web.multipart.MultipartFile file, String path);
 
-    java.util.Map<String, Object> uploadFileToExternalApi(org.springframework.web.multipart.MultipartFile file, String path);
-    
+    int getOcrDocumentCount(Map<String, Object> params);
+
+    List<OcrInfoVO> getOcrDocumentList(Map<String, Object> params);
+
+    OcrInfoVO getOcrDocumentDetail(Map<String, Object> params);
+
+    List<OcrInfoVO> getDocumentListByCtrlNo(Map<String, Object> params);
+
+    List<OcrInfoVO> getOcrResultText(Map<String, Object> params);
+
+    List<String> getOcrDocNoList(Map<String, Object> params);
+
+    java.util.Map<String, Object> uploadFileToExternalApi(MultipartFile file, String path);
+
     String getNextCtrlNo(String instCd, String prdtCd);
-    
+
     int insertOcrDocument(java.util.Map<String, Object> params);
-    
-    int deleteOcrDocument(String ocrDocNo);
-    
+
+    List<OcrInfoVO> getOcrHisList(java.util.Map<String, Object> params);
+
     boolean deleteOcrDocumentWithFile(java.util.Map<String, Object> params);
-    
-    java.util.List<String> getUserTestFileList(String usrId);
-    
-    void deleteFileFromExternalApi(java.util.List<String> filePaths);
-    
-    int uploadAndInsertOcrDocument(org.springframework.web.multipart.MultipartFile file, String ctrlYr, String instCd, String prdtCd, String nextCtrlNo, String docTpCd, String usrId);
-    
+
     int deleteUserTestData(String usrId);
-    
-    // OCR 항목 코드 관리
+
+    List<String> getUserTestFileList(String usrId);
+
+    void deleteFileFromExternalApi(java.util.List<String> filePaths);
+
+    int uploadAndInsertOcrDocument(org.springframework.web.multipart.MultipartFile file, String ctrlYr, String instCd, String prdtCd, String nextCtrlNo, String docTpCd, String usrId);
+
+    int updateOcrStatus(Map<String, Object> params);
+
+    String getDocumentName(String instCd, String prdtCd, String docTpCd);
+
     List<com.refine.ocr.vo.OcrItemVO> getOcrItemList(Map<String, Object> params);
-    
+
     int getOcrItemCount(Map<String, Object> params);
-    
+
     int insertOcrItem(Map<String, Object> params);
-    
+
     int updateOcrItem(Map<String, Object> params);
-    
+
     int deleteOcrItem(Map<String, Object> params);
-    
+
     int activateOcrItem(Map<String, Object> params);
+
 }
