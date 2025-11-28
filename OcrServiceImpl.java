@@ -744,3 +744,82 @@ public class OcrServiceImpl implements OcrService {
         }
     }
 }
+
+    @Override
+    public List<com.refine.ocr.vo.OcrItemVO> getOcrItemList(Map<String, Object> params) {
+        logger.debug("OCR 항목 코드 목록 조회: {}", params);
+        
+        try {
+            return ocrDAO.getOcrItemList(params);
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 목록 조회 중 오류 발생", e);
+            throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
+    public int getOcrItemCount(Map<String, Object> params) {
+        logger.debug("OCR 항목 코드 건수 조회: {}", params);
+        
+        try {
+            return ocrDAO.getOcrItemCount(params);
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 건수 조회 중 오류 발생", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public int insertOcrItem(Map<String, Object> params) {
+        logger.info("OCR 항목 코드 추가: {}", params);
+        
+        try {
+            // 중복 체크
+            int exists = ocrDAO.checkOcrItemExists(params);
+            if (exists > 0) {
+                throw new RuntimeException("이미 존재하는 항목코드입니다.");
+            }
+            
+            return ocrDAO.insertOcrItem(params);
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 추가 중 오류 발생", e);
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+    
+    @Override
+    public int updateOcrItem(Map<String, Object> params) {
+        logger.info("OCR 항목 코드 수정: {}", params);
+        
+        try {
+            return ocrDAO.updateOcrItem(params);
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 수정 중 오류 발생", e);
+            throw new RuntimeException("OCR 항목 코드 수정 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
+    public int deleteOcrItem(Map<String, Object> params) {
+        logger.info("OCR 항목 코드 삭제: {}", params);
+        
+        try {
+            return ocrDAO.deleteOcrItem(params);
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 삭제 중 오류 발생", e);
+            throw new RuntimeException("OCR 항목 코드 삭제 중 오류가 발생했습니다.", e);
+        }
+    }
+    
+    @Override
+    public int activateOcrItem(Map<String, Object> params) {
+        logger.info("OCR 항목 코드 활성화: {}", params);
+        
+        try {
+            return ocrDAO.activateOcrItem(params);
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 활성화 중 오류 발생", e);
+            throw new RuntimeException("OCR 항목 코드 활성화 중 오류가 발생했습니다.", e);
+        }
+    }
+}

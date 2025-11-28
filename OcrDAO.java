@@ -45,4 +45,19 @@ public interface OcrDAO {
     List<String> getUserTestFilePathList(Map<String, Object> params);
     
     int deleteUserTestDocuments(Map<String, Object> params);
+    
+    // OCR 항목 코드 관리
+    List<com.refine.ocr.vo.OcrItemVO> getOcrItemList(Map<String, Object> params);
+    
+    int getOcrItemCount(Map<String, Object> params);
+    
+    int checkOcrItemExists(Map<String, Object> params);
+    
+    int insertOcrItem(Map<String, Object> params);
+    
+    int updateOcrItem(Map<String, Object> params);
+    
+    int deleteOcrItem(Map<String, Object> params);
+    
+    int activateOcrItem(Map<String, Object> params);
 }

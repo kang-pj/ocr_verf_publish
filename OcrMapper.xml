@@ -294,4 +294,113 @@
         )
     </insert>
     
+    <!-- OCR 항목 코드 목록 조회 -->
+    <select id="getOcrItemList" parameterType="map" resultType="com.refine.ocr.vo.OcrItemVO">
+        SELECT
+            inst_cd,
+            prdt_cd,
+            item_cd,
+            item_nm,
+            item_odr,
+            use_yn,
+            insr_id,
+            TO_CHAR(ins_dttm, 'YYYY-MM-DD HH24:MI:SS') AS ins_dttm,
+            updr_id,
+            TO_CHAR(upd_dttm, 'YYYY-MM-DD HH24:MI:SS') AS upd_dttm
+        FROM rfdb.c_ocr_doc_item
+        WHERE inst_cd = #{inst_cd}
+        AND prdt_cd = #{prdt_cd}
+        <if test="keyword != null and keyword != ''">
+            AND (item_cd LIKE '%' || #{keyword} || '%' OR item_nm LIKE '%' || #{keyword} || '%')
+        </if>
+        <if test="use_yn != null and use_yn != ''">
+            AND use_yn = #{use_yn}
+        </if>
+        ORDER BY item_odr, item_cd
+    </select>
+    
+    <!-- OCR 항목 코드 건수 조회 -->
+    <select id="getOcrItemCount" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM rfdb.c_ocr_doc_item
+        WHERE inst_cd = #{inst_cd}
+        AND prdt_cd = #{prdt_cd}
+        <if test="keyword != null and keyword != ''">
+            AND (item_cd LIKE '%' || #{keyword} || '%' OR item_nm LIKE '%' || #{keyword} || '%')
+        </if>
+        <if test="use_yn != null and use_yn != ''">
+            AND use_yn = #{use_yn}
+        </if>
+    </select>
+    
+    <!-- OCR 항목 코드 중복 체크 -->
+    <select id="checkOcrItemExists" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM rfdb.c_ocr_doc_item
+        WHERE inst_cd = #{inst_cd}
+        AND prdt_cd = #{prdt_cd}
+        AND item_cd = #{item_cd}
+    </select>
+    
+    <!-- OCR 항목 코드 추가 -->
+    <insert id="insertOcrItem" parameterType="map">
+        INSERT INTO rfdb.c_ocr_doc_item (
+            inst_cd,
+            prdt_cd,
+            item_cd,
+            item_nm,
+            item_odr,
+            use_yn,
+            insr_id,
+            ins_dttm,
+            updr_id,
+            upd_dttm
+        ) VALUES (
+            #{inst_cd},
+            #{prdt_cd},
+            #{item_cd},
+            #{item_nm},
+            #{item_odr},
+            #{use_yn},
+            #{insr_id},
+            NOW(),
+            #{updr_id},
+            NOW()
+        )
+    </insert>
+    
+    <!-- OCR 항목 코드 수정 -->
+    <update id="updateOcrItem" parameterType="map">
+        UPDATE rfdb.c_ocr_doc_item
+        SET item_cd = #{item_cd},
+            item_nm = #{item_nm},
+            updr_id = #{updr_id},
+            upd_dttm = NOW()
+        WHERE inst_cd = #{inst_cd}
+        AND prdt_cd = #{prdt_cd}
+        AND item_cd = #{old_item_cd}
+    </update>
+    
+    <!-- OCR 항목 코드 삭제 (use_yn 변경) -->
+    <update id="deleteOcrItem" parameterType="map">
+        UPDATE rfdb.c_ocr_doc_item
+        SET use_yn = 'N',
+            updr_id = #{updr_id},
+            upd_dttm = NOW()
+        WHERE inst_cd = #{inst_cd}
+        AND prdt_cd = #{prdt_cd}
+        AND item_cd = #{item_cd}
+    </update>
+    
+    <!-- OCR 항목 코드 활성화 (use_yn 변경) -->
+    <update id="activateOcrItem" parameterType="map">
+        UPDATE rfdb.c_ocr_doc_item
+        SET use_yn = 'Y',
+            updr_id = #{updr_id},
+            upd_dttm = NOW()
+        WHERE inst_cd = #{inst_cd}
+        AND prdt_cd = #{prdt_cd}
+        AND item_cd = #{item_cd}
+    </update>
+    
 </mapper>

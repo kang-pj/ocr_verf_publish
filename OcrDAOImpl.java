@@ -108,4 +108,39 @@ public class OcrDAOImpl implements OcrDAO {
     public int deleteUserTestDocuments(Map<String, Object> params) {
         return sqlSession.delete("ocr.deleteUserTestDocuments", params);
     }
+    
+    @Override
+    public List<com.refine.ocr.vo.OcrItemVO> getOcrItemList(Map<String, Object> params) {
+        return sqlSession.selectList("ocr.getOcrItemList", params);
+    }
+    
+    @Override
+    public int getOcrItemCount(Map<String, Object> params) {
+        return sqlSession.selectOne("ocr.getOcrItemCount", params);
+    }
+    
+    @Override
+    public int checkOcrItemExists(Map<String, Object> params) {
+        return sqlSession.selectOne("ocr.checkOcrItemExists", params);
+    }
+    
+    @Override
+    public int insertOcrItem(Map<String, Object> params) {
+        return sqlSession.insert("ocr.insertOcrItem", params);
+    }
+    
+    @Override
+    public int updateOcrItem(Map<String, Object> params) {
+        return sqlSession.update("ocr.updateOcrItem", params);
+    }
+    
+    @Override
+    public int deleteOcrItem(Map<String, Object> params) {
+        return sqlSession.update("ocr.deleteOcrItem", params);
+    }
+    
+    @Override
+    public int activateOcrItem(Map<String, Object> params) {
+        return sqlSession.update("ocr.activateOcrItem", params);
+    }
 }

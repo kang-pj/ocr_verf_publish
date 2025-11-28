@@ -849,3 +849,219 @@ public class OcrController {
     
 }
 
+
+    /**
+     * OCR 항목 코드 목록 조회
+     */
+    @PostMapping(value = "/getOcrItemList.do")
+    public ResponseEntity<Map<String, Object>> getOcrItemList(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            logger.info("OCR 항목 코드 목록 조회 요청: {}", params);
+            
+            // 목록 조회
+            List<com.refine.ocr.vo.OcrItemVO> list = ocrService.getOcrItemList(params);
+            
+            // 건수 조회
+            int totalCount = ocrService.getOcrItemCount(params);
+            
+            result.put("success", true);
+            result.put("data", list);
+            result.put("totalCount", totalCount);
+            
+            logger.info("OCR 항목 코드 목록 조회 완료: {} 건", list != null ? list.size() : 0);
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+            
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 목록 조회 실패", e);
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+
+    /**
+     * OCR 항목 코드 추가
+     */
+    @PostMapping(value = "/insertOcrItem.do")
+    public ResponseEntity<Map<String, Object>> insertOcrItem(@RequestBody Map<String, Object> params, HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            logger.info("OCR 항목 코드 추가 요청: {}", params);
+            
+            // 세션에서 사용자 ID 가져오기
+            String userId = "SYSTEM";
+            Object loginVO = session.getAttribute("USER");
+            if (loginVO != null) {
+                try {
+                    // LoginVO에서 usrId 가져오기
+                    java.lang.reflect.Method method = loginVO.getClass().getMethod("getUsrId");
+                    userId = (String) method.invoke(loginVO);
+                } catch (Exception e) {
+                    logger.warn("LoginVO에서 usrId 가져오기 실패, SYSTEM 사용", e);
+                }
+            }
+            
+            params.put("insr_id", userId);
+            params.put("updr_id", userId);
+            
+            int insertResult = ocrService.insertOcrItem(params);
+            
+            result.put("success", insertResult > 0);
+            result.put("message", insertResult > 0 ? "추가되었습니다." : "추가 실패");
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+            
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 추가 실패", e);
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+    
+    /**
+     * OCR 항목 코드 수정
+     */
+    @PostMapping(value = "/updateOcrItem.do")
+    public ResponseEntity<Map<String, Object>> updateOcrItem(@RequestBody Map<String, Object> params, HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            logger.info("OCR 항목 코드 수정 요청: {}", params);
+            
+            // 세션에서 사용자 ID 가져오기
+            String userId = "SYSTEM";
+            Object loginVO = session.getAttribute("USER");
+            if (loginVO != null) {
+                try {
+                    java.lang.reflect.Method method = loginVO.getClass().getMethod("getUsrId");
+                    userId = (String) method.invoke(loginVO);
+                } catch (Exception e) {
+                    logger.warn("LoginVO에서 usrId 가져오기 실패, SYSTEM 사용", e);
+                }
+            }
+            
+            params.put("updr_id", userId);
+            
+            int updateResult = ocrService.updateOcrItem(params);
+            
+            result.put("success", updateResult > 0);
+            result.put("message", updateResult > 0 ? "수정되었습니다." : "수정 실패");
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+            
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 수정 실패", e);
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+    
+    /**
+     * OCR 항목 코드 삭제 (use_yn = N)
+     */
+    @PostMapping(value = "/deleteOcrItem.do")
+    public ResponseEntity<Map<String, Object>> deleteOcrItem(@RequestBody Map<String, Object> params, HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            logger.info("OCR 항목 코드 삭제 요청: {}", params);
+            
+            // 세션에서 사용자 ID 가져오기
+            String userId = "SYSTEM";
+            Object loginVO = session.getAttribute("USER");
+            if (loginVO != null) {
+                try {
+                    java.lang.reflect.Method method = loginVO.getClass().getMethod("getUsrId");
+                    userId = (String) method.invoke(loginVO);
+                } catch (Exception e) {
+                    logger.warn("LoginVO에서 usrId 가져오기 실패, SYSTEM 사용", e);
+                }
+            }
+            
+            params.put("updr_id", userId);
+            
+            int deleteResult = ocrService.deleteOcrItem(params);
+            
+            result.put("success", deleteResult > 0);
+            result.put("message", deleteResult > 0 ? "삭제되었습니다." : "삭제 실패");
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+            
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 삭제 실패", e);
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+    
+    /**
+     * OCR 항목 코드 활성화 (use_yn = Y)
+     */
+    @PostMapping(value = "/activateOcrItem.do")
+    public ResponseEntity<Map<String, Object>> activateOcrItem(@RequestBody Map<String, Object> params, HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            logger.info("OCR 항목 코드 활성화 요청: {}", params);
+            
+            // 세션에서 사용자 ID 가져오기
+            String userId = "SYSTEM";
+            Object loginVO = session.getAttribute("USER");
+            if (loginVO != null) {
+                try {
+                    java.lang.reflect.Method method = loginVO.getClass().getMethod("getUsrId");
+                    userId = (String) method.invoke(loginVO);
+                } catch (Exception e) {
+                    logger.warn("LoginVO에서 usrId 가져오기 실패, SYSTEM 사용", e);
+                }
+            }
+            
+            params.put("updr_id", userId);
+            
+            int activateResult = ocrService.activateOcrItem(params);
+            
+            result.put("success", activateResult > 0);
+            result.put("message", activateResult > 0 ? "활성화되었습니다." : "활성화 실패");
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+            
+        } catch (Exception e) {
+            logger.error("OCR 항목 코드 활성화 실패", e);
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+}

@@ -50,4 +50,17 @@ public interface OcrService {
     int uploadAndInsertOcrDocument(org.springframework.web.multipart.MultipartFile file, String ctrlYr, String instCd, String prdtCd, String nextCtrlNo, String docTpCd, String usrId);
     
     int deleteUserTestData(String usrId);
+    
+    // OCR 항목 코드 관리
+    List<com.refine.ocr.vo.OcrItemVO> getOcrItemList(Map<String, Object> params);
+    
+    int getOcrItemCount(Map<String, Object> params);
+    
+    int insertOcrItem(Map<String, Object> params);
+    
+    int updateOcrItem(Map<String, Object> params);
+    
+    int deleteOcrItem(Map<String, Object> params);
+    
+    int activateOcrItem(Map<String, Object> params);
 }
