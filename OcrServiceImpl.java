@@ -21,6 +21,17 @@ public class OcrServiceImpl implements OcrService {
 
     private static final Logger logger = LoggerFactory.getLogger(OcrController.class);
 
+    // 외부 API Base URL 상수
+    private static final String DEV_API_BASE_URL = "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file";
+    private static final String PROD_API_BASE_URL = "https://api.work.refinehub.com/apis/refine-ocr-api/v1/application/file";
+
+    /**
+     * 환경에 따른 Base URL 반환
+     */
+    private String getApiBaseUrl() {
+        return "TEST".equals(String.valueOf(ContextHolder.getDbMode())) ? DEV_API_BASE_URL : PROD_API_BASE_URL;
+    }
+
 
 
     /**
@@ -45,15 +56,11 @@ public class OcrServiceImpl implements OcrService {
      * @return OCR 문서 목록
      */
     public List<OcrInfoVO> getOcrDocumentList(Map<String, Object> params) {
-        logger.debug("OCR 문서 목록 조회 시작: {}", params);
-
-        // 파라미터 검증 및 기본값 설정
         validateAndSetDefaults(params);
 
         try {
             List<OcrInfoVO> list = ocrDAO.getOcrDocumentList(params);
 
-            // 각 항목에 대해 서류 한글명 설정
             if (list != null && !list.isEmpty()) {
                 for (OcrInfoVO item : list) {
                     String docName = getDocumentName(item.getInst_cd(), item.getPrdt_cd(), item.getDoc_tp_cd());
@@ -66,12 +73,10 @@ public class OcrServiceImpl implements OcrService {
                 }
             }
 
-            logger.debug("OCR 문서 목록 조회 완료: {} 건", list != null ? list.size() : 0);
-
             return list;
 
         } catch (Exception e) {
-            logger.error("OCR 문서 목록 조회 중 오류 발생", e);
+            logger.error("OCR 문서 목록 조회 실패: {}", e.getMessage());
             throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
         }
     }
@@ -114,8 +119,6 @@ public class OcrServiceImpl implements OcrService {
 
     @Override
     public OcrInfoVO getOcrDocumentDetail(Map<String, Object> params) {
-        logger.debug("OCR 문서 상세 조회: {}", params);
-
         try {
             OcrInfoVO detail = ocrDAO.getOcrDocumentDetail(params);
 
@@ -123,7 +126,6 @@ public class OcrServiceImpl implements OcrService {
                 throw new RuntimeException("해당 문서를 찾을 수 없습니다.");
             }
 
-            // 서류 한글명 설정
             String docName = getDocumentName(detail.getInst_cd(), detail.getPrdt_cd(), detail.getDoc_tp_cd());
             if (docName != null) {
                 detail.setDoc_kr_nm(docName);
@@ -135,19 +137,16 @@ public class OcrServiceImpl implements OcrService {
             return detail;
 
         } catch (Exception e) {
-            logger.error("OCR 문서 상세 조회 중 오류 발생", e);
+            logger.error("OCR 문서 상세 조회 실패: {}", e.getMessage());
             throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
         }
     }
 
     @Override
     public List<OcrInfoVO> getDocumentListByCtrlNo(Map<String, Object> params) {
-        logger.debug("서류 목록 조회: {}", params);
-
         try {
             List<OcrInfoVO> list = ocrDAO.getDocumentListByCtrlNo(params);
 
-            // 각 항목에 대해 서류 한글명 설정
             if (list != null && !list.isEmpty()) {
                 for (OcrInfoVO item : list) {
                     String docName = getDocumentName(item.getInst_cd(), item.getPrdt_cd(), item.getDoc_tp_cd());
@@ -162,31 +161,27 @@ public class OcrServiceImpl implements OcrService {
 
             return list;
         } catch (Exception e) {
-            logger.error("서류 목록 조회 중 오류 발생", e);
+            logger.error("서류 목록 조회 실패: {}", e.getMessage());
             throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
         }
     }
 
     @Override
     public List<String> getOcrDocNoList(Map<String, Object> params) {
-        logger.debug("OCR 문서 번호 리스트 조회: {}", params);
-
         try {
             return ocrDAO.getOcrDocNoList(params);
         } catch (Exception e) {
-            logger.error("OCR 문서 번호 리스트 조회 중 오류 발생", e);
+            logger.error("OCR 문서 번호 리스트 조회 실패: {}", e.getMessage());
             throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
         }
     }
 
     @Override
     public List<OcrInfoVO> getOcrResultText(Map<String, Object> params) {
-        logger.debug("OCR 결과 텍스트 조회: {}", params);
-
         try {
             return ocrDAO.getOcrResultText(params);
         } catch (Exception e) {
-            logger.error("OCR 결과 텍스트 조회 중 오류 발생", e);
+            logger.error("OCR 결과 텍스트 조회 실패: {}", e.getMessage());
             throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
         }
     }
@@ -198,9 +193,7 @@ public class OcrServiceImpl implements OcrService {
 
         try {
 
-            String uploadUrl = "TEST".equals(String.valueOf(ContextHolder.getDbMode()))
-                    ? "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/upload-image"
-                    : "https://api.work.refinehub.com/apis/refine-ocr-api/v1/application/file/upload-image";
+            String uploadUrl = getApiBaseUrl() + "/upload-image";
 
             // RestTemplate 사용
             org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
@@ -248,46 +241,35 @@ public class OcrServiceImpl implements OcrService {
 
     @Override
     public String getNextCtrlNo(String instCd, String prdtCd) {
-        logger.debug("다음 CTRL_NO 조회: INST_CD={}, PRDT_CD={}", instCd, prdtCd);
-
         try {
             Map<String, Object> params = new HashMap<>();
             params.put("inst_cd", instCd);
             params.put("prdt_cd", prdtCd);
 
-            // DB에서 최대 CTRL_NO 조회
             String maxCtrlNo = ocrDAO.getMaxCtrlNo(params);
 
             String nextCtrlNo;
             if (maxCtrlNo == null || maxCtrlNo.isEmpty()) {
-                // 첫 번째 데이터
                 nextCtrlNo = "000001";
             } else {
-                // 최대값 + 1
                 int nextNum = Integer.parseInt(maxCtrlNo) + 1;
                 nextCtrlNo = String.format("%06d", nextNum);
             }
 
-            logger.debug("다음 CTRL_NO: {}", nextCtrlNo);
             return nextCtrlNo;
 
         } catch (Exception e) {
-            logger.error("다음 CTRL_NO 조회 실패", e);
+            logger.error("다음 CTRL_NO 조회 실패: {}", e.getMessage());
             throw new RuntimeException("CTRL_NO 조회 중 오류가 발생했습니다.", e);
         }
     }
 
     @Override
     public int insertOcrDocument(Map<String, Object> params) {
-        logger.info("OCR 문서 등록: CTRL_YR={}, INST_CD={}, PRDT_CD={}, CTRL_NO={}",
-                params.get("ctrl_yr"), params.get("inst_cd"), params.get("prdt_cd"), params.get("ctrl_no"));
-
         try {
-            int result = ocrDAO.insertOcrDocument(params);
-            logger.info("OCR 문서 등록 완료: {} 건", result);
-            return result;
+            return ocrDAO.insertOcrDocument(params);
         } catch (Exception e) {
-            logger.error("OCR 문서 등록 실패", e);
+            logger.error("OCR 문서 등록 실패: {}", e.getMessage());
             throw new RuntimeException("OCR 문서 등록 중 오류가 발생했습니다.", e);
         }
     }
@@ -300,20 +282,12 @@ public class OcrServiceImpl implements OcrService {
      * @return OCR 문서 목록
      */
     public List<OcrInfoVO> getOcrHisList(Map<String, Object> params) {
-        logger.debug("OCR 문서 목록 조회 시작: {}", params);
-
-        // 파라미터 검증 및 기본값 설정
         validateAndSetDefaults(params);
 
         try {
-            List<OcrInfoVO> list = ocrDAO.getOcrHisList(params);
-
-            logger.debug("OCR 문서 목록 조회 완료: {} 건", list != null ? list.size() : 0);
-
-            return list;
-
+            return ocrDAO.getOcrHisList(params);
         } catch (Exception e) {
-            logger.error("OCR 문서 목록 조회 중 오류 발생", e);
+            logger.error("OCR 문서 목록 조회 실패: {}", e.getMessage());
             throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
         }
     }
@@ -390,9 +364,7 @@ public class OcrServiceImpl implements OcrService {
     public void deleteFileFromExternalApi(List<String> filePaths) {
         try {
             org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-            String deleteFileUrl = "TEST".equals(String.valueOf(ContextHolder.getDbMode()))
-                    ? "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/delete-file-multi"
-                    : "https://api.work.refinehub.com/apis/refine-ocr-api/v1/application/file/delete-file-multi";
+            String deleteFileUrl = getApiBaseUrl() + "/delete-file-multi";
 
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
@@ -508,44 +480,26 @@ public class OcrServiceImpl implements OcrService {
     @Override
     @Transactional(readOnly = false)
     public int updateOcrStatus(Map<String, Object> params) {
-        logger.info("OCR 상태 업데이트: {}", params);
-
         try {
-            int result = ocrDAO.updateOcrStatus(params);
-
-            logger.info("OCR 상태 업데이트 완료: {} 건", result);
-
-            return result;
-
+            return ocrDAO.updateOcrStatus(params);
         } catch (Exception e) {
-            logger.error("OCR 상태 업데이트 중 오류 발생", e);
+            logger.error("OCR 상태 업데이트 실패: {}", e.getMessage());
             throw new RuntimeException("데이터베이스 업데이트 중 오류가 발생했습니다.", e);
         }
     }
 
     @Override
     public String getDocumentName(String instCd, String prdtCd, String docTpCd) {
-        logger.debug("서류 한글명 조회: INST_CD={}, PRDT_CD={}, DOC_TP_CD={}", instCd, prdtCd, docTpCd);
-
         try {
-            // 프로시저를 포함한 쿼리로 한 번에 조회
             Map<String, Object> params = new HashMap<>();
             params.put("inst_cd", instCd);
             params.put("prdt_cd", prdtCd);
             params.put("doc_tp_cd", docTpCd);
 
-            String docName = ocrDAO.getDocumentName(params);
-
-            if (docName != null) {
-                logger.debug("조회된 서류명: {}", docName);
-            } else {
-                logger.warn("서류명을 찾을 수 없음: INST_CD={}, PRDT_CD={}, DOC_TP_CD={}", instCd, prdtCd, docTpCd);
-            }
-
-            return docName;
+            return ocrDAO.getDocumentName(params);
 
         } catch (Exception e) {
-            logger.error("서류 한글명 조회 중 오류 발생", e);
+            logger.error("서류 한글명 조회 실패: {}", e.getMessage());
             return null;
         }
     }
@@ -553,34 +507,27 @@ public class OcrServiceImpl implements OcrService {
 
     @Override
     public List<com.refine.ocr.vo.OcrItemVO> getOcrItemList(Map<String, Object> params) {
-        logger.debug("OCR 항목 코드 목록 조회: {}", params);
-
         try {
             return ocrDAO.getOcrItemList(params);
         } catch (Exception e) {
-            logger.error("OCR 항목 코드 목록 조회 중 오류 발생", e);
+            logger.error("OCR 항목 코드 목록 조회 실패: {}", e.getMessage());
             throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
         }
     }
 
     @Override
     public int getOcrItemCount(Map<String, Object> params) {
-        logger.debug("OCR 항목 코드 건수 조회: {}", params);
-
         try {
             return ocrDAO.getOcrItemCount(params);
         } catch (Exception e) {
-            logger.error("OCR 항목 코드 건수 조회 중 오류 발생", e);
+            logger.error("OCR 항목 코드 건수 조회 실패: {}", e.getMessage());
             return 0;
         }
     }
 
     @Override
     public int insertOcrItem(Map<String, Object> params) {
-        logger.info("OCR 항목 코드 추가: {}", params);
-
         try {
-            // 중복 체크
             int exists = ocrDAO.checkOcrItemExists(params);
             if (exists > 0) {
                 throw new RuntimeException("이미 존재하는 항목코드입니다.");
@@ -588,44 +535,95 @@ public class OcrServiceImpl implements OcrService {
 
             return ocrDAO.insertOcrItem(params);
         } catch (Exception e) {
-            logger.error("OCR 항목 코드 추가 중 오류 발생", e);
+            logger.error("OCR 항목 코드 추가 실패: {}", e.getMessage());
             throw new RuntimeException(e.getMessage(), e);
         }
     }
 
     @Override
     public int updateOcrItem(Map<String, Object> params) {
-        logger.info("OCR 항목 코드 수정: {}", params);
-
         try {
             return ocrDAO.updateOcrItem(params);
         } catch (Exception e) {
-            logger.error("OCR 항목 코드 수정 중 오류 발생", e);
+            logger.error("OCR 항목 코드 수정 실패: {}", e.getMessage());
             throw new RuntimeException("OCR 항목 코드 수정 중 오류가 발생했습니다.", e);
         }
     }
 
     @Override
     public int deleteOcrItem(Map<String, Object> params) {
-        logger.info("OCR 항목 코드 삭제: {}", params);
-
         try {
             return ocrDAO.deleteOcrItem(params);
         } catch (Exception e) {
-            logger.error("OCR 항목 코드 삭제 중 오류 발생", e);
+            logger.error("OCR 항목 코드 삭제 실패: {}", e.getMessage());
             throw new RuntimeException("OCR 항목 코드 삭제 중 오류가 발생했습니다.", e);
         }
     }
 
     @Override
     public int activateOcrItem(Map<String, Object> params) {
-        logger.info("OCR 항목 코드 활성화: {}", params);
-
         try {
             return ocrDAO.activateOcrItem(params);
         } catch (Exception e) {
-            logger.error("OCR 항목 코드 활성화 중 오류 발생", e);
+            logger.error("OCR 항목 코드 활성화 실패: {}", e.getMessage());
             throw new RuntimeException("OCR 항목 코드 활성화 중 오류가 발생했습니다.", e);
         }
+    }
+
+    /**
+     * 외부 API에서 이미지 다운로드
+     */
+    @Override
+    public byte[] downloadImageFromExternalApi(String imagePath, String instCd, String prdtCd) throws Exception {
+        String encodedPath = java.net.URLEncoder.encode(java.util.Base64.getEncoder().encodeToString(imagePath.getBytes()), "UTF-8");
+        String trgtURL = getApiBaseUrl() + "/preview-image-all?instCd=" + instCd + "&prdtCd=" + prdtCd + "&imagePath=" + encodedPath;
+
+        java.net.URL url = new java.net.URL(trgtURL);
+        java.net.URLConnection connection = url.openConnection();
+        java.io.InputStream is = connection.getInputStream();
+        byte[] fileArray = org.apache.commons.io.IOUtils.toByteArray(is);
+        is.close();
+
+        return fileArray;
+    }
+
+    /**
+     * 여러 이미지 다운로드 및 변환 (컨트롤러에서 변환 로직 호출 필요)
+     */
+    @Override
+    public List<String> downloadAndConvertImages(String instCd, String prdtCd, List<Map<String, Object>> imageList) {
+        List<String> images = new ArrayList<>();
+        Map<String, byte[]> pdfCache = new HashMap<>();
+
+        for (Map<String, Object> imageInfo : imageList) {
+            String imagePath = (String) imageInfo.get("image_path");
+            String ext = (String) imageInfo.get("ext");
+            Boolean isPdf = (Boolean) imageInfo.get("is_pdf");
+
+            if (imagePath == null || ext == null) {
+                continue;
+            }
+
+            try {
+                byte[] fileArray;
+                if (isPdf != null && isPdf && pdfCache.containsKey(imagePath)) {
+                    fileArray = pdfCache.get(imagePath);
+                } else {
+                    fileArray = downloadImageFromExternalApi(imagePath, instCd, prdtCd);
+                    if (isPdf != null && isPdf) {
+                        pdfCache.put(imagePath, fileArray);
+                    }
+                }
+
+                // Base64 변환은 컨트롤러에서 처리하도록 byte[]를 반환하는 방식으로 변경 필요
+                // 현재는 imagePath만 추가
+                images.add(imagePath);
+            } catch (Exception e) {
+                logger.error("이미지 다운로드 실패 [{}]: {}", imagePath, e.getMessage());
+                images.add(imagePath);
+            }
+        }
+
+        return images;
     }
 }

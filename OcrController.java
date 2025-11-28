@@ -301,18 +301,8 @@ public class OcrController {
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
             }
 
-            String baseUrl = "TEST".equals(String.valueOf(ContextHolder.getDbMode()))
-                    ? "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/preview-image-all"
-                    : "https://api.work.refinehub.com/apis/refine-ocr-api/v1/application/file/preview-image-all";
-
-            String encodedPath = URLEncoder.encode(Base64.getEncoder().encodeToString(imagePath.getBytes()), "UTF-8");
-            String trgtURL = baseUrl + "?instCd=" + instCd + "&prdtCd=" + prdtCd + "&imagePath=" + encodedPath;
-
             try {
-                InputStream is = HttpUtil.httpConnectionStream(trgtURL, "GET", null, null);
-                byte[] fileArray = IOUtils.toByteArray(is);
-                is.close();
-
+                byte[] fileArray = ocrService.downloadImageFromExternalApi(imagePath, instCd, prdtCd);
                 String base64Image = convertToBase64Image(fileArray, ext);
 
                 result.put("success", true);
@@ -419,10 +409,6 @@ public class OcrController {
             }
 
             List<String> images = new ArrayList<>();
-            String baseUrl = "TEST".equals(String.valueOf(ContextHolder.getDbMode()))
-                    ? "https://api.work.refinedev.io/apis/refine-ocr-api/v1/application/file/preview-image-all"
-                    : "https://api.work.refinehub.com/apis/refine-ocr-api/v1/application/file/preview-image-all";
-
             Map<String, byte[]> pdfCache = new HashMap<>();
 
             for (Map<String, Object> imageInfo : imageList) {
@@ -436,14 +422,11 @@ public class OcrController {
                 }
 
                 try {
-                    String encodedPath = URLEncoder.encode(Base64.getEncoder().encodeToString(imagePath.getBytes()), "UTF-8");
-                    String trgtURL = baseUrl + "?instCd=" + instCd + "&prdtCd=" + prdtCd + "&imagePath=" + encodedPath;
-
                     byte[] fileArray;
                     if (isPdf != null && isPdf && pdfCache.containsKey(imagePath)) {
                         fileArray = pdfCache.get(imagePath);
                     } else {
-                        fileArray = downloadImageFromUrl(trgtURL);
+                        fileArray = ocrService.downloadImageFromExternalApi(imagePath, instCd, prdtCd);
                         if (isPdf != null && isPdf) {
                             pdfCache.put(imagePath, fileArray);
                         }
