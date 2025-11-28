@@ -459,24 +459,50 @@
             // 이미지 경로가 있으면 미리보기 표시
             imagePreview.innerHTML = '<p class="text-muted">이미지 로딩 중...</p>';
 
-            // 이미지 조회 API 호출
-            fetch('/rf-ocr-verf/api/getOcrImage.do', {
+            // 단일 문서의 이미지 정보 조회 (PDF 페이지별 처리)
+            fetch('/rf-ocr-verf/api/getOcrDocumentImages.do', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    inst_cd: item.inst_cd,
-                    prdt_cd: item.prdt_cd,
-                    image_path: item.doc_fl_sav_pth_nm,
-                    ext: item.doc_fl_ext
+                    ocr_doc_no_list: [item.ocr_doc_no]
                 })
             })
                 .then(response => response.json())
+                .then(imageInfoData => {
+                    if (imageInfoData.success && imageInfoData.data && imageInfoData.data.length > 0) {
+                        console.log('이미지 정보 개수:', imageInfoData.data.length);
+                        
+                        // 여러 이미지 로딩 API 호출
+                        return fetch('/rf-ocr-verf/api/getOcrImages.do', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                inst_cd: item.inst_cd,
+                                prdt_cd: item.prdt_cd,
+                                image_list: imageInfoData.data
+                            })
+                        });
+                    } else {
+                        throw new Error('이미지 정보를 가져올 수 없습니다.');
+                    }
+                })
+                .then(response => response.json())
                 .then(data => {
-                    if (data.success && data.data) {
-                        // 컨테이너 생성 (이미지는 숨김)
-                        imagePreview.innerHTML = '<div id="viewerContainer" style="width: 100%; height: 800px;"><img id="viewerImage" src="' + data.data + '" style="display: none;"></div>';
+                    if (data.success && data.data && data.data.length > 0) {
+                        console.log('로드된 이미지 개수:', data.data.length);
+                        
+                        // 여러 이미지를 Viewer.js로 표시
+                        let imagesHtml = '<div id="viewerContainer" style="width: 100%; height: 800px;">';
+                        data.data.forEach(function(imgSrc, index) {
+                            imagesHtml += '<img src="' + imgSrc + '" style="display: none;">';
+                        });
+                        imagesHtml += '</div>';
+                        
+                        imagePreview.innerHTML = imagesHtml;
                         
                         setTimeout(function() {
                             const viewerContainer = document.getElementById('viewerContainer');
@@ -485,14 +511,15 @@
                                     inline: true,
                                     autoCrop: false,
                                     background: false,
+                                    navbar: data.data.length > 1,
                                     toolbar: {
                                         zoomIn: true,
                                         zoomOut: true,
                                         oneToOne: true,
                                         reset: true,
-                                        prev: false,
+                                        prev: data.data.length > 1,
                                         play: false,
-                                        next: false,
+                                        next: data.data.length > 1,
                                         rotateLeft: true,
                                         rotateRight: true,
                                         flipHorizontal: true,
