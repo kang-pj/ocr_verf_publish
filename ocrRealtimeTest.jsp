@@ -1,4 +1,12 @@
 <%@ page pageEncoding="utf-8" %>
+<%
+    // 운영 환경에서는 접근 불가
+    String dbMode = System.getProperty("DBMODE");
+    if ("PROD".equalsIgnoreCase(dbMode) || "REAL".equalsIgnoreCase(dbMode)) {
+        response.sendError(HttpServletResponse.SC_FORBIDDEN, "운영 환경에서는 접근할 수 없습니다.");
+        return;
+    }
+%>
 <!doctype html>
 <html lang="ko">
 <head>

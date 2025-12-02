@@ -234,8 +234,7 @@
             INF.INST_CD,
             INF.PRDT_CD,
             INF.CTRL_NO,
-            INF.DOC_TP_CD,
-            DATE_TRUNC('MINUTES', INF.INS_DTTM)
+            INF.DOC_TP_CD
             ORDER BY MAX(INF.INS_DTTM)
             <choose>
                 <when test='sort == "ASC"'>ASC</when>
@@ -354,13 +353,24 @@
             UNION ALL
             
             -- 배열인 경우: json_array_elements 사용
+            -- 배열의 각 요소가 객체인 경우 모든 키-값 쌍을 추출
             SELECT
                 ROW_NUMBER() OVER() AS JSON_SEQ,
-                elem->>'key' AS ITEM_CD,
-                NULL::JSON,
-                elem->>'value' AS ITEM_VALUE_DIRECT
-            FROM base_doc,
-                 json_array_elements(OCR_CNTS::JSON) AS elem
+                COALESCE(
+                    elem->>'item_cd',
+                    elem->>'key',
+                    elem->>'name',
+                    'item_' || ROW_NUMBER() OVER()
+                ) AS ITEM_CD,
+                NULL::JSON AS OCR_CNTS,
+                COALESCE(
+                    elem->>'item_value',
+                    elem->>'value',
+                    elem->>'val',
+                    elem::TEXT
+                ) AS ITEM_VALUE_DIRECT
+            FROM base_doc
+            CROSS JOIN json_array_elements(OCR_CNTS::JSON) AS elem
             WHERE OCR_CNTS IS NOT NULL AND JSON_TYPE = 'array'
         ),
         json_parsed AS (

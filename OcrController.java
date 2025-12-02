@@ -552,6 +552,15 @@ public class OcrController {
             HttpSession session) {
 
         Map<String, Object> result = new HashMap<>();
+        
+        // 운영 환경에서는 접근 불가
+        String dbMode = System.getProperty("DBMODE");
+        if ("PROD".equalsIgnoreCase(dbMode) || "REAL".equalsIgnoreCase(dbMode)) {
+            result.put("success", false);
+            result.put("message", "운영 환경에서는 사용할 수 없는 기능입니다.");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
+        }
+        
         List<Map<String, Object>> uploadedFiles = new ArrayList<>();
         int totalInserted = 0;
         int totalFailed = 0;
