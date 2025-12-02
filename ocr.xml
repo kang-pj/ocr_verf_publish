@@ -329,7 +329,11 @@
                 INF.PRDT_CD,
                 INF.CTRL_NO,
                 INF.DOC_TP_CD,
-                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS
+                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
+                CASE 
+                    WHEN PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS)::TEXT LIKE '[%' THEN 'array'
+                    ELSE 'object'
+                END AS JSON_TYPE
             FROM RFDB.OCR_DOC_INF INF
             LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
                 ON RSLT.OCR_DOC_NO = INF.OCR_DOC_NO
@@ -337,20 +341,37 @@
             LIMIT 1
         ),
         json_keys AS (
-            -- 2단계: JSON 키 순서 보존
+            -- 2단계: JSON 타입에 따라 처리
+            -- 객체인 경우: json_object_keys 사용
             SELECT
                 ROW_NUMBER() OVER() AS JSON_SEQ,
                 json_object_keys(OCR_CNTS::JSON) AS ITEM_CD,
-                OCR_CNTS::JSON
+                OCR_CNTS::JSON,
+                NULL::TEXT AS ITEM_VALUE_DIRECT
             FROM base_doc
-            WHERE OCR_CNTS IS NOT NULL
+            WHERE OCR_CNTS IS NOT NULL AND JSON_TYPE = 'object'
+            
+            UNION ALL
+            
+            -- 배열인 경우: json_array_elements 사용
+            SELECT
+                ROW_NUMBER() OVER() AS JSON_SEQ,
+                elem->>'key' AS ITEM_CD,
+                NULL::JSON,
+                elem->>'value' AS ITEM_VALUE_DIRECT
+            FROM base_doc,
+                 json_array_elements(OCR_CNTS::JSON) AS elem
+            WHERE OCR_CNTS IS NOT NULL AND JSON_TYPE = 'array'
         ),
         json_parsed AS (
             -- 3단계: 키에 해당하는 값 추출
             SELECT
                 json_keys.JSON_SEQ,
                 json_keys.ITEM_CD,
-                json_keys.OCR_CNTS ->> json_keys.ITEM_CD AS ITEM_VALUE
+                COALESCE(
+                    json_keys.ITEM_VALUE_DIRECT,
+                    json_keys.OCR_CNTS ->> json_keys.ITEM_CD
+                ) AS ITEM_VALUE
             FROM json_keys
         )
         -- 4단계: JSON 순서 그대로 반환 (ITEM_CD 기반)
@@ -362,7 +383,6 @@
         LEFT JOIN RFDB.C_OCR_DOC_ITEM CODI
             ON CODI.ITEM_CD = json_parsed.ITEM_CD
             AND CODI.USE_YN = 'Y'
-            AND CODI.INST_CD = (SELECT INST_CD FROM json_parsed LIMIT 1)
         ORDER BY json_parsed.JSON_SEQ
     </select>
 

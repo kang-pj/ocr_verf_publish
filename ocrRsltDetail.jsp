@@ -236,6 +236,14 @@
                     <i class="fas fa-file-alt"></i> OCR 문서 상세
                 </h4>
                 <div>
+                    <button type="button" class="btn btn-sm btn-ocr-reset mr-2" id="downloadBtn" onclick="downloadFile()">
+                        <i class="fas fa-download"></i>
+                        <span>현재 파일</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-ocr-reset mr-2" id="downloadAllBtn" onclick="downloadAllFiles()">
+                        <i class="fas fa-file-archive"></i>
+                        <span>전체 다운로드</span>
+                    </button>
                     <button type="button" class="btn btn-sm btn-ocr-reset mr-2" id="resetOcrBtn" onclick="resetOcrStatus()">
                         <i class="fas fa-sync-alt"></i>
                         <span>OCR 재실행</span>
@@ -351,6 +359,7 @@
     var ocrDocNoList = [];
     var currentIndex = 0;
     var currentOcrDocNo = null;
+    var currentDocumentDetail = null;
 
     // 기관-상품명 매핑
     var organizationMapping = {
@@ -428,6 +437,7 @@
                     ocrDocNoList = response.ocrDocNoList || [];
                     currentIndex = response.currentIndex || 0;
                     currentOcrDocNo = response.data.ocr_doc_no;
+                    currentDocumentDetail = response.data;
 
                     // 기본 정보 표시
                     displayDocumentInfo(response.data);
@@ -691,10 +701,20 @@
         // 첫 번째 이미지의 inst_cd, prdt_cd 사용
         var firstImage = imageInfoList[0];
 
+        // image_path를 Base64로 인코딩
+        var encodedImageList = imageInfoList.map(function(imageInfo) {
+            var encoded = Object.assign({}, imageInfo);
+            if (encoded.image_path) {
+                // UTF-8 문자열을 Base64로 인코딩
+                encoded.image_path = btoa(unescape(encodeURIComponent(encoded.image_path)));
+            }
+            return encoded;
+        });
+
         var params = {
             inst_cd: firstImage.inst_cd,
             prdt_cd: firstImage.prdt_cd,
-            image_list: imageInfoList
+            image_list: encodedImageList
         };
 
         console.log('이미지 로딩 파라미터:', params);
@@ -719,8 +739,8 @@
                         console.log('이미지 ' + index + ' 처리 중...');
 
                         if (imageData && imageData.startsWith('data:image')) {
-                            html += '<li style="display: inline-block;">';
-                            html += '<img src="' + imageData + '" alt="Page ' + (index + 1) + '">';
+                            html += '<li>';
+                            html += '<img src="' + imageData + '" alt="Page ' + (index + 1) + '" style="display: none;">';
                             html += '</li>';
                         } else {
                             console.warn('이미지 ' + index + '이 base64 형식이 아닙니다.');
@@ -883,8 +903,8 @@
                         console.log('이미지 ' + index + ' 처리 중...');
 
                         if (imageData && imageData.startsWith('data:image')) {
-                            html += '<li style="display: inline-block;">';
-                            html += '<img src="' + imageData + '" alt="Page ' + (index + 1) + '" style="max-width: 100%; height: auto;">';
+                            html += '<li>';
+                            html += '<img src="' + imageData + '" alt="Page ' + (index + 1) + '" style="display: none;">';
                             html += '</li>';
                         } else {
                             console.warn('이미지 ' + index + '이 base64 형식이 아닙니다.');
@@ -984,6 +1004,82 @@
         html += '<p class="text-break small" style="word-break: break-all; color: #999;">' + imagePath + '</p>';
         html += '</div>';
         $('#imageViewer').html(html);
+    }
+
+    /**
+     * 파일 다운로드
+     */
+    function downloadFile() {
+        console.log('downloadFile 호출됨');
+        console.log('currentDocumentDetail:', currentDocumentDetail);
+        
+        if (!currentDocumentDetail) {
+            alert('문서 정보가 없습니다.');
+            return;
+        }
+
+        const instCd = currentDocumentDetail.inst_cd;
+        const prdtCd = currentDocumentDetail.prdt_cd;
+        const imagePath = currentDocumentDetail.doc_fl_sav_pth_nm;
+        const fileName = currentDocumentDetail.doc_fl_nm || 'download';
+        const ext = currentDocumentDetail.doc_fl_ext;
+
+        console.log('다운로드 정보:', { instCd, prdtCd, imagePath, fileName, ext });
+
+        if (!imagePath) {
+            alert('파일 경로 정보가 없습니다.');
+            return;
+        }
+
+        // 다운로드 URL 생성
+        const downloadUrl = '/rf-ocr-verf/api/downloadFile.do' +
+            '?inst_cd=' + encodeURIComponent(instCd) +
+            '&prdt_cd=' + encodeURIComponent(prdtCd) +
+            '&image_path=' + encodeURIComponent(imagePath) +
+            '&file_name=' + encodeURIComponent(fileName) +
+            '&ext=' + encodeURIComponent(ext);
+
+        console.log('다운로드 URL:', downloadUrl);
+
+        // 새 창에서 다운로드
+        window.location.href = downloadUrl;
+    }
+
+    /**
+     * 전체 파일 다운로드 (ZIP)
+     */
+    function downloadAllFiles() {
+        console.log('downloadAllFiles 호출됨');
+        console.log('currentDocumentDetail:', currentDocumentDetail);
+        
+        if (!currentDocumentDetail) {
+            alert('문서 정보가 없습니다.');
+            return;
+        }
+
+        const ctrlYr = currentDocumentDetail.ctrl_yr;
+        const instCd = currentDocumentDetail.inst_cd;
+        const prdtCd = currentDocumentDetail.prdt_cd;
+        const ctrlNo = currentDocumentDetail.ctrl_no;
+
+        console.log('전체 다운로드 정보:', { ctrlYr, instCd, prdtCd, ctrlNo });
+
+        if (!ctrlYr || !instCd || !prdtCd || !ctrlNo) {
+            alert('관리번호 정보가 없습니다.');
+            return;
+        }
+
+        // 다운로드 URL 생성
+        const downloadUrl = '/rf-ocr-verf/api/downloadAllFiles.do' +
+            '?ctrl_yr=' + encodeURIComponent(ctrlYr) +
+            '&inst_cd=' + encodeURIComponent(instCd) +
+            '&prdt_cd=' + encodeURIComponent(prdtCd) +
+            '&ctrl_no=' + encodeURIComponent(ctrlNo);
+
+        console.log('전체 다운로드 URL:', downloadUrl);
+
+        // 새 창에서 다운로드
+        window.location.href = downloadUrl;
     }
 
     /**

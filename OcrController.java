@@ -748,6 +748,131 @@ public class OcrController {
     }
 
     /**
+     * 파일 다운로드 (단일)
+     */
+    @GetMapping(value = "/api/downloadFile.do")
+    public void downloadFile(
+            @RequestParam("inst_cd") String instCd,
+            @RequestParam("prdt_cd") String prdtCd,
+            @RequestParam("image_path") String imagePath,
+            @RequestParam("file_name") String fileName,
+            @RequestParam("ext") String ext,
+            javax.servlet.http.HttpServletResponse response) {
+        
+        try {
+            logger.info("파일 다운로드 요청 - 파일명: {}", fileName);
+            
+            byte[] fileData = ocrService.downloadImageFromExternalApi(imagePath, instCd, prdtCd);
+            
+            String contentType;
+            if ("pdf".equalsIgnoreCase(ext)) {
+                contentType = "application/pdf";
+            } else if ("png".equalsIgnoreCase(ext)) {
+                contentType = "image/png";
+            } else if ("gif".equalsIgnoreCase(ext)) {
+                contentType = "image/gif";
+            } else if ("tif".equalsIgnoreCase(ext) || "tiff".equalsIgnoreCase(ext)) {
+                contentType = "image/tiff";
+            } else {
+                contentType = "image/jpeg";
+            }
+            
+            String encodedFileName = URLEncoder.encode(fileName + "." + ext, "UTF-8").replaceAll("\\+", "%20");
+            
+            response.setContentType(contentType);
+            response.setContentLength(fileData.length);
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + encodedFileName + "\"");
+            
+            java.io.OutputStream out = response.getOutputStream();
+            out.write(fileData);
+            out.flush();
+            out.close();
+            
+            logger.info("파일 다운로드 완료 - 파일명: {}, 크기: {} bytes", fileName, fileData.length);
+            
+        } catch (Exception e) {
+            logger.error("파일 다운로드 실패: {}", e.getMessage());
+            try {
+                response.sendError(javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "파일 다운로드 실패");
+            } catch (IOException ex) {
+                logger.error("에러 응답 전송 실패", ex);
+            }
+        }
+    }
+
+    /**
+     * 전체 파일 다운로드 (ZIP)
+     */
+    @PostMapping(value = "/api/downloadAllFiles.do")
+    public void downloadAllFiles(@RequestBody Map<String, Object> params, javax.servlet.http.HttpServletResponse response) {
+        try {
+            String ctrlYr = (String) params.get("ctrl_yr");
+            String instCd = (String) params.get("inst_cd");
+            String prdtCd = (String) params.get("prdt_cd");
+            String ctrlNo = (String) params.get("ctrl_no");
+
+            logger.info("전체 파일 다운로드 요청 - 관리번호: {}-{}-{}-{}", ctrlYr, instCd, prdtCd, ctrlNo);
+
+            // 해당 관리번호의 모든 문서 조회
+            List<OcrInfoVO> documentList = ocrService.getDocumentListByCtrlNo(params);
+
+            if (documentList == null || documentList.isEmpty()) {
+                response.sendError(javax.servlet.http.HttpServletResponse.SC_NOT_FOUND, "다운로드할 파일이 없습니다.");
+                return;
+            }
+
+            // ZIP 파일 생성
+            response.setContentType("application/zip");
+            String zipFileName = URLEncoder.encode(ctrlYr + "-" + instCd + "-" + prdtCd + "-" + ctrlNo + ".zip", "UTF-8").replaceAll("\\+", "%20");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + zipFileName + "\"");
+
+            java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(response.getOutputStream());
+
+            int fileCount = 0;
+            for (OcrInfoVO doc : documentList) {
+                try {
+                    String imagePath = doc.getDoc_fl_sav_pth_nm();
+                    String docFileName = doc.getDoc_fl_nm();
+                    String docExt = doc.getDoc_fl_ext();
+
+                    if (imagePath == null || imagePath.isEmpty()) {
+                        continue;
+                    }
+
+                    // 외부 API에서 파일 다운로드
+                    byte[] fileData = ocrService.downloadImageFromExternalApi(imagePath, instCd, prdtCd);
+
+                    // ZIP 엔트리 추가
+                    String entryName = docFileName + "." + docExt;
+                    java.util.zip.ZipEntry zipEntry = new java.util.zip.ZipEntry(entryName);
+                    zos.putNextEntry(zipEntry);
+                    zos.write(fileData);
+                    zos.closeEntry();
+
+                    fileCount++;
+                    logger.info("ZIP에 파일 추가: {}", entryName);
+
+                } catch (Exception e) {
+                    logger.error("파일 추가 실패 [{}]: {}", doc.getDoc_fl_nm(), e.getMessage());
+                }
+            }
+
+            zos.finish();
+            zos.close();
+
+            logger.info("전체 파일 다운로드 완료 - {} 개 파일", fileCount);
+
+        } catch (Exception e) {
+            logger.error("전체 파일 다운로드 실패: {}", e.getMessage());
+            try {
+                response.sendError(javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "파일 다운로드 실패");
+            } catch (IOException ex) {
+                logger.error("에러 응답 전송 실패", ex);
+            }
+        }
+    }
+
+    /**
      * OCR 상태 업데이트 (ocr_yn 변경)
      */
     @PostMapping(value = "/api/updateOcrStatus.do")

@@ -575,7 +575,9 @@ public class OcrServiceImpl implements OcrService {
      */
     @Override
     public byte[] downloadImageFromExternalApi(String imagePath, String instCd, String prdtCd) throws Exception {
-        String encodedPath = java.net.URLEncoder.encode(java.util.Base64.getEncoder().encodeToString(imagePath.getBytes()), "UTF-8");
+        // imagePath는 이미 클라이언트에서 Base64 인코딩되어 전달됨
+        // URLEncoder.encode만 적용 (+ 기호 문제 해결을 위해 replace 사용)
+        String encodedPath = java.net.URLEncoder.encode(imagePath, "UTF-8").replace("+", "%20");
         String trgtURL = getApiBaseUrl() + "/preview-image-all?instCd=" + instCd + "&prdtCd=" + prdtCd + "&imagePath=" + encodedPath;
 
         java.net.URL url = new java.net.URL(trgtURL);
