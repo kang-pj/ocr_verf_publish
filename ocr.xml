@@ -397,7 +397,8 @@
         INF.CTRL_NO,
         INF.DOC_TP_CD,
         INF.DOC_FL_SAV_PTH_NM,
-        INF.DOC_FL_EXT,
+        COALESCE(HDF.DOC_FL_EXT, INF.DOC_FL_EXT) AS DOC_FL_EXT,
+        COALESCE(HDF.DOC_FL_NM, INF.DOC_TP_CD) AS DOC_FL_NM,
         INF.OCR_YN,
         TO_CHAR(INF.INS_DTTM, 'YYYY-MM-DD HH24:MI:SS') AS INS_DTTM,
         RSLT.OCR_RSLT_NO,
@@ -417,11 +418,17 @@
         RSLT.REPLACED,
         PKG_PGCRYPTO$DECRYPT(JSN.JSON_VALUE) AS JSON_VALUE
         FROM RFDB.OCR_DOC_INF INF
+        LEFT JOIN RFDB.HUG_DOC_FL HDF
+        ON INF.DOC_FL_SAV_PTH_NM = HDF.DOC_FL_SAV_PTH_NM
+        AND INF.PRDT_CD = HDF.PRDT_CD
         LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
         ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
         LEFT JOIN RFDB.OCR_DOC_JSON JSN
         ON RSLT.OCR_RSLT_NO = JSN.OCR_RSLT_NO
         WHERE INF.OCR_DOC_NO = #{ocr_doc_no}
+        ORDER BY
+        RSLT.ins_dttm DESC
+        LIMIT 1
     </select>
 
     <!-- 특정 서류 타입의 OCR 문서 번호 리스트 조회 -->
@@ -464,6 +471,28 @@
           AND INF.CTRL_NO = #{ctrl_no}
         GROUP BY INF.DOC_TP_CD
         ORDER BY INF.DOC_TP_CD
+    </select>
+
+    <!-- 같은 관리번호의 모든 파일 조회 (ZIP 다운로드용) -->
+    <select id="getAllFilesByCtrlNo" resultType="OcrInfoVO">
+        SELECT
+            INF.OCR_DOC_NO,
+            INF.CTRL_YR,
+            INF.INST_CD,
+            INF.PRDT_CD,
+            INF.CTRL_NO,
+            INF.DOC_TP_CD,
+            INF.DOC_FL_SAV_PTH_NM,
+            INF.DOC_FL_NM,
+            INF.DOC_FL_EXT,
+            INF.DOC_FL_NO
+        FROM RFDB.OCR_DOC_INF INF
+        WHERE 1=1
+          AND INF.CTRL_YR = #{ctrl_yr}
+          AND INF.INST_CD = #{inst_cd}
+          AND INF.PRDT_CD = #{prdt_cd}
+          AND INF.CTRL_NO = #{ctrl_no}
+        ORDER BY INF.DOC_TP_CD, INF.OCR_DOC_NO
     </select>
 
 

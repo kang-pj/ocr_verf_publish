@@ -474,6 +474,16 @@
                     if (imageInfoData.success && imageInfoData.data && imageInfoData.data.length > 0) {
                         console.log('이미지 정보 개수:', imageInfoData.data.length);
                         
+                        // image_path를 Base64로 인코딩
+                        const encodedImageList = imageInfoData.data.map(function(imageInfo) {
+                            const encoded = Object.assign({}, imageInfo);
+                            if (encoded.image_path) {
+                                // UTF-8 문자열을 Base64로 인코딩
+                                encoded.image_path = btoa(unescape(encodeURIComponent(encoded.image_path)));
+                            }
+                            return encoded;
+                        });
+                        
                         // 여러 이미지 로딩 API 호출
                         return fetch('/rf-ocr-verf/api/getOcrImages.do', {
                             method: 'POST',
@@ -483,7 +493,7 @@
                             body: JSON.stringify({
                                 inst_cd: item.inst_cd,
                                 prdt_cd: item.prdt_cd,
-                                image_list: imageInfoData.data
+                                image_list: encodedImageList
                             })
                         });
                     } else {

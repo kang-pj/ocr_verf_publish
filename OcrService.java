@@ -16,6 +16,8 @@ public interface OcrService {
 
     List<OcrInfoVO> getDocumentListByCtrlNo(Map<String, Object> params);
 
+    List<OcrInfoVO> getAllFilesByCtrlNo(Map<String, Object> params);
+
     List<OcrInfoVO> getOcrResultText(Map<String, Object> params);
 
     List<String> getOcrDocNoList(Map<String, Object> params);

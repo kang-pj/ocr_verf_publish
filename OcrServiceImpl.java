@@ -167,6 +167,16 @@ public class OcrServiceImpl implements OcrService {
     }
 
     @Override
+    public List<OcrInfoVO> getAllFilesByCtrlNo(Map<String, Object> params) {
+        try {
+            return ocrDAO.getAllFilesByCtrlNo(params);
+        } catch (Exception e) {
+            logger.error("전체 파일 목록 조회 실패: {}", e.getMessage());
+            throw new RuntimeException("데이터베이스 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+
+    @Override
     public List<String> getOcrDocNoList(Map<String, Object> params) {
         try {
             return ocrDAO.getOcrDocNoList(params);
@@ -575,9 +585,26 @@ public class OcrServiceImpl implements OcrService {
      */
     @Override
     public byte[] downloadImageFromExternalApi(String imagePath, String instCd, String prdtCd) throws Exception {
-        // imagePath는 이미 클라이언트에서 Base64 인코딩되어 전달됨
-        // URLEncoder.encode만 적용 (+ 기호 문제 해결을 위해 replace 사용)
-        String encodedPath = java.net.URLEncoder.encode(imagePath, "UTF-8").replace("+", "%20");
+        return downloadImageFromExternalApi(imagePath, instCd, prdtCd, false);
+    }
+
+    /**
+     * 외부 API에서 이미지 다운로드 (Base64 인코딩 여부 선택 가능)
+     */
+    public byte[] downloadImageFromExternalApi(String imagePath, String instCd, String prdtCd, boolean isAlreadyBase64Encoded) throws Exception {
+        String encodedPath;
+        
+        if (isAlreadyBase64Encoded) {
+            // 이미 Base64 인코딩된 경우 URLEncoder만 적용
+            encodedPath = java.net.URLEncoder.encode(imagePath, "UTF-8").replace("+", "%20");
+        } else {
+            // 원본 경로인 경우 Base64 인코딩 후 URLEncoder 적용
+            encodedPath = java.net.URLEncoder.encode(
+                java.util.Base64.getEncoder().encodeToString(imagePath.getBytes()), 
+                "UTF-8"
+            ).replace("+", "%20");
+        }
+        
         String trgtURL = getApiBaseUrl() + "/preview-image-all?instCd=" + instCd + "&prdtCd=" + prdtCd + "&imagePath=" + encodedPath;
 
         java.net.URL url = new java.net.URL(trgtURL);

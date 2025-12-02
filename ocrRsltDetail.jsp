@@ -6,6 +6,46 @@
         font-family: 'Noto Sans KR', sans-serif;
         min-width: 1200px;
     }
+    
+    /* 로딩 오버레이 */
+    #loadingOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        flex-direction: column;
+    }
+    
+    #loadingOverlay.hidden {
+        display: none;
+    }
+    
+    .loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #4e73df;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+        margin-top: 20px;
+        color: #4e73df;
+        font-size: 16px;
+        font-weight: 500;
+    }
     #wrapper {
         display: flex;
     }
@@ -224,6 +264,12 @@
     }
 </style>
 
+<!-- 로딩 오버레이 -->
+<div id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">데이터를 불러오는 중...</div>
+</div>
+
 <!-- Content Wrapper -->
 <div id="content-wrapper" class="d-flex flex-column">
     <div id="content">
@@ -360,6 +406,7 @@
     var currentIndex = 0;
     var currentOcrDocNo = null;
     var currentDocumentDetail = null;
+    var currentImageInfoList = [];
 
     // 기관-상품명 매핑
     var organizationMapping = {
@@ -414,6 +461,9 @@
      */
     function loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, ocrDocNo) {
         console.log('문서 상세 조회:', ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, 'ocrDocNo:', ocrDocNo);
+        
+        // 로딩 오버레이 표시
+        $('#loadingOverlay').removeClass('hidden');
 
         var params = {
             ctrl_yr: ctrlYr,
@@ -438,6 +488,7 @@
                     currentIndex = response.currentIndex || 0;
                     currentOcrDocNo = response.data.ocr_doc_no;
                     currentDocumentDetail = response.data;
+                    currentImageInfoList = response.imageInfoList || [];
 
                     // 기본 정보 표시
                     displayDocumentInfo(response.data);
@@ -648,6 +699,12 @@
 
         // 서버에서 받은 데이터를 테이블 행으로 변환
         ocrResults.forEach(function(item, index) {
+            // null 체크
+            if (!item) {
+                console.warn('OCR 결과 항목이 null입니다. (인덱스: ' + index + ')');
+                return;
+            }
+
             var itemName = item.item_nm || item.item_cd || '-';
             var itemValue = item.item_value || '';
 
@@ -739,8 +796,17 @@
                         console.log('이미지 ' + index + ' 처리 중...');
 
                         if (imageData && imageData.startsWith('data:image')) {
+                            // 파일명 가져오기
+                            var fileName = 'Page ' + (index + 1);
+                            if (currentImageInfoList && currentImageInfoList[index]) {
+                                var imageInfo = currentImageInfoList[index];
+                                if (imageInfo.file_name) {
+                                    fileName = imageInfo.file_name + '.' + imageInfo.ext;
+                                }
+                            }
+                            
                             html += '<li>';
-                            html += '<img src="' + imageData + '" alt="Page ' + (index + 1) + '" style="display: none;">';
+                            html += '<img src="' + imageData + '" alt="' + fileName + '" title="' + fileName + '" style="display: none;">';
                             html += '</li>';
                         } else {
                             console.warn('이미지 ' + index + '이 base64 형식이 아닙니다.');
@@ -763,42 +829,48 @@
                                 container: '#imageViewer',
                                 viewed: function(event) {
                                     var newIndex = event.detail.index;
-                                    console.log('Viewer.js viewed 이벤트 - 현재 인덱스:', newIndex);
+                                    console.log('=== Viewer.js viewed 이벤트 ===');
+                                    console.log('이전 currentIndex:', currentIndex);
+                                    console.log('새로운 인덱스:', newIndex);
 
-                                    // 인덱스가 변경되었을 때만 처리
-                                    if (newIndex !== currentIndex) {
-                                        currentIndex = newIndex;
+                                    // 현재 인덱스 항상 업데이트
+                                    currentIndex = newIndex;
+                                    console.log('업데이트된 currentIndex:', currentIndex);
+                                    
+                                    // 첫 로딩 시 로딩 오버레이 숨기기
+                                    setTimeout(function() {
+                                        $('#loadingOverlay').addClass('hidden');
+                                    }, 500);
 
-                                        // 해당 인덱스의 ocr_doc_no 가져오기
-                                        if (ocrDocNoList && ocrDocNoList[newIndex]) {
-                                            var newOcrDocNo = ocrDocNoList[newIndex];
-                                            
-                                            // ocr_doc_no가 실제로 변경되었을 때만 OCR 결과 갱신
-                                            // (PDF 여러 페이지인 경우 같은 ocr_doc_no가 반복되므로)
-                                            if (newOcrDocNo !== currentOcrDocNo) {
-                                                currentOcrDocNo = newOcrDocNo;
-                                                console.log('OCR 결과 업데이트 - OCR_DOC_NO:', newOcrDocNo);
+                                    // 해당 인덱스의 ocr_doc_no 가져오기
+                                    if (ocrDocNoList && ocrDocNoList[newIndex]) {
+                                        var newOcrDocNo = ocrDocNoList[newIndex];
+                                        
+                                        // ocr_doc_no가 실제로 변경되었을 때만 OCR 결과 갱신
+                                        // (PDF 여러 페이지인 경우 같은 ocr_doc_no가 반복되므로)
+                                        if (newOcrDocNo !== currentOcrDocNo) {
+                                            currentOcrDocNo = newOcrDocNo;
+                                            console.log('OCR 결과 업데이트 - OCR_DOC_NO:', newOcrDocNo);
 
-                                                // OCR 결과 조회
-                                                $.ajax({
-                                                    url: '/rf-ocr-verf/api/getOcrResultText.do',
-                                                    type: 'POST',
-                                                    contentType: 'application/json',
-                                                    data: JSON.stringify({
-                                                        ocr_doc_no: newOcrDocNo
-                                                    }),
-                                                    success: function(response) {
-                                                        if (response.success && response.data) {
-                                                            displayOcrResults(response.data);
-                                                        }
-                                                    },
-                                                    error: function(xhr, status, error) {
-                                                        console.error('OCR 결과 조회 실패:', error);
+                                            // OCR 결과 조회
+                                            $.ajax({
+                                                url: '/rf-ocr-verf/api/getOcrResultText.do',
+                                                type: 'POST',
+                                                contentType: 'application/json',
+                                                data: JSON.stringify({
+                                                    ocr_doc_no: newOcrDocNo
+                                                }),
+                                                success: function(response) {
+                                                    if (response.success && response.data) {
+                                                        displayOcrResults(response.data);
                                                     }
-                                                });
-                                            } else {
-                                                console.log('같은 OCR_DOC_NO - OCR 결과 갱신 생략:', newOcrDocNo);
-                                            }
+                                                },
+                                                error: function(xhr, status, error) {
+                                                    console.error('OCR 결과 조회 실패:', error);
+                                                }
+                                            });
+                                        } else {
+                                            console.log('같은 OCR_DOC_NO - OCR 결과 갱신 생략:', newOcrDocNo);
                                         }
                                     }
                                 },
@@ -825,11 +897,7 @@
                                 transition: true,
                                 fullscreen: true,
                                 keyboard: true,
-                                initialViewIndex: currentIndex,
-                                viewed: function() {
-                                    // 뷰어가 표시된 후 크기 조정
-                                    viewer.update();
-                                }
+                                initialViewIndex: currentIndex
                             });
 
                             // 현재 인덱스로 이동
@@ -856,6 +924,7 @@
                 }
 
                 $('#imageViewer').html('<p class="text-danger text-center">' + errorMsg + '</p>');
+                $('#loadingOverlay').addClass('hidden');
             }
         });
     }
@@ -1007,24 +1076,42 @@
     }
 
     /**
-     * 파일 다운로드
+     * 파일 다운로드 (현재 보고 있는 이미지)
      */
     function downloadFile() {
-        console.log('downloadFile 호출됨');
-        console.log('currentDocumentDetail:', currentDocumentDetail);
+        console.log('=== downloadFile 호출 ===');
+        console.log('currentIndex:', currentIndex);
+        console.log('currentImageInfoList 길이:', currentImageInfoList ? currentImageInfoList.length : 0);
+        console.log('currentImageInfoList:', currentImageInfoList);
         
-        if (!currentDocumentDetail) {
-            alert('문서 정보가 없습니다.');
+        if (!currentImageInfoList || currentImageInfoList.length === 0) {
+            alert('이미지 정보가 없습니다.');
             return;
         }
 
-        const instCd = currentDocumentDetail.inst_cd;
-        const prdtCd = currentDocumentDetail.prdt_cd;
-        const imagePath = currentDocumentDetail.doc_fl_sav_pth_nm;
-        const fileName = currentDocumentDetail.doc_fl_nm || 'download';
-        const ext = currentDocumentDetail.doc_fl_ext;
+        // 현재 인덱스의 이미지 정보 가져오기
+        const currentImage = currentImageInfoList[currentIndex];
+        console.log('currentImage (index=' + currentIndex + '):', currentImage);
+        
+        if (!currentImage) {
+            alert('현재 이미지 정보를 찾을 수 없습니다. (인덱스: ' + currentIndex + ')');
+            return;
+        }
 
-        console.log('다운로드 정보:', { instCd, prdtCd, imagePath, fileName, ext });
+        const instCd = currentImage.inst_cd;
+        const prdtCd = currentImage.prdt_cd;
+        const imagePath = currentImage.image_path;
+        const fileName = currentImage.file_name || 'download';
+        const ext = currentImage.ext;
+
+        console.log('다운로드 정보:', { 
+            index: currentIndex,
+            instCd: instCd, 
+            prdtCd: prdtCd, 
+            imagePath: imagePath, 
+            fileName: fileName, 
+            ext: ext 
+        });
 
         if (!imagePath) {
             alert('파일 경로 정보가 없습니다.');
@@ -1069,17 +1156,29 @@
             return;
         }
 
-        // 다운로드 URL 생성
-        const downloadUrl = '/rf-ocr-verf/api/downloadAllFiles.do' +
-            '?ctrl_yr=' + encodeURIComponent(ctrlYr) +
-            '&inst_cd=' + encodeURIComponent(instCd) +
-            '&prdt_cd=' + encodeURIComponent(prdtCd) +
-            '&ctrl_no=' + encodeURIComponent(ctrlNo);
-
-        console.log('전체 다운로드 URL:', downloadUrl);
-
-        // 새 창에서 다운로드
-        window.location.href = downloadUrl;
+        // POST 방식으로 다운로드 (form submit 사용)
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/rf-ocr-verf/api/downloadAllFiles.do';
+        
+        const fields = {
+            ctrl_yr: ctrlYr,
+            inst_cd: instCd,
+            prdt_cd: prdtCd,
+            ctrl_no: ctrlNo
+        };
+        
+        for (const key in fields) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = fields[key];
+            form.appendChild(input);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
     }
 
     /**

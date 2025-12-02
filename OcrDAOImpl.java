@@ -40,6 +40,11 @@ public class OcrDAOImpl implements OcrDAO {
     }
     
     @Override
+    public List<OcrInfoVO> getAllFilesByCtrlNo(Map<String, Object> params) {
+        return sqlSession.selectList("ocr.getAllFilesByCtrlNo", params);
+    }
+    
+    @Override
     public List<OcrInfoVO> getOcrResultText(Map<String, Object> params) {
         return sqlSession.selectList("ocr.getOcrResultText", params);
     }
