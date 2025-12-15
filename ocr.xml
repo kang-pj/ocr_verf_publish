@@ -83,13 +83,14 @@
         <!-- 날짜 범위 검색 -->
         <choose>
             <when test="ins_dttm_st != null and ins_dttm_en != null">
-                AND INF.INS_DTTM BETWEEN #{ins_dttm_st}::TIMESTAMP AND #{ins_dttm_en}::TIMESTAMP
+                AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP 
+                AND INF.INS_DTTM &lt;= (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
             </when>
             <when test="ins_dttm_st != null">
                 AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
             </when>
             <when test="ins_dttm_en != null">
-                AND INF.INS_DTTM &lt;= #{ins_dttm_en}::TIMESTAMP
+                AND INF.INS_DTTM &lt;= (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
             </when>
         </choose>
         GROUP BY
@@ -220,13 +221,14 @@
             <!-- 날짜 범위 검색 -->
             <choose>
                 <when test="ins_dttm_st != null and ins_dttm_en != null">
-                    AND INF.INS_DTTM BETWEEN #{ins_dttm_st}::TIMESTAMP AND #{ins_dttm_en}::TIMESTAMP
+                    AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP 
+                    AND INF.INS_DTTM &lt;= (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
                 </when>
                 <when test="ins_dttm_st != null">
                     AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
                 </when>
                 <when test="ins_dttm_en != null">
-                    AND INF.INS_DTTM &lt;= #{ins_dttm_en}::TIMESTAMP
+                    AND INF.INS_DTTM &lt;= (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
                 </when>
             </choose>
             GROUP BY
@@ -401,6 +403,7 @@
         RSLT.VERF_YN,
         RSLT.VERF_DTTM,
         RSLT.REPLACED,
+        RSLT.DOC_TITLE,
         PKG_PGCRYPTO$DECRYPT(JSN.JSON_VALUE) AS JSON_VALUE
         FROM RFDB.OCR_DOC_INF INF
         LEFT JOIN RFDB.HUG_DOC_FL HDF

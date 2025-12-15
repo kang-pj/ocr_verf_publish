@@ -473,10 +473,10 @@
             console.error('AJAX 에러 발생:', thrownError);
             $('#loadingOverlay').removeClass('active').addClass('hidden');
         });
-        
+
         // 관리자 모드 체크
         checkAdminMode();
-        
+
         // URL 파라미터에서 관리번호 정보 가져오기
         var urlParams = new URLSearchParams(window.location.search);
         var ctrlYr = urlParams.get('ctrl_yr');
@@ -502,11 +502,11 @@
     function checkAdminMode() {
         var adminMode = sessionStorage.getItem('adminMode');
         var adminModeExpiry = sessionStorage.getItem('adminModeExpiry');
-        
+
         if (adminMode === 'true' && adminModeExpiry) {
             var now = new Date().getTime();
             var expiryTime = parseInt(adminModeExpiry);
-            
+
             // 만료 시간 체크
             if (now < expiryTime) {
                 $('#downloadBtn').show();
@@ -527,10 +527,10 @@
     window.enableAdminMode = function() {
         var now = new Date().getTime();
         var expiryTime = now + (30 * 60 * 1000); // 30분 후
-        
+
         sessionStorage.setItem('adminMode', 'true');
         sessionStorage.setItem('adminModeExpiry', expiryTime.toString());
-        
+
         $('#downloadBtn').show();
         $('#downloadAllBtn').show();
     };
