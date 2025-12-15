@@ -184,7 +184,7 @@
                         </div>
                         <div class="form-row align-items-center mb-2">
                             <div class="col-auto" style="width: 120px;">
-                                <label class="mb-0">기간</label>
+                                <label class="mb-0">기간</label>ㄱ
                             </div>
                             <div class="col-auto">
                                 <div class="input-group input-group-sm" style="width: 300px;">
@@ -239,7 +239,7 @@
                         </div>
                     </div>
                 </div>
-
+cr
                 <!-- OCR 결과 테이블 -->
                 <div class="card shadow mb-4">
                     <div class="card-header py-3">
@@ -322,12 +322,9 @@
                         ins_dttm_en: $('#endDate').val() || null,
                         ocr_yn: $('#verifiedFilter').val() ? [$('#verifiedFilter').val()] : null
                     };
-                    console.log('서버로 전송되는 파라미터:', params);
                     return JSON.stringify(params);  // JSON 문자열로 변환
                 },
                 dataSrc: function(json) {
-                    //console.log('서버 응답:', json);
-
                     // 서버 응답을 DataTables 형식으로 변환
                     if (json.success) {
                         // 서버에서 받은 전체 건수 사용
@@ -544,54 +541,20 @@
             return null;
         }
 
-        // 하이픈 제거하고 숫자만 추출
-        var cleaned = input.replace(/[^0-9]/g, '');
-
-        if (cleaned.length === 0) {
+        // 하이픈 제거
+        var cleaned = input.trim().replace(/-/g, '');
+        
+        if (cleaned.length < 4) {
             return null;
         }
 
         // 2-2-3-6 패턴으로 자르기
         var result = {
-            ctrl_yr: null,
-            inst_cd: null,
-            prdt_cd: null,
-            ctrl_no: null
+            ctrl_yr: cleaned.substring(0, 2),
+            inst_cd: cleaned.substring(2, 4),
+            prdt_cd: cleaned.length > 4 ? cleaned.substring(4, Math.min(cleaned.length, 7)) : null,
+            ctrl_no: cleaned.length > 7 ? cleaned.substring(7) : null
         };
-
-        var pos = 0;
-
-        // ctrl_yr (2자리)
-        if (cleaned.length >= 2) {
-            result.ctrl_yr = cleaned.substring(0, 2);
-            pos = 2;
-        } else {
-            result.ctrl_yr = cleaned;
-            return result;
-        }
-
-        // inst_cd (2자리)
-        if (cleaned.length >= 4) {
-            result.inst_cd = cleaned.substring(2, 4);
-            pos = 4;
-        } else if (cleaned.length > 2) {
-            result.inst_cd = cleaned.substring(2);
-            return result;
-        }
-
-        // prdt_cd (3자리)
-        if (cleaned.length >= 7) {
-            result.prdt_cd = cleaned.substring(4, 7);
-            pos = 7;
-        } else if (cleaned.length > 4) {
-            result.prdt_cd = cleaned.substring(4);
-            return result;
-        }
-
-        // ctrl_no (6자리)
-        if (cleaned.length > 7) {
-            result.ctrl_no = cleaned.substring(7, 13); // 최대 6자리
-        }
 
         return result;
     }
@@ -632,8 +595,6 @@
     // 상세보기
     // 상세보기
     function viewDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd) {
-        //console.log('상세보기:', ctrlYr, instCd, prdtCd, ctrlNo, docTpCd);
-
         // pageChange 방식으로 상세 페이지를 새 탭에서 열기
         var currentPath = window.location.pathname;
         var site = currentPath.substring(1); // '/rf_ocr_verf' -> 'rf_ocr_verf'
@@ -685,7 +646,7 @@
     function formatDateInput(date) {
         var year = date.getFullYear();
         var month = String(date.getMonth() + 1).padStart(2, '0');
-        var day = String(date.getDate()).padStart(2, '0');
+        var day = String(date.getDate()).padStart(2, '0');e
         return year + '-' + month + '-' + day;
     }
 </script>

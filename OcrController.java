@@ -450,7 +450,8 @@ public class OcrController {
                     images.add(base64Image);
                 } catch (Exception e) {
                     logger.error("이미지 로딩 실패 [{}]: {}", imagePath, e.getMessage());
-                    images.add(imagePath);
+                    // 에러 정보를 포함한 객체를 추가 (클라이언트에서 구분 가능하도록)
+                    images.add("ERROR: 파일을 불러올 수 없습니다 - " + e.getMessage());
                 }
             }
 

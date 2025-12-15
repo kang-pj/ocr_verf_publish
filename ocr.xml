@@ -320,7 +320,6 @@
     <!-- OCR 결과 텍스트 조회 (JSON 파싱) -->
     <select id="getOcrResultText" resultType="OcrInfoVO">
         WITH base_doc AS (
-            -- 1단계: 특정 OCR_DOC_NO의 문서 정보 조회
             SELECT
                 INF.OCR_DOC_NO,
                 INF.CTRL_YR,
@@ -334,65 +333,41 @@
                     ELSE 'object'
                 END AS JSON_TYPE
             FROM RFDB.OCR_DOC_INF INF
-            LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
-                ON RSLT.OCR_DOC_NO = INF.OCR_DOC_NO
+            LEFT JOIN RFDB.OCR_DOC_RSLT RSLT ON RSLT.OCR_DOC_NO = INF.OCR_DOC_NO
             WHERE INF.OCR_DOC_NO = #{ocr_doc_no}
             LIMIT 1
         ),
         json_keys AS (
-            -- 2단계: JSON 타입에 따라 처리
-            -- 객체인 경우: json_object_keys 사용
             SELECT
                 ROW_NUMBER() OVER() AS JSON_SEQ,
                 json_object_keys(OCR_CNTS::JSON) AS ITEM_CD,
-                OCR_CNTS::JSON,
+                OCR_CNTS::JSON AS OCR_CNTS,
                 NULL::TEXT AS ITEM_VALUE_DIRECT
             FROM base_doc
             WHERE OCR_CNTS IS NOT NULL AND JSON_TYPE = 'object'
-            
             UNION ALL
-            
-            -- 배열인 경우: json_array_elements 사용
-            -- 배열의 각 요소가 객체인 경우 모든 키-값 쌍을 추출
             SELECT
                 ROW_NUMBER() OVER() AS JSON_SEQ,
-                COALESCE(
-                    elem->>'item_cd',
-                    elem->>'key',
-                    elem->>'name',
-                    'item_' || ROW_NUMBER() OVER()
-                ) AS ITEM_CD,
-                NULL::JSON AS OCR_CNTS,
-                COALESCE(
-                    elem->>'item_value',
-                    elem->>'value',
-                    elem->>'val',
-                    elem::TEXT
-                ) AS ITEM_VALUE_DIRECT
+                json_object_keys(elem::JSON) AS ITEM_CD,
+                elem::JSON AS OCR_CNTS,
+                NULL::TEXT AS ITEM_VALUE_DIRECT
             FROM base_doc
             CROSS JOIN json_array_elements(OCR_CNTS::JSON) AS elem
-            WHERE OCR_CNTS IS NOT NULL AND JSON_TYPE = 'array'
+            WHERE OCR_CNTS IS NOT NULL AND JSON_TYPE = 'array' AND jsonb_typeof(elem::JSONB) = 'object'
         ),
         json_parsed AS (
-            -- 3단계: 키에 해당하는 값 추출
             SELECT
                 json_keys.JSON_SEQ,
                 json_keys.ITEM_CD,
-                COALESCE(
-                    json_keys.ITEM_VALUE_DIRECT,
-                    json_keys.OCR_CNTS ->> json_keys.ITEM_CD
-                ) AS ITEM_VALUE
+                COALESCE(json_keys.ITEM_VALUE_DIRECT, json_keys.OCR_CNTS ->> json_keys.ITEM_CD) AS ITEM_VALUE
             FROM json_keys
         )
-        -- 4단계: JSON 순서 그대로 반환 (ITEM_CD 기반)
         SELECT
             json_parsed.ITEM_CD,
             json_parsed.ITEM_VALUE,
             COALESCE(CODI.ITEM_NM, json_parsed.ITEM_CD) AS ITEM_NM
         FROM json_parsed
-        LEFT JOIN RFDB.C_OCR_DOC_ITEM CODI
-            ON CODI.ITEM_CD = json_parsed.ITEM_CD
-            AND CODI.USE_YN = 'Y'
+        LEFT JOIN RFDB.C_OCR_DOC_ITEM CODI ON CODI.ITEM_CD = json_parsed.ITEM_CD AND CODI.USE_YN = 'Y'
         ORDER BY json_parsed.JSON_SEQ
     </select>
 

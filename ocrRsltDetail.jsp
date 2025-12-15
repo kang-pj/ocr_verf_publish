@@ -2,11 +2,7 @@
 <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/viewerjs/1.11.7/viewer.min.css">
 <script src="${pageContext.request.contextPath}/resources/viewerjs/1.11.7/viewer.min.js"></script>
 <style>
-    body {
-        font-family: 'Noto Sans KR', sans-serif;
-        min-width: 1200px;
-    }
-    
+
     /* 로딩 오버레이 */
     #loadingOverlay {
         position: fixed;
@@ -14,18 +10,18 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(189, 189, 189, 0.50);
         display: flex;
         justify-content: center;
         align-items: center;
         z-index: 9999;
         flex-direction: column;
     }
-    
+
     #loadingOverlay.hidden {
         display: none;
     }
-    
+
     .loading-spinner {
         border: 4px solid #f3f3f3;
         border-top: 4px solid #4e73df;
@@ -34,17 +30,22 @@
         height: 50px;
         animation: spin 1s linear infinite;
     }
-    
+
     @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-    
+
     .loading-text {
         margin-top: 20px;
         color: #4e73df;
         font-size: 16px;
         font-weight: 500;
+    }
+
+    body {
+        font-family: 'Noto Sans KR', sans-serif;
+        min-width: 1200px;
     }
     #wrapper {
         display: flex;
@@ -282,11 +283,11 @@
                     <i class="fas fa-file-alt"></i> OCR 문서 상세
                 </h4>
                 <div>
-                    <button type="button" class="btn btn-sm btn-ocr-reset mr-2" id="downloadBtn" onclick="downloadFile()">
+                    <button type="button" class="btn btn-sm btn-ocr-reset mr-2" id="downloadBtn" onclick="downloadFile()" style="display: none;">
                         <i class="fas fa-download"></i>
                         <span>현재 파일</span>
                     </button>
-                    <button type="button" class="btn btn-sm btn-ocr-reset mr-2" id="downloadAllBtn" onclick="downloadAllFiles()">
+                    <button type="button" class="btn btn-sm btn-ocr-reset mr-2" id="downloadAllBtn" onclick="downloadAllFiles()" style="display: none;">
                         <i class="fas fa-file-archive"></i>
                         <span>전체 다운로드</span>
                     </button>
@@ -401,6 +402,30 @@
 
 
 <script>
+    // 전역 에러 핸들러 - 최우선 등록
+    (function() {
+        // JavaScript 런타임 에러 캐치
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error('전역 에러 발생:', message, 'at', source, lineno + ':' + colno);
+            try {
+                $('#loadingOverlay').removeClass('active').addClass('hidden');
+            } catch(e) {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+            return false;
+        };
+
+        // Promise rejection 에러 캐치
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Promise rejection:', event.reason);
+            try {
+                $('#loadingOverlay').removeClass('active').addClass('hidden');
+            } catch(e) {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        });
+    })();
+
     // 전역 변수
     var ocrDocNoList = [];
     var currentIndex = 0;
@@ -443,6 +468,15 @@
     }
 
     $(document).ready(function() {
+        // jQuery AJAX 전역 에러 핸들러
+        $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+            console.error('AJAX 에러 발생:', thrownError);
+            $('#loadingOverlay').removeClass('active').addClass('hidden');
+        });
+        
+        // 관리자 모드 체크
+        checkAdminMode();
+        
         // URL 파라미터에서 관리번호 정보 가져오기
         var urlParams = new URLSearchParams(window.location.search);
         var ctrlYr = urlParams.get('ctrl_yr');
@@ -453,15 +487,69 @@
         var ocrDocNo = urlParams.get('ocr_doc_no');
 
         // 문서 상세 정보 로드
-        loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, ocrDocNo);
+        try {
+            loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, ocrDocNo);
+        } catch (error) {
+            console.error('문서 로드 중 오류:', error);
+            $('#loadingOverlay').removeClass('active').addClass('hidden');
+            alert('문서를 불러오는 중 오류가 발생했습니다.');
+        }
     });
+
+    /**
+     * 관리자 모드 체크 및 다운로드 버튼 표시 (30분 타임아웃)
+     */
+    function checkAdminMode() {
+        var adminMode = sessionStorage.getItem('adminMode');
+        var adminModeExpiry = sessionStorage.getItem('adminModeExpiry');
+        
+        if (adminMode === 'true' && adminModeExpiry) {
+            var now = new Date().getTime();
+            var expiryTime = parseInt(adminModeExpiry);
+            
+            // 만료 시간 체크
+            if (now < expiryTime) {
+                $('#downloadBtn').show();
+                $('#downloadAllBtn').show();
+            } else {
+                // 만료됨 - 세션 제거
+                sessionStorage.removeItem('adminMode');
+                sessionStorage.removeItem('adminModeExpiry');
+            }
+        }
+    }
+
+    /**
+     * 관리자 모드 활성화 (콘솔에서 호출)
+     * 사용법: enableAdminMode()
+     * 유지 시간: 30분
+     */
+    window.enableAdminMode = function() {
+        var now = new Date().getTime();
+        var expiryTime = now + (30 * 60 * 1000); // 30분 후
+        
+        sessionStorage.setItem('adminMode', 'true');
+        sessionStorage.setItem('adminModeExpiry', expiryTime.toString());
+        
+        $('#downloadBtn').show();
+        $('#downloadAllBtn').show();
+    };
+
+    /**
+     * 관리자 모드 비활성화 (콘솔에서 호출)
+     * 사용법: disableAdminMode()
+     */
+    window.disableAdminMode = function() {
+        sessionStorage.removeItem('adminMode');
+        sessionStorage.removeItem('adminModeExpiry');
+        $('#downloadBtn').hide();
+        $('#downloadAllBtn').hide();
+    };
 
     /**
      * 문서 상세 정보 로드
      */
     function loadDocumentDetail(ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, ocrDocNo) {
-        console.log('문서 상세 조회:', ctrlYr, instCd, prdtCd, ctrlNo, docTpCd, 'ocrDocNo:', ocrDocNo);
-        
         // 로딩 오버레이 표시
         $('#loadingOverlay').removeClass('hidden');
 
@@ -505,20 +593,22 @@
                     } else {
                         $('#imageViewer').html('<p class="text-muted">이미지 정보가 없습니다.</p>');
                     }
-/*
-                    // 페이지 네비게이션 표시 (이미지 로딩 상관없이 항상 표시)
-                    setTimeout(function() {
-                        displayPageNavigation(response.totalPages || 1);
-                    }, 100);*/
+                    /*
+                                        // 페이지 네비게이션 표시 (이미지 로딩 상관없이 항상 표시)
+                                        setTimeout(function() {
+                                            displayPageNavigation(response.totalPages || 1);
+                                        }, 100);*/
                 } else {
                     alert('문서 정보를 불러올 수 없습니다.');
                     $('#documentTypeList').html('<p class="text-center text-danger">데이터를 불러오지 못했습니다.</p>');
+                    $('#loadingOverlay').removeClass('active').addClass('hidden');
                 }
             },
             error: function() {
                 console.error('서버 연결 실패');
                 alert('서버 연결에 실패했습니다.');
                 $('#documentTypeList').html('<p class="text-center text-danger">서버 연결에 실패했습니다.</p>');
+                $('#loadingOverlay').removeClass('active').addClass('hidden');
             }
         });
     }
@@ -581,7 +671,7 @@
             var isCurrent = doc.doc_tp_cd === currentDocTpCd;
             var itemClass = isCurrent ? 'doc-type-item current' : 'doc-type-item';
             var icon = isCurrent ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-file-alt"></i>';
-            
+
             // doc_kr_nm (한글명) 우선 표시, 없으면 doc_tp_cd
             var displayName = doc.doc_kr_nm || doc.doc_tp_cd;
 
@@ -756,9 +846,7 @@
         console.log('복수 이미지 로딩 시작 - 이미지 개수:', imageInfoList.length);
 
         // 첫 번째 이미지의 inst_cd, prdt_cd 사용
-        var firstImage = imageInfoList[0];
-
-        // image_path를 Base64로 인코딩
+        var firstImage = imageInfoList[0];// image_path를 Base64로 인코딩
         var encodedImageList = imageInfoList.map(function(imageInfo) {
             var encoded = Object.assign({}, imageInfo);
             if (encoded.image_path) {
@@ -774,7 +862,7 @@
             image_list: encodedImageList
         };
 
-        console.log('이미지 로딩 파라미터:', params);
+        //console.log('이미지 로딩 파라미터:', params);
 
         $.ajax({
             url: '/rf-ocr-verf/api/getOcrImages.do',
@@ -783,19 +871,24 @@
             data: JSON.stringify(params),
             timeout: 60000,
             success: function(response) {
-                console.log('이미지 로딩 응답:', response);
+                //console.log('이미지 로딩 응답:', response);
 
                 if (response.success && response.data && response.data.length > 0) {
-                    console.log('로드된 이미지 개수:', response.data.length);
+                    //console.log('로드된 이미지 개수:', response.data.length);
 
                     // 컨테이너 div 생성
                     var html = '<div id="viewerContainer" style="width: 100%; height: 100%;">';
                     html += '<ul style="list-style: none; padding: 0; margin: 0; width: 100%; height: 100%;">';
 
+                    var validImageCount = 0;
+                    var failedImageCount = 0;
+                    var failedImages = [];
+
                     response.data.forEach(function(imageData, index) {
-                        console.log('이미지 ' + index + ' 처리 중...');
+                        //console.log('이미지 ' + index + ' 처리 중...');
 
                         if (imageData && imageData.startsWith('data:image')) {
+                            validImageCount++;
                             // 파일명 가져오기
                             var fileName = 'Page ' + (index + 1);
                             if (currentImageInfoList && currentImageInfoList[index]) {
@@ -804,39 +897,78 @@
                                     fileName = imageInfo.file_name + '.' + imageInfo.ext;
                                 }
                             }
-                            
+
                             html += '<li>';
                             html += '<img src="' + imageData + '" alt="' + fileName + '" title="' + fileName + '" style="display: none;">';
                             html += '</li>';
+                        } else if (imageData && imageData.startsWith('ERROR:')) {
+                            failedImageCount++;
+                            var fileName = 'Page ' + (index + 1);
+                            if (currentImageInfoList && currentImageInfoList[index]) {
+                                var imageInfo = currentImageInfoList[index];
+                                if (imageInfo.file_name) {
+                                    fileName = imageInfo.file_name + '.' + imageInfo.ext;
+                                }
+                            }
+                            failedImages.push(fileName);
+                            console.error('이미지 로딩 실패 [' + index + ']:', imageData);
+
+                            // 에러 이미지 플레이스홀더 추가
+                            html += '<li>';
+                            html += '<div style="width: 100%; height: 600px; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa; border: 2px dashed #dee2e6;">';
+                            html += '<div class="text-center p-4">';
+                            html += '<i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>';
+                            html += '<h6 class="text-danger">이미지 로딩 실패</h6>';
+                            html += '<p class="text-muted small mb-0">' + fileName + '</p>';
+                            html += '<p class="text-muted small">파일을 불러올 수 없습니다</p>';
+                            html += '</div>';
+                            html += '</div>';
+                            html += '</li>';
                         } else {
-                            console.warn('이미지 ' + index + '이 base64 형식이 아닙니다.');
+                            console.warn('이미지 ' + index + '이 유효하지 않습니다:', imageData);
                         }
                     });
 
                     html += '</ul>';
                     html += '</div>';
 
+                    // 유효한 이미지가 하나도 없으면 에러 표시
+                    if (validImageCount === 0) {
+                        var errorHtml = '<div class="text-center p-4">';
+                        errorHtml += '<i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>';
+                        errorHtml += '<h5 class="text-danger">이미지를 불러올 수 없습니다</h5>';
+                        errorHtml += '<p class="text-muted">외부 API에서 파일을 가져오는 중 오류가 발생했습니다.</p>';
+                        errorHtml += '<p class="text-muted small">파일이 존재하지 않거나 접근 권한이 없을 수 있습니다.</p>';
+                        errorHtml += '</div>';
+                        $('#imageViewer').html(errorHtml);
+                        $('#loadingOverlay').removeClass('active').addClass('hidden');
+                        return;
+                    }
+
+                    // 일부 이미지만 실패한 경우 경고 메시지 표시
+                    if (failedImageCount > 0) {
+                        var warningMsg = '총 ' + response.data.length + '개 중 ' + failedImageCount + '개 이미지를 불러올 수 없습니다.';
+                        console.warn(warningMsg, failedImages);
+                        // 상단에 경고 배너 추가 (선택사항)
+                        // alert(warningMsg);
+                    }
+
                     $('#imageViewer').html(html);
 
                     // Viewer.js 초기화
                     setTimeout(function() {
                         var container = document.getElementById('viewerContainer');
-                        console.log('Viewer.js 초기화 시작 - 컨테이너:', container);
+                        //console.log('Viewer.js 초기화 시작 - 컨테이너:', container);
 
                         if (container) {
                             var viewer = new Viewer(container, {
                                 inline: true,
                                 container: '#imageViewer',
                                 viewed: function(event) {
-                                    var newIndex = event.detail.index;
-                                    console.log('=== Viewer.js viewed 이벤트 ===');
-                                    console.log('이전 currentIndex:', currentIndex);
-                                    console.log('새로운 인덱스:', newIndex);
-
                                     // 현재 인덱스 항상 업데이트
+                                    var newIndex = event.detail.index;
                                     currentIndex = newIndex;
-                                    console.log('업데이트된 currentIndex:', currentIndex);
-                                    
+
                                     // 첫 로딩 시 로딩 오버레이 숨기기
                                     setTimeout(function() {
                                         $('#loadingOverlay').addClass('hidden');
@@ -845,12 +977,11 @@
                                     // 해당 인덱스의 ocr_doc_no 가져오기
                                     if (ocrDocNoList && ocrDocNoList[newIndex]) {
                                         var newOcrDocNo = ocrDocNoList[newIndex];
-                                        
+
                                         // ocr_doc_no가 실제로 변경되었을 때만 OCR 결과 갱신
                                         // (PDF 여러 페이지인 경우 같은 ocr_doc_no가 반복되므로)
                                         if (newOcrDocNo !== currentOcrDocNo) {
                                             currentOcrDocNo = newOcrDocNo;
-                                            console.log('OCR 결과 업데이트 - OCR_DOC_NO:', newOcrDocNo);
 
                                             // OCR 결과 조회
                                             $.ajax({
@@ -897,7 +1028,11 @@
                                 transition: true,
                                 fullscreen: true,
                                 keyboard: true,
-                                initialViewIndex: currentIndex
+                                initialViewIndex: currentIndex/*,
+                                viewed: function() {
+                                    // 뷰어가 표시된 후 크기 조정
+                                    viewer.update();
+                                }*/
                             });
 
                             // 현재 인덱스로 이동
@@ -928,131 +1063,132 @@
             }
         });
     }
-/*
+
+    /*
 
 
-    /!**
-     * 복수 이미지 로딩 API 호출 (Viewer.js 적용)
-     *!/
-    function loadMultipleImages(currentData, imageList) {
-        // 로딩바 표시
-        var loadingHtml = '<div style="display: flex; align-items: center; justify-content: center; height: 100%;">';
-        loadingHtml += '<div class="spinner-border text-primary" role="status">';
-        loadingHtml += '<span class="sr-only">로딩 중...</span>';
-        loadingHtml += '</div></div>';
-        $('#imageViewer').html(loadingHtml);
+        /!**
+         * 복수 이미지 로딩 API 호출 (Viewer.js 적용)
+         *!/
+        function loadMultipleImages(currentData, imageList) {
+            // 로딩바 표시
+            var loadingHtml = '<div style="display: flex; align-items: center; justify-content: center; height: 100%;">';
+            loadingHtml += '<div class="spinner-border text-primary" role="status">';
+            loadingHtml += '<span class="sr-only">로딩 중...</span>';
+            loadingHtml += '</div></div>';
+            $('#imageViewer').html(loadingHtml);
 
-        console.log('복수 이미지 로딩 API 호출 - 이미지 개수:', imageList.length);
+            console.log('복수 이미지 로딩 API 호출 - 이미지 개수:', imageList.length);
 
-        var params = {
-            inst_cd: currentData.inst_cd,
-            prdt_cd: currentData.prdt_cd,
-            image_list: imageList
-        };
+            var params = {
+                inst_cd: currentData.inst_cd,
+                prdt_cd: currentData.prdt_cd,
+                image_list: imageList
+            };
 
-        console.log('이미지 로딩 파라미터:', params);
+            console.log('이미지 로딩 파라미터:', params);
 
-        $.ajax({
-            url: '/rf-ocr-verf/api/getOcrImages.do',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(params),
-            timeout: 60000,
-            success: function(response) {
-                console.log('이미지 로딩 응답:', response);
+            $.ajax({
+                url: '/rf-ocr-verf/api/getOcrImages.do',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(params),
+                timeout: 60000,
+                success: function(response) {
+                    console.log('이미지 로딩 응답:', response);
 
-                if (response.success && response.data && response.data.length > 0) {
-                    console.log('로드된 이미지 개수:', response.data.length);
+                    if (response.success && response.data && response.data.length > 0) {
+                        console.log('로드된 이미지 개수:', response.data.length);
 
-                    // 컨테이너 div 생성
-                    var html = '<div id="viewerContainer" style="width: 100%; height: 100%;">';
-                    html += '<ul style="list-style: none; padding: 0; margin: 0;">';
+                        // 컨테이너 div 생성
+                        var html = '<div id="viewerContainer" style="width: 100%; height: 100%;">';
+                        html += '<ul style="list-style: none; padding: 0; margin: 0;">';
 
-                    response.data.forEach(function(imageData, index) {
-                        console.log('이미지 ' + index + ' 처리 중...');
+                        response.data.forEach(function(imageData, index) {
+                            console.log('이미지 ' + index + ' 처리 중...');
 
-                        if (imageData && imageData.startsWith('data:image')) {
-                            html += '<li>';
-                            html += '<img src="' + imageData + '" alt="Page ' + (index + 1) + '" style="display: none;">';
-                            html += '</li>';
-                        } else {
-                            console.warn('이미지 ' + index + '이 base64 형식이 아닙니다.');
-                        }
-                    });
+                            if (imageData && imageData.startsWith('data:image')) {
+                                html += '<li>';
+                                html += '<img src="' + imageData + '" alt="Page ' + (index + 1) + '" style="display: none;">';
+                                html += '</li>';
+                            } else {
+                                console.warn('이미지 ' + index + '이 base64 형식이 아닙니다.');
+                            }
+                        });
 
-                    html += '</ul>';
-                    html += '</div>';
+                        html += '</ul>';
+                        html += '</div>';
 
-                    $('#imageViewer').html(html);
+                        $('#imageViewer').html(html);
 
-                    // Viewer.js 초기화
-                    setTimeout(function() {
-                        var container = document.getElementById('viewerContainer');
-                        console.log('Viewer.js 초기화 시작 - 컨테이너:', container);
+                        // Viewer.js 초기화
+                        setTimeout(function() {
+                            var container = document.getElementById('viewerContainer');
+                            console.log('Viewer.js 초기화 시작 - 컨테이너:', container);
 
-                        if (container) {
-                            var viewer = new Viewer(container, {
-                                inline: true,
-                                viewed: function() {
-                                    console.log('Viewer.js viewed 이벤트 - 현재 인덱스:', viewer.index);
-                                },
-                                toolbar: {
-                                    zoomIn: 4,
-                                    zoomOut: 4,
-                                    oneToOne: 4,
-                                    reset: 4,
-                                    prev: 4,
-                                    play: false,
-                                    next: 4,
-                                    rotateLeft: 4,
-                                    rotateRight: 4,
-                                    flipHorizontal: 4,
-                                    flipVertical: 4
-                                },
-                                navbar: true,
-                                title: true,
-                                tooltip: true,
-                                movable: true,
-                                zoomable: true,
-                                rotatable: true,
-                                scalable: true,
-                                transition: true,
-                                fullscreen: true,
-                                keyboard: true,
-                                initialViewIndex: currentIndex
-                            });
+                            if (container) {
+                                var viewer = new Viewer(container, {
+                                    inline: true,
+                                    viewed: function() {
+                                        console.log('Viewer.js viewed 이벤트 - 현재 인덱스:', viewer.index);
+                                    },
+                                    toolbar: {
+                                        zoomIn: 4,
+                                        zoomOut: 4,
+                                        oneToOne: 4,
+                                        reset: 4,
+                                        prev: 4,
+                                        play: false,
+                                        next: 4,
+                                        rotateLeft: 4,
+                                        rotateRight: 4,
+                                        flipHorizontal: 4,
+                                        flipVertical: 4
+                                    },
+                                    navbar: true,
+                                    title: true,
+                                    tooltip: true,
+                                    movable: true,
+                                    zoomable: true,
+                                    rotatable: true,
+                                    scalable: true,
+                                    transition: true,
+                                    fullscreen: true,
+                                    keyboard: true,
+                                    initialViewIndex: currentIndex
+                                });
 
-                            // 현재 인덱스로 이동
-                            viewer.view(currentIndex);
+                                // 현재 인덱스로 이동
+                                viewer.view(currentIndex);
 
-                            console.log('Viewer.js 초기화 완료 - 현재 인덱스:', currentIndex);
-                        }
-                    }, 300);
-                } else {
-                    console.error('이미지 로딩 실패 - 응답 데이터 없음');
-                    $('#imageViewer').html('<p class="text-danger text-center">이미지를 불러올 수 없습니다.</p>');
+                                console.log('Viewer.js 초기화 완료 - 현재 인덱스:', currentIndex);
+                            }
+                        }, 300);
+                    } else {
+                        console.error('이미지 로딩 실패 - 응답 데이터 없음');
+                        $('#imageViewer').html('<p class="text-danger text-center">이미지를 불러올 수 없습니다.</p>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('이미지 로딩 AJAX 오류:', {status: status, error: error, xhr: xhr});
+
+                    var errorMsg = '서버 연결 실패';
+                    if (xhr.status === 404) {
+                        errorMsg = 'API 엔드포인트 없음 (404)';
+                    } else if (xhr.status === 500) {
+                        errorMsg = '서버 오류 (500)';
+                    } else if (status === 'timeout') {
+                        errorMsg = '요청 시간 초과';
+                    }
+
+                    $('#imageViewer').html('<p class="text-danger text-center">' + errorMsg + '</p>');
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error('이미지 로딩 AJAX 오류:', {status: status, error: error, xhr: xhr});
-
-                var errorMsg = '서버 연결 실패';
-                if (xhr.status === 404) {
-                    errorMsg = 'API 엔드포인트 없음 (404)';
-                } else if (xhr.status === 500) {
-                    errorMsg = '서버 오류 (500)';
-                } else if (status === 'timeout') {
-                    errorMsg = '요청 시간 초과';
-                }
-
-                $('#imageViewer').html('<p class="text-danger text-center">' + errorMsg + '</p>');
-            }
-        });
-    }
-*/
+            });
+        }
+    */
 
 
-        /**
+    /**
      * 이미지 로드 오류 처리
      */
     function handleImageError() {
@@ -1079,11 +1215,13 @@
      * 파일 다운로드 (현재 보고 있는 이미지)
      */
     function downloadFile() {
+        /*
         console.log('=== downloadFile 호출 ===');
         console.log('currentIndex:', currentIndex);
         console.log('currentImageInfoList 길이:', currentImageInfoList ? currentImageInfoList.length : 0);
         console.log('currentImageInfoList:', currentImageInfoList);
-        
+        */
+
         if (!currentImageInfoList || currentImageInfoList.length === 0) {
             alert('이미지 정보가 없습니다.');
             return;
@@ -1091,8 +1229,7 @@
 
         // 현재 인덱스의 이미지 정보 가져오기
         const currentImage = currentImageInfoList[currentIndex];
-        console.log('currentImage (index=' + currentIndex + '):', currentImage);
-        
+
         if (!currentImage) {
             alert('현재 이미지 정보를 찾을 수 없습니다. (인덱스: ' + currentIndex + ')');
             return;
@@ -1104,13 +1241,13 @@
         const fileName = currentImage.file_name || 'download';
         const ext = currentImage.ext;
 
-        console.log('다운로드 정보:', { 
+        console.log('다운로드 정보:', {
             index: currentIndex,
-            instCd: instCd, 
-            prdtCd: prdtCd, 
-            imagePath: imagePath, 
-            fileName: fileName, 
-            ext: ext 
+            instCd: instCd,
+            prdtCd: prdtCd,
+            imagePath: imagePath,
+            fileName: fileName,
+            ext: ext
         });
 
         if (!imagePath) {
@@ -1136,9 +1273,6 @@
      * 전체 파일 다운로드 (ZIP)
      */
     function downloadAllFiles() {
-        console.log('downloadAllFiles 호출됨');
-        console.log('currentDocumentDetail:', currentDocumentDetail);
-        
         if (!currentDocumentDetail) {
             alert('문서 정보가 없습니다.');
             return;
@@ -1149,7 +1283,6 @@
         const prdtCd = currentDocumentDetail.prdt_cd;
         const ctrlNo = currentDocumentDetail.ctrl_no;
 
-        console.log('전체 다운로드 정보:', { ctrlYr, instCd, prdtCd, ctrlNo });
 
         if (!ctrlYr || !instCd || !prdtCd || !ctrlNo) {
             alert('관리번호 정보가 없습니다.');
@@ -1160,14 +1293,14 @@
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '/rf-ocr-verf/api/downloadAllFiles.do';
-        
+
         const fields = {
             ctrl_yr: ctrlYr,
             inst_cd: instCd,
             prdt_cd: prdtCd,
             ctrl_no: ctrlNo
         };
-        
+
         for (const key in fields) {
             const input = document.createElement('input');
             input.type = 'hidden';
@@ -1175,11 +1308,12 @@
             input.value = fields[key];
             form.appendChild(input);
         }
-        
+
         document.body.appendChild(form);
         form.submit();
         document.body.removeChild(form);
     }
+
 
     /**
      * OCR 상태 초기화 (재실행)
