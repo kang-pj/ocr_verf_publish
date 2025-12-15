@@ -184,7 +184,7 @@
                         </div>
                         <div class="form-row align-items-center mb-2">
                             <div class="col-auto" style="width: 120px;">
-                                <label class="mb-0">기간</label>ㄱ
+                                <label class="mb-0">기간</label>
                             </div>
                             <div class="col-auto">
                                 <div class="input-group input-group-sm" style="width: 300px;">
@@ -212,6 +212,10 @@
                                 <div class="custom-control custom-checkbox custom-control-inline" style="padding-left: 0.5rem !important;">
                                     <input type="checkbox" class="custom-control-input" id="org1" value="모바일반환보증">
                                     <label class="custom-control-label" for="org1">모바일반환보증</label>
+                                </div>
+                                <div class="custom-control custom-checkbox custom-control-inline" style="padding-left: 0.5rem !important;">
+                                    <input type="checkbox" class="custom-control-input" id="org5" value="모바일임대보증">
+                                    <label class="custom-control-label" for="org5">모바일임대보증</label>
                                 </div>
                                 <div class="custom-control custom-checkbox custom-control-inline" style="padding-left: 0.5rem !important;">
                                     <input type="checkbox" class="custom-control-input" id="org2" value="신한전세">
@@ -516,7 +520,11 @@ cr
     var organizationMapping = {
         '모바일반환보증': {
             inst_cd: ['01', '45', '47', '49'],
-            prdt_cd: ['820', '830']
+            prdt_cd: ['820']
+        },
+        '모바일임대보증': {
+            inst_cd: ['01', '45', '47', '49'],
+            prdt_cd: ['830']
         },
         '신한전세': {
             inst_cd: ['01'],
@@ -543,7 +551,7 @@ cr
 
         // 하이픈 제거
         var cleaned = input.trim().replace(/-/g, '');
-        
+
         if (cleaned.length < 4) {
             return null;
         }
@@ -646,7 +654,7 @@ cr
     function formatDateInput(date) {
         var year = date.getFullYear();
         var month = String(date.getMonth() + 1).padStart(2, '0');
-        var day = String(date.getDate()).padStart(2, '0');e
+        var day = String(date.getDate()).padStart(2, '0');
         return year + '-' + month + '-' + day;
     }
 </script>

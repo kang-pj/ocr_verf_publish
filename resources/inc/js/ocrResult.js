@@ -221,7 +221,11 @@ $(document).ready(function() {
 var organizationMapping = {
     '모바일반환보증': {
         inst_cd: ['01', '45', '47', '49'],
-        prdt_cd: ['820', '830']
+        prdt_cd: ['820']
+    },
+    '모바일임대보증': {
+        inst_cd: ['01', '45', '47', '49'],
+        prdt_cd: ['830']
     },
     '신한전세': {
         inst_cd: ['01'],

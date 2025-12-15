@@ -162,13 +162,13 @@
         )
         SELECT 
             CASE 
-                -- KRH (모바일반환보증)
+                -- KRH (모바일반환보증/모바일임대보증)
                 WHEN (SELECT sys_cls_cd FROM sys_cls) = 'KRH' THEN
                     CASE 
-                        -- prdt_cd가 830이면 nv_hug_doc_inf 테이블
+                        -- prdt_cd가 830이면 nv_hug_doc_inf 테이블 (모바일임대보증)
                         WHEN #{prdt_cd} = '830' THEN
                             (SELECT doc_nm FROM nv_hug_doc_inf WHERE doc_cd = #{doc_tp_cd} LIMIT 1)
-                        -- prdt_cd가 820이면 hug_doc_inf 테이블
+                        -- prdt_cd가 820이면 hug_doc_inf 테이블 (모바일반환보증)
                         WHEN #{prdt_cd} = '820' THEN
                             (SELECT doc_nm FROM hug_doc_inf WHERE doc_cd = #{doc_tp_cd} LIMIT 1)
                         ELSE NULL
