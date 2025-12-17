@@ -70,6 +70,11 @@ public class OcrDAOImpl implements OcrDAO {
     }
     
     @Override
+    public List<Map<String, Object>> getDocumentNamesBatch(Map<String, Object> params) {
+        return sqlSession.selectList("ocr.getDocumentNamesBatch", params);
+    }
+    
+    @Override
     public OcrInfoVO getImageInfo(Map<String, Object> params) {
         return sqlSession.selectOne("ocr.getImageInfo", params);
     }
@@ -147,5 +152,10 @@ public class OcrDAOImpl implements OcrDAO {
     @Override
     public int activateOcrItem(Map<String, Object> params) {
         return sqlSession.update("ocr.activateOcrItem", params);
+    }
+
+    @Override
+    public List<Map<String, Object>> getDocumentTypes(Map<String, Object> params) {
+        return sqlSession.selectList("ocr.getDocumentTypes", params);
     }
 }

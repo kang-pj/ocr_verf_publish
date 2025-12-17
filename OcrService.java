@@ -43,6 +43,8 @@ public interface OcrService {
     int updateOcrStatus(Map<String, Object> params);
 
     String getDocumentName(String instCd, String prdtCd, String docTpCd);
+    
+    Map<String, String> getDocumentNamesBatch(List<OcrInfoVO> docList);
 
     List<com.refine.ocr.vo.OcrItemVO> getOcrItemList(Map<String, Object> params);
 
@@ -58,6 +60,9 @@ public interface OcrService {
 
     // 외부 API 이미지 다운로드
     byte[] downloadImageFromExternalApi(String imagePath, String instCd, String prdtCd) throws Exception;
+
+    // 문서 유형 목록 조회
+    List<Map<String, Object>> getDocumentTypes(Map<String, Object> params);
 
     // 여러 이미지 다운로드 및 변환
     List<String> downloadAndConvertImages(String instCd, String prdtCd, List<Map<String, Object>> imageList);

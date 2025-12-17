@@ -151,6 +151,40 @@
             background-color: #e2e3e5 !important;
             color: #6c757d !important;
         }
+        
+        /* 문서 유형 모달 스타일 */
+        .doc-type-group {
+            margin-bottom: 20px;
+        }
+        .doc-type-group-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .doc-type-group .custom-control {
+            margin-bottom: 8px;
+        }
+        .doc-type-group .custom-control-label {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .doc-type-group .custom-control-label:hover {
+            background-color: #f8f9fa;
+            border-radius: 3px;
+        }
+        .doc-type-group .custom-control-input {
+            position: static !important;
+            opacity: 1 !important;
+            margin-right: 8px;
+        }
     </style>
 </head>
 <script type="text/javascript">
@@ -231,6 +265,19 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="form-row align-items-center mb-3">
+                            <div class="col-auto" style="width: 120px;">
+                                <label class="mb-0">문서 유형</label>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnDocTypeFilter" data-toggle="modal" data-target="#docTypeModal">
+                                    <i class="fas fa-filter"></i> 문서 유형 선택 (<span id="selectedDocTypeCount">0</span>)
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <small class="text-muted" id="selectedDocTypeText">전체</small>
+                            </div>
+                        </div>
                         <div class="form-row">
                             <div class="col-md-12 text-center">
                                 <button type="button" class="btn btn-secondary btn-sm mr-2" id="btnReset">
@@ -243,7 +290,7 @@
                         </div>
                     </div>
                 </div>
-cr
+
                 <!-- OCR 결과 테이블 -->
                 <div class="card shadow mb-4">
                     <div class="card-header py-3">
@@ -276,6 +323,42 @@ cr
     </div>
 </div>
 
+<!-- 문서 유형 선택 모달 -->
+<div class="modal fade" id="docTypeModal" tabindex="-1" role="dialog" aria-labelledby="docTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="docTypeModalLabel">문서 유형 선택</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <button type="button" class="btn btn-sm btn-outline-primary mr-2" id="btnSelectAllDocTypes">전체 선택</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnDeselectAllDocTypes">전체 해제</button>
+                    </div>
+                </div>
+                <div class="row" id="docTypeCheckboxContainer">
+                    <!-- 문서 유형 체크박스들이 동적으로 추가됩니다 -->
+                    <div class="col-12 text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">로딩 중...</span>
+                        </div>
+                        <p class="mt-2">문서 유형을 불러오는 중...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="btnApplyDocTypeFilter">적용</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <!-- Scroll to Top Button-->
 <a class="scroll-to-top rounded" href="#page-top">
     <i class="fas fa-angle-up"></i>
@@ -287,6 +370,9 @@ cr
 <script>
     /*검증 페이지 메인 js*/
 
+    // 전역 변수
+    var selectedDocTypes = []; // 선택된 문서 유형 코드 배열
+    var docTypeMapping = {}; // 문서 유형 코드 -> 한글명 매핑
 
     $(document).ready(function() {
         // ========================================
@@ -324,7 +410,8 @@ cr
                         ctrl_no: parsedMgmtNo ? parsedMgmtNo.ctrl_no : null,
                         ins_dttm_st: $('#startDate').val() || null,
                         ins_dttm_en: $('#endDate').val() || null,
-                        ocr_yn: $('#verifiedFilter').val() ? [$('#verifiedFilter').val()] : null
+                        ocr_yn: $('#verifiedFilter').val() ? [$('#verifiedFilter').val()] : null,
+                        doc_tp_cd: selectedDocTypes.length > 0 ? selectedDocTypes : null
                     };
                     return JSON.stringify(params);  // JSON 문자열로 변환
                 },
@@ -494,6 +581,10 @@ cr
             $('.period-btn[data-period="all"]').addClass('active');
             $('input[type="checkbox"]').prop('checked', false);
             $('#verifiedFilter').val('');
+            // 문서 유형 초기화
+            selectedDocTypes = [];
+            updateDocTypeDisplay();
+
             setDateRange('all');
             table.ajax.reload();
         });
@@ -509,6 +600,38 @@ cr
                 console.warn('DataTables wrapper가 card-body 밖에 있습니다.');
             }
         }, 500);
+
+        // 문서 유형 데이터 로드 (DataTable 초기화 후)
+        setTimeout(function() {
+            console.log('문서 유형 데이터 로드 시작');
+            
+            // 실제 API 호출
+            loadDocumentTypes();
+        }, 500);
+
+        // 문서 유형 모달 버튼 이벤트 (수동 바인딩)
+        $('#btnDocTypeFilter').on('click', function() {
+            console.log('문서 유형 버튼 클릭됨');
+            
+            // Bootstrap 모달이 없을 경우를 대비한 대체 방법
+            if (typeof $.fn.modal === 'function') {
+                $('#docTypeModal').modal('show');
+            } else {
+                // Bootstrap이 없으면 직접 표시
+                $('#docTypeModal').show();
+                $('#docTypeModal').css('display', 'block');
+                $('#docTypeModal').addClass('show');
+                $('body').addClass('modal-open');
+                
+                // 배경 클릭 시 닫기
+                $('#docTypeModal').on('click', function(e) {
+                    if (e.target === this) {
+                        $(this).hide();
+                        $('body').removeClass('modal-open');
+                    }
+                });
+            }
+        });
     });
 
 
@@ -656,5 +779,252 @@ cr
         var month = String(date.getMonth() + 1).padStart(2, '0');
         var day = String(date.getDate()).padStart(2, '0');
         return year + '-' + month + '-' + day;
+    }
+
+
+    /**
+     * 문서 유형 목록 로드
+     */
+    function loadDocumentTypes() {
+        console.log('문서 유형 로드 시작');
+
+        $.ajax({
+            url: '/rf-ocr-verf/api/getDocumentTypes.do',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({}),
+            timeout: 10000, // 10초 타임아웃
+            success: function(response) {
+                console.log('문서 유형 API 응답:', response);
+
+                if (response && response.success && response.data) {
+                    console.log('문서 유형 개수:', response.data.length);
+                    displayDocumentTypes(response.data);
+                } else {
+                    console.error('문서 유형 로드 실패:', response ? response.message : '응답 없음');
+                    $('#docTypeCheckboxContainer').html('<div class="col-12 text-center text-danger">문서 유형을 불러올 수 없습니다.<br><small>' + (response ? response.message : '응답 없음') + '</small></div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('문서 유형 로드 실패:', status, error);
+                console.error('응답 상태:', xhr.status);
+                console.error('응답 텍스트:', xhr.responseText);
+                
+                var errorMsg = '서버 연결에 실패했습니다.';
+                if (xhr.status === 404) {
+                    errorMsg = 'API를 찾을 수 없습니다. (404)';
+                } else if (xhr.status === 500) {
+                    errorMsg = '서버 내부 오류가 발생했습니다. (500)';
+                } else if (status === 'timeout') {
+                    errorMsg = '요청 시간이 초과되었습니다.';
+                }
+                
+                $('#docTypeCheckboxContainer').html('<div class="col-12 text-center text-danger">' + errorMsg + '<br><small>상태: ' + xhr.status + '</small></div>');
+            }
+        });
+    }
+
+    /**
+     * 문서 유형 체크박스 표시 (서비스별 그룹화)
+     */
+    function displayDocumentTypes(docTypes) {
+        console.log('displayDocumentTypes 호출됨, 데이터:', docTypes);
+        
+        var html = '';
+        docTypeMapping = {}; // 매핑 초기화
+        
+        // 기존 organizationMapping과 동일한 서비스 분류 (inst_cd + prdt_cd 조합)
+        function getServiceName(instCd, prdtCd) {
+            // 모바일반환보증
+            if (['01', '45', '47', '49'].includes(instCd) && prdtCd === '820') {
+                return '모바일반환보증';
+            }
+            // 모바일임대보증
+            if (['01', '45', '47', '49'].includes(instCd) && prdtCd === '830') {
+                return '모바일임대보증';
+            }
+            // 신한전세
+            if (instCd === '01' && ['001', '003', '005', '002', '016', '041', '050', '118', '119', '120',
+                '053', '200', '201', '202', '203', '217', '219', '220', '221', '007',
+                '014', '020', '031', '129', '028', '037', '032', '038', '128', '029',
+                '030', '036', '127', '027'].includes(prdtCd)) {
+                return '신한전세';
+            }
+            // 전세안심보험(카손)
+            if (instCd === '61' && prdtCd === 'L01') {
+                return '전세안심보험(카손)';
+            }
+            // 하나은행(사전)
+            if (instCd === '02' && ['007', '222', '223', '224', '225'].includes(prdtCd)) {
+                return '하나은행(사전)';
+            }
+            // 테스트
+            if (prdtCd === 'OCR') {
+                return '테스트';
+            }
+            
+            return '기타 (' + instCd + '-' + prdtCd + ')';
+        }
+
+        var serviceGroups = {};
+        var globalDocTypeMapping = {}; // 전역 문서 유형 매핑
+
+        // 문서 유형을 실제 사용 서비스별로 분류
+        docTypes.forEach(function(docType) {
+            var displayName = docType.doc_kr_nm || docType.doc_tp_cd;
+            var instCd = docType.inst_cd;
+            var prdtCd = docType.prdt_cd;
+            var docTpCd = docType.doc_tp_cd;
+            
+            // 전역 매핑에 추가 (가장 좋은 한글명 유지)
+            if (!globalDocTypeMapping[docTpCd] || (displayName !== docTpCd && globalDocTypeMapping[docTpCd] === docTpCd)) {
+                globalDocTypeMapping[docTpCd] = displayName;
+            }
+            
+            // inst_cd + prdt_cd 조합으로 서비스 분류
+            var serviceName = getServiceName(instCd, prdtCd);
+            
+            if (!serviceGroups[serviceName]) {
+                serviceGroups[serviceName] = [];
+            }
+            
+            // 같은 서비스 내에서 같은 문서 유형이 이미 있는지 확인
+            var exists = serviceGroups[serviceName].some(function(item) {
+                return item.doc_tp_cd === docTpCd;
+            });
+            
+            // 중복이 아닌 경우에만 추가
+            if (!exists) {
+                serviceGroups[serviceName].push({
+                    doc_tp_cd: docTpCd,
+                    doc_kr_nm: displayName,
+                    inst_cd: instCd,
+                    prdt_cd: prdtCd
+                });
+            }
+            
+            // 기타로 분류된 것들 로그 출력
+            if (serviceName.startsWith('기타')) {
+                console.log('기타로 분류된 문서:', docTpCd, displayName, 'inst_cd:', instCd, 'prdt_cd:', prdtCd);
+            }
+        });
+        
+        // 전역 매핑을 docTypeMapping에 복사
+        docTypeMapping = globalDocTypeMapping;
+
+        var index = 0;
+        
+        // 서비스별로 HTML 생성
+        Object.keys(serviceGroups).forEach(function(serviceName) {
+            var group = serviceGroups[serviceName];
+            if (group.length > 0) {
+                html += '<div class="col-12 doc-type-group">';
+                html += '<div class="doc-type-group-title">' + serviceName + '</div>';
+                html += '<div class="row">';
+                
+                group.forEach(function(docType) {
+                    var displayName = docType.doc_kr_nm || docType.doc_tp_cd;
+                    
+                    html += '<div class="col-md-4 mb-2">';
+                    html += '<div class="custom-control custom-checkbox">';
+                    html += '<input type="checkbox" class="custom-control-input doc-type-checkbox" id="docType' + index + '" value="' + docType.doc_tp_cd + '">';
+                    html += '<label class="custom-control-label" for="docType' + index + '" title="' + displayName + '">' + displayName + '</label>';
+                    html += '</div>';
+                    html += '</div>';
+                    
+                    index++;
+                });
+                
+                html += '</div>'; // row 닫기
+                html += '</div>'; // doc-type-group 닫기
+            }
+        });
+
+        console.log('생성된 HTML:', html);
+        
+        var container = $('#docTypeCheckboxContainer');
+        console.log('컨테이너 찾음:', container.length);
+        
+        container.html(html);
+        
+        console.log('HTML 설정 완료, 이벤트 바인딩 시작');
+
+        // 모달 이벤트 바인딩
+        bindDocTypeModalEvents();
+        
+        console.log('displayDocumentTypes 완료');
+    }
+
+    /**
+     * 문서 유형 모달 이벤트 바인딩
+     */
+    function bindDocTypeModalEvents() {
+        // 전체 선택
+        $('#btnSelectAllDocTypes').off('click').on('click', function() {
+            $('.doc-type-checkbox').prop('checked', true);
+        });
+
+        // 전체 해제
+        $('#btnDeselectAllDocTypes').off('click').on('click', function() {
+            $('.doc-type-checkbox').prop('checked', false);
+        });
+
+        // 적용 버튼
+        $('#btnApplyDocTypeFilter').off('click').on('click', function() {
+            selectedDocTypes = [];
+            $('.doc-type-checkbox:checked').each(function() {
+                selectedDocTypes.push($(this).val());
+            });
+
+            updateDocTypeDisplay();
+            
+            // 모달 닫기 (Bootstrap 여부에 관계없이)
+            if (typeof $.fn.modal === 'function') {
+                $('#docTypeModal').modal('hide');
+            } else {
+                $('#docTypeModal').hide();
+                $('body').removeClass('modal-open');
+            }
+
+            // 테이블 새로고침
+            $('#ocrResultTable').DataTable().ajax.reload();
+        });
+
+        // 취소 버튼과 X 버튼
+        $('#docTypeModal .btn-secondary, #docTypeModal .close').off('click').on('click', function() {
+            if (typeof $.fn.modal === 'function') {
+                $('#docTypeModal').modal('hide');
+            } else {
+                $('#docTypeModal').hide();
+                $('body').removeClass('modal-open');
+            }
+        });
+
+        // 모달 열릴 때 현재 선택 상태 복원
+        $('#docTypeModal').off('show.bs.modal').on('show.bs.modal', function() {
+            $('.doc-type-checkbox').prop('checked', false);
+            selectedDocTypes.forEach(function(docTypeCode) {
+                $('.doc-type-checkbox[value="' + docTypeCode + '"]').prop('checked', true);
+            });
+        });
+    }
+
+    /**
+     * 문서 유형 선택 상태 표시 업데이트
+     */
+    function updateDocTypeDisplay() {
+        var count = selectedDocTypes.length;
+        $('#selectedDocTypeCount').text(count);
+
+        if (count === 0) {
+            $('#selectedDocTypeText').text('전체');
+        } else if (count <= 3) {
+            var names = selectedDocTypes.map(function(code) {
+                return docTypeMapping[code] || code;
+            });
+            $('#selectedDocTypeText').text(names.join(', '));
+        } else {
+            $('#selectedDocTypeText').text(selectedDocTypes[0] + ' 외 ' + (count - 1) + '개');
+        }
     }
 </script>

@@ -1175,4 +1175,33 @@ public class OcrController {
         }
     }
 
+    /**
+     * 문서 유형 목록 조회
+     */
+    @PostMapping(value = "/api/getDocumentTypes.do")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getDocumentTypes(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            List<Map<String, Object>> documentTypes = ocrService.getDocumentTypes(params);
+
+            result.put("success", true);
+            result.put("data", documentTypes);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+
+        } catch (Exception e) {
+            logger.error("문서 유형 목록 조회 실패: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", "문서 유형 목록 조회 중 오류가 발생했습니다.");
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+
 }

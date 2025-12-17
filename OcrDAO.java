@@ -30,6 +30,8 @@ public interface OcrDAO {
     
     String getDocumentName(Map<String, Object> params);
     
+    List<Map<String, Object>> getDocumentNamesBatch(Map<String, Object> params);
+    
     OcrInfoVO getImageInfo(Map<String, Object> params);
     
     String getSysClsCd(Map<String, Object> params);
@@ -62,4 +64,7 @@ public interface OcrDAO {
     int deleteOcrItem(Map<String, Object> params);
     
     int activateOcrItem(Map<String, Object> params);
+    
+    // 문서 유형 목록 조회
+    List<Map<String, Object>> getDocumentTypes(Map<String, Object> params);
 }

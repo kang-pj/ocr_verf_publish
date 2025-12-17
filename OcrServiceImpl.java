@@ -62,11 +62,17 @@ public class OcrServiceImpl implements OcrService {
             List<OcrInfoVO> list = ocrDAO.getOcrDocumentList(params);
 
             if (list != null && !list.isEmpty()) {
+                // 배치로 한글명 조회
+                Map<String, String> docNameMap = getDocumentNamesBatch(list);
+                
+                // 각 항목에 한글명 설정
                 for (OcrInfoVO item : list) {
-                    String docName = getDocumentName(item.getInst_cd(), item.getPrdt_cd(), item.getDoc_tp_cd());
+                    String key = item.getInst_cd() + "|" + item.getPrdt_cd() + "|" + item.getDoc_tp_cd();
+                    String docName = docNameMap.get(key);
                     if (docName != null) {
                         item.setDoc_kr_nm(docName);
                     }
+                    // 테스트 문서 특별 처리
                     if(item.getPrdt_cd().equals("OCR") && item.getDoc_tp_cd().equals("01")) {
                         item.setDoc_kr_nm("테스트");
                     }
@@ -126,10 +132,17 @@ public class OcrServiceImpl implements OcrService {
                 throw new RuntimeException("해당 문서를 찾을 수 없습니다.");
             }
 
-            String docName = getDocumentName(detail.getInst_cd(), detail.getPrdt_cd(), detail.getDoc_tp_cd());
+            // 배치 조회를 위해 리스트로 만들어서 처리
+            List<OcrInfoVO> tempList = new ArrayList<>();
+            tempList.add(detail);
+            Map<String, String> docNameMap = getDocumentNamesBatch(tempList);
+            
+            String key = detail.getInst_cd() + "|" + detail.getPrdt_cd() + "|" + detail.getDoc_tp_cd();
+            String docName = docNameMap.get(key);
             if (docName != null) {
                 detail.setDoc_kr_nm(docName);
             }
+            // 테스트 문서 특별 처리
             if(detail.getPrdt_cd().equals("OCR") && detail.getDoc_tp_cd().equals("01")) {
                 detail.setDoc_kr_nm("테스트");
             }
@@ -148,11 +161,17 @@ public class OcrServiceImpl implements OcrService {
             List<OcrInfoVO> list = ocrDAO.getDocumentListByCtrlNo(params);
 
             if (list != null && !list.isEmpty()) {
+                // 배치로 한글명 조회
+                Map<String, String> docNameMap = getDocumentNamesBatch(list);
+                
+                // 각 항목에 한글명 설정
                 for (OcrInfoVO item : list) {
-                    String docName = getDocumentName(item.getInst_cd(), item.getPrdt_cd(), item.getDoc_tp_cd());
+                    String key = item.getInst_cd() + "|" + item.getPrdt_cd() + "|" + item.getDoc_tp_cd();
+                    String docName = docNameMap.get(key);
                     if (docName != null) {
                         item.setDoc_kr_nm(docName);
                     }
+                    // 테스트 문서 특별 처리
                     if(item.getPrdt_cd().equals("OCR") && item.getDoc_tp_cd().equals("01")) {
                         item.setDoc_kr_nm("테스트");
                     }
@@ -514,6 +533,53 @@ public class OcrServiceImpl implements OcrService {
         }
     }
 
+    @Override
+    public Map<String, String> getDocumentNamesBatch(List<OcrInfoVO> docList) {
+        Map<String, String> docNameMap = new HashMap<>();
+        
+        if (docList == null || docList.isEmpty()) {
+            return docNameMap;
+        }
+
+        try {
+            // 중복 제거를 위한 Set 사용
+            Set<Map<String, String>> uniqueDocs = new HashSet<>();
+            for (OcrInfoVO doc : docList) {
+                if (doc.getInst_cd() != null && doc.getPrdt_cd() != null && doc.getDoc_tp_cd() != null) {
+                    Map<String, String> docKey = new HashMap<>();
+                    docKey.put("inst_cd", doc.getInst_cd());
+                    docKey.put("prdt_cd", doc.getPrdt_cd());
+                    docKey.put("doc_tp_cd", doc.getDoc_tp_cd());
+                    uniqueDocs.add(docKey);
+                }
+            }
+
+            if (!uniqueDocs.isEmpty()) {
+                // 배치 조회를 위한 파라미터 구성
+                List<Map<String, String>> docListForBatch = new ArrayList<>(uniqueDocs);
+                Map<String, Object> params = new HashMap<>();
+                params.put("docList", docListForBatch);
+
+                // 배치 조회 실행
+                List<Map<String, Object>> results = ocrDAO.getDocumentNamesBatch(params);
+                
+                // 결과를 Map으로 변환 (키: inst_cd|prdt_cd|doc_tp_cd, 값: doc_name)
+                for (Map<String, Object> result : results) {
+                    String key = result.get("inst_cd") + "|" + result.get("prdt_cd") + "|" + result.get("doc_tp_cd");
+                    String docName = (String) result.get("doc_name");
+                    if (docName != null) {
+                        docNameMap.put(key, docName);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            logger.error("서류 한글명 배치 조회 실패: {}", e.getMessage());
+        }
+
+        return docNameMap;
+    }
+
 
     @Override
     public List<com.refine.ocr.vo.OcrItemVO> getOcrItemList(Map<String, Object> params) {
@@ -654,5 +720,39 @@ public class OcrServiceImpl implements OcrService {
         }
 
         return images;
+    }
+
+    @Override
+    public List<Map<String, Object>> getDocumentTypes(Map<String, Object> params) {
+        List<Map<String, Object>> docTypes = ocrDAO.getDocumentTypes(params);
+        
+        if (docTypes != null && !docTypes.isEmpty()) {
+            // 배치 조회를 위해 OcrInfoVO 리스트로 변환
+            List<OcrInfoVO> tempList = new ArrayList<>();
+            for (Map<String, Object> docType : docTypes) {
+                OcrInfoVO temp = new OcrInfoVO();
+                temp.setInst_cd((String) docType.get("inst_cd"));
+                temp.setPrdt_cd((String) docType.get("prdt_cd"));
+                temp.setDoc_tp_cd((String) docType.get("doc_tp_cd"));
+                tempList.add(temp);
+            }
+            
+            // 배치로 한글명 조회
+            Map<String, String> docNameMap = getDocumentNamesBatch(tempList);
+            
+            // 각 문서 유형에 한글명 설정
+            for (Map<String, Object> docType : docTypes) {
+                String instCd = (String) docType.get("inst_cd");
+                String prdtCd = (String) docType.get("prdt_cd");
+                String docTpCd = (String) docType.get("doc_tp_cd");
+                String key = instCd + "|" + prdtCd + "|" + docTpCd;
+                
+                String koreanName = docNameMap.get(key);
+                // 한글명이 있으면 설정, 없으면 코드 그대로
+                docType.put("doc_kr_nm", koreanName != null ? koreanName : docTpCd);
+            }
+        }
+        
+        return docTypes;
     }
 }
