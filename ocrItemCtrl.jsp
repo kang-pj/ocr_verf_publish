@@ -51,7 +51,8 @@
         }
         .card-body {
             position: relative !important;
-            padding: 0.5rem 0.75rem !important;
+            padding: 15px 15px 40px 15px !important;
+            overflow: visible !important;
         }
         #itemTable_wrapper {
             width: 100% !important;
@@ -61,9 +62,50 @@
         }
         .dataTables_wrapper .dataTables_paginate {
             text-align: center !important;
+            margin: 10px 0 !important;
         }
         .dataTables_wrapper .dataTables_paginate .pagination {
             justify-content: center !important;
+        }
+        /* 상단 페이징 스타일 */
+        .dataTables_wrapper .row:nth-child(2) .dataTables_paginate {
+            margin-bottom: 15px;
+        }
+        /* 하단 페이징 스타일 */
+        .dataTables_wrapper .row:nth-child(4) .dataTables_paginate {
+            border-top: 1px solid #e3e6f0;
+            padding-top: 10px;
+            margin-top: 15px;
+        }
+
+        /* DataTable 컨테이너 스타일 */
+        .dataTables_wrapper {
+            width: 100% !important;
+            margin: 0 !important;
+        }
+
+        /* 상단 컨트롤 영역 */
+        .dataTables_wrapper .top-controls {
+            margin-bottom: 15px !important;
+            border-bottom: 1px solid #e3e6f0;
+            padding-bottom: 10px;
+            align-items: center !important;
+        }
+        
+        /* 상단 페이징을 가운데 정렬 */
+        .dataTables_wrapper .top-controls .dataTables_paginate {
+            text-align: center !important;
+            margin: 0 !important;
+        }
+
+        /* 테이블 컨테이너 */
+        .dataTables_wrapper .table-container {
+            margin: 0 !important;
+        }
+
+        /* 하단 컨트롤 영역 */
+        .dataTables_wrapper .bottom-controls {
+            margin-top: 15px !important;
         }
         .dataTables_wrapper .row {
             margin-left: 0 !important;
@@ -76,6 +118,8 @@
         }
         #itemTable {
             font-size: 0.85rem;
+            width: 100% !important;
+            table-layout: auto !important;
         }
         #itemTable thead th {
             padding: 0.5rem;
@@ -86,9 +130,7 @@
             padding: 0.5rem;
             vertical-align: middle;
         }
-        .table-responsive {
-            font-size: 0.85rem;
-        }
+
         .badge {
             font-weight: 100;
             padding: 0.3em 0.9em;
@@ -195,25 +237,23 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover" id="itemTable" width="100%" cellspacing="0">
-                                <thead>
-                                <tr>
-                                    <th style="width: 50px;">No</th>
-                                    <th>항목코드</th>
-                                    <th>항목명</th>
-                                    <th style="text-align: center;">사용여부</th>
-                                    <th style="text-align: center;">등록자</th>
-                                    <th style="text-align: center;">등록일시</th>
-                                    <th style="text-align: center;">수정자</th>
-                                    <th style="text-align: center;">수정일시</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <!-- 데이터는 JavaScript로 동적 로드 -->
-                                </tbody>
-                            </table>
-                        </div>
+                        <table class="table table-bordered table-hover" id="itemTable" width="100%" cellspacing="0">
+                            <thead>
+                            <tr>
+                                <th style="width: 50px;">No</th>
+                                <th>항목코드</th>
+                                <th>항목명</th>
+                                <th style="text-align: center;">사용여부</th>
+                                <th style="text-align: center;">등록자</th>
+                                <th style="text-align: center;">등록일시</th>
+                                <th style="text-align: center;">수정자</th>
+                                <th style="text-align: center;">수정일시</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <!-- 데이터는 JavaScript로 동적 로드 -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -268,6 +308,9 @@
             pageLength: 50,
             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "전체"]],
             order: [[1, 'asc']],  // 항목코드로 정렬
+            dom: '<"top-controls row"<"col-sm-12 col-md-4"l><"col-sm-12 col-md-4"p><"col-sm-12 col-md-4"f>>' +
+                '<"table-container row"<"col-sm-12"t>>' +
+                '<"bottom-controls row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
             language: {
                 emptyTable: "데이터가 없습니다.",
                 info: "총 _TOTAL_건 중 _START_~_END_건 표시",
@@ -284,7 +327,7 @@
                 }
             },
             columns: [
-                { 
+                {
                     data: null,
                     render: function(data, type, row, meta) {
                         return '<div style="text-align: center;">' + (meta.row + 1) + '</div>';
@@ -294,7 +337,7 @@
                 },
                 { data: 'item_cd' },
                 { data: 'item_nm' },
-                { 
+                {
                     data: 'use_yn',
                     render: function(data) {
                         var badge = '';
@@ -306,25 +349,25 @@
                         return '<div style="text-align: center;">' + badge + '</div>';
                     }
                 },
-                { 
+                {
                     data: 'insr_id',
                     render: function(data) {
                         return '<div style="text-align: center;">' + (data || '-') + '</div>';
                     }
                 },
-                { 
+                {
                     data: 'ins_dttm',
                     render: function(data) {
                         return '<div style="text-align: center;">' + (data || '-') + '</div>';
                     }
                 },
-                { 
+                {
                     data: 'updr_id',
                     render: function(data) {
                         return '<div style="text-align: center;">' + (data || '-') + '</div>';
                     }
                 },
-                { 
+                {
                     data: 'upd_dttm',
                     render: function(data) {
                         return '<div style="text-align: center;">' + (data || '-') + '</div>';
@@ -396,7 +439,7 @@
             contentType: 'application/json',
             data: JSON.stringify(params),
             success: function(response) {
-                console.log('응답:', response);
+                //console.log('응답:', response);
 
                 if (response.success) {
                     // DataTable 데이터 갱신
@@ -415,10 +458,10 @@
             }
         });
     }
-    
+
     var selectedRow = null;
     var modalMode = 'add';  // 'add' or 'edit'
-    
+
     $(document).ready(function() {
         // 행 선택 기능
         $('#itemTable tbody').on('click', 'tr', function() {
@@ -430,7 +473,7 @@
                 dataTable.$('tr.selected').removeClass('selected');
                 $(this).addClass('selected');
                 selectedRow = dataTable.row(this).data();
-                
+
                 // 사용여부에 따라 버튼 표시
                 if (selectedRow.use_yn === 'Y') {
                     $('#btnEdit, #btnDelete').prop('disabled', false).show();
@@ -441,7 +484,7 @@
                 }
             }
         });
-        
+
         // 추가 버튼
         $('#btnAdd').on('click', function() {
             modalMode = 'add';
@@ -451,14 +494,14 @@
             $('#modalItemNm').val('');
             $('#itemModal').modal('show');
         });
-        
+
         // 수정 버튼
         $('#btnEdit').on('click', function() {
             if (!selectedRow) {
                 alert('수정할 항목을 선택해주세요.');
                 return;
             }
-            
+
             modalMode = 'edit';
             $('#modalTitle').text('항목 코드 수정');
             $('#modalItemCd').prop('readonly', false);
@@ -466,41 +509,41 @@
             $('#modalItemNm').val(selectedRow.item_nm);
             $('#itemModal').modal('show');
         });
-        
+
         // 삭제 버튼
         $('#btnDelete').on('click', function() {
             if (!selectedRow) {
                 alert('삭제할 항목을 선택해주세요.');
                 return;
             }
-            
+
             if (confirm('정말 삭제하시겠습니까?')) {
                 deleteItem();
             }
         });
-        
+
         // 활성화 버튼
         $('#btnActivate').on('click', function() {
             if (!selectedRow) {
                 alert('활성화할 항목을 선택해주세요.');
                 return;
             }
-            
+
             if (confirm('사용 상태로 변경하시겠습니까?')) {
                 activateItem();
             }
         });
-        
+
         // 모달 확인 버튼
         $('#btnModalConfirm').on('click', function() {
             var itemCd = $('#modalItemCd').val().trim();
             var itemNm = $('#modalItemNm').val().trim();
-            
+
             if (!itemCd || !itemNm) {
                 alert('모든 필드를 입력해주세요.');
                 return;
             }
-            
+
             if (modalMode === 'add') {
                 addItem(itemCd, itemNm);
             } else {
@@ -508,7 +551,7 @@
             }
         });
     });
-    
+
     /**
      * 항목 추가
      */
@@ -521,7 +564,7 @@
             item_odr: null,
             use_yn: 'Y'
         };
-        
+
         $.ajax({
             url: '/rf-ocr-verf/api/insertOcrItem.do',
             type: 'POST',
@@ -541,7 +584,7 @@
             }
         });
     }
-    
+
     /**
      * 항목 수정
      */
@@ -553,7 +596,7 @@
             item_cd: itemCd,                    // 새 항목 코드
             item_nm: itemNm
         };
-        
+
         $.ajax({
             url: '/rf-ocr-verf/api/updateOcrItem.do',
             type: 'POST',
@@ -575,7 +618,7 @@
             }
         });
     }
-    
+
     /**
      * 항목 삭제 (use_yn = N)
      */
@@ -585,7 +628,7 @@
             prdt_cd: '999',
             item_cd: selectedRow.item_cd
         };
-        
+
         $.ajax({
             url: '/rf-ocr-verf/api/deleteOcrItem.do',
             type: 'POST',
@@ -606,7 +649,7 @@
             }
         });
     }
-    
+
     /**
      * 항목 활성화 (use_yn = Y)
      */
@@ -616,7 +659,7 @@
             prdt_cd: '999',
             item_cd: selectedRow.item_cd
         };
-        
+
         $.ajax({
             url: '/rf-ocr-verf/api/activateOcrItem.do',
             type: 'POST',
