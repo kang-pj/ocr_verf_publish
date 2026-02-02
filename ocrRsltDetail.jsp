@@ -314,7 +314,12 @@
                         <tbody>
                         <tr>
                             <td class="info-label bg-light" style="width: 15%;">관리번호</td>
-                            <td class="info-value" style="width: 35%;" id="ctrlNo">-</td>
+                            <td class="info-value" style="width: 35%;">
+                                <span id="ctrlNo">-</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ml-2" id="copyCtrlNoBtn" onclick="copyToClipboard()" style="padding: 2px 8px; font-size: 0.75rem;">
+                                    <i class="fas fa-copy"></i> C
+                                </button>
+                            </td>
                             <td class="info-label bg-light" style="width: 15%;">기관-상품명</td>
                             <td class="info-value" style="width: 35%;" id="orgProduct">-</td>
                         </tr>
@@ -1359,6 +1364,78 @@
                 alert('OCR 상태 초기화 중 오류가 발생했습니다.');
             }
         });
+    }
+
+    /**
+     * 관리번호 클립보드 복사
+     */
+    function copyToClipboard() {
+        var ctrlNo = $('#ctrlNo').text();
+        
+        if (!ctrlNo || ctrlNo === '-') {
+            alert('복사할 관리번호가 없습니다.');
+            return;
+        }
+
+        // 클립보드 API 사용
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(ctrlNo).then(function() {
+                // 성공 시 버튼 텍스트 변경
+                var btn = $('#copyCtrlNoBtn');
+                var originalHtml = btn.html();
+                btn.html('<i class="fas fa-check"></i> 복사됨');
+                btn.removeClass('btn-outline-secondary').addClass('btn-success');
+                
+                // 1초 후 원래대로
+                setTimeout(function() {
+                    btn.html(originalHtml);
+                    btn.removeClass('btn-success').addClass('btn-outline-secondary');
+                }, 1000);
+            }).catch(function(err) {
+                console.error('클립보드 복사 실패:', err);
+                fallbackCopyToClipboard(ctrlNo);
+            });
+        } else {
+            // 구형 브라우저 대응
+            fallbackCopyToClipboard(ctrlNo);
+        }
+    }
+
+    /**
+     * 클립보드 복사 대체 방법 (구형 브라우저용)
+     */
+    function fallbackCopyToClipboard(text) {
+        var textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            var successful = document.execCommand('copy');
+            if (successful) {
+                var btn = $('#copyCtrlNoBtn');
+                var originalHtml = btn.html();
+                btn.html('<i class="fas fa-check"></i> 복사됨');
+                btn.removeClass('btn-outline-secondary').addClass('btn-success');
+                
+                setTimeout(function() {
+                    btn.html(originalHtml);
+                    btn.removeClass('btn-success').addClass('btn-outline-secondary');
+                }, 1000);
+            } else {
+                alert('클립보드 복사에 실패했습니다.');
+            }
+        } catch (err) {
+            console.error('클립보드 복사 오류:', err);
+            alert('클립보드 복사에 실패했습니다.');
+        }
+
+        document.body.removeChild(textArea);
     }
 
 
