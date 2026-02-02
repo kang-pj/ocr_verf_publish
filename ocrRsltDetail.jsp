@@ -220,6 +220,9 @@
         font-weight: 500;
     }
     #ocrResultTable tbody td:nth-child(3) {
+        text-align: center;
+    }
+    #ocrResultTable tbody td:nth-child(4) {
         word-break: break-all;
     }
     /* 뱃지 스타일 */
@@ -317,7 +320,7 @@
                             <td class="info-value" style="width: 35%;">
                                 <span id="ctrlNo">-</span>
                                 <button type="button" class="btn btn-sm btn-outline-secondary ml-2" id="copyCtrlNoBtn" onclick="copyToClipboard()" style="padding: 2px 8px; font-size: 0.75rem;">
-                                    <i class="fas fa-copy"></i> C
+                                    <i class="fas fa-copy"></i>
                                 </button>
                             </td>
                             <td class="info-label bg-light" style="width: 15%;">기관-상품명</td>
@@ -373,6 +376,7 @@
                                     <th style="width: 25%;">한글명</th>
                                     <th>추출값</th>
                                     <th style="width: 38px">상태</th>
+                                    <th style="width: 38px">체크</th>
                                 </tr>
                                 </thead>
                                 <tbody id="ocrResultBody">
@@ -822,6 +826,7 @@
             html += '<tr>';
             html += '<td>' + itemName + '</td>';
             html += '<td>' + itemValue + '</td>';
+            html += '<td class="text-center">-</td>';
             html += '<td class="text-center">' + statusIcon + '</td>';
             html += '</tr>';
         });
