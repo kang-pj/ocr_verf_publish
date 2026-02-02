@@ -553,6 +553,7 @@
     <update id="updateOcrExtractFailType" parameterType="map">
         UPDATE rfdb.ocr_extract_data
         SET ocr_fail_type = #{ocr_fail_type},
+            upd_id = #{upd_id},
             upd_dttm = NOW()
         WHERE ocr_doc_rslt = #{ocr_doc_rslt}
         AND extract_key = #{extract_key}

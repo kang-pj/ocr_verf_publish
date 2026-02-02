@@ -1276,7 +1276,7 @@ public class OcrController {
      */
     @PostMapping(value = "/api/updateOcrExtractFailType.do")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> updateOcrExtractFailType(@RequestBody Map<String, Object> params) {
+    public ResponseEntity<Map<String, Object>> updateOcrExtractFailType(@RequestBody Map<String, Object> params, HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
         try {
@@ -1291,6 +1291,20 @@ public class OcrController {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(result);
             }
+
+            // 세션에서 사용자 ID 가져오기
+            String userId = "SYSTEM";
+            Object loginVO = session.getAttribute("USER");
+            if (loginVO != null) {
+                try {
+                    java.lang.reflect.Method method = loginVO.getClass().getMethod("getUsrId");
+                    userId = (String) method.invoke(loginVO);
+                } catch (Exception e) {
+                    logger.warn("사용자 ID 조회 실패, SYSTEM 사용");
+                }
+            }
+
+            params.put("upd_id", userId);
 
             int updateResult = ocrService.updateOcrExtractFailType(params);
 
