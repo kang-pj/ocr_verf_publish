@@ -1271,4 +1271,50 @@ public class OcrController {
         }
     }
 
+    /**
+     * OCR 추출 데이터 fail_type 업데이트
+     */
+    @PostMapping(value = "/api/updateOcrExtractFailType.do")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> updateOcrExtractFailType(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            String ocrDocRslt = (String) params.get("ocr_doc_rslt");
+            String extractKey = (String) params.get("extract_key");
+            String ocrFailType = (String) params.get("ocr_fail_type");
+
+            if (ocrDocRslt == null || ocrDocRslt.isEmpty() || extractKey == null || extractKey.isEmpty()) {
+                result.put("success", false);
+                result.put("message", "필수 파라미터가 누락되었습니다.");
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(result);
+            }
+
+            int updateResult = ocrService.updateOcrExtractFailType(params);
+
+            if (updateResult > 0) {
+                result.put("success", true);
+                result.put("message", "업데이트 완료");
+            } else {
+                result.put("success", false);
+                result.put("message", "업데이트 실패");
+            }
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+
+        } catch (Exception e) {
+            logger.error("OCR 추출 데이터 fail_type 업데이트 실패: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", "업데이트 중 오류가 발생했습니다.");
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+
 }

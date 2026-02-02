@@ -865,5 +865,19 @@ public class OcrServiceImpl implements OcrService {
             throw new RuntimeException("OCR 추출 데이터 조회 중 오류가 발생했습니다.", e);
         }
     }
+
+    /**
+     * OCR 추출 데이터 fail_type 업데이트
+     */
+    @Override
+    @Transactional
+    public int updateOcrExtractFailType(Map<String, Object> params) {
+        try {
+            return ocrDAO.updateOcrExtractFailType(params);
+        } catch (Exception e) {
+            logger.error("OCR 추출 데이터 fail_type 업데이트 실패: {}", e.getMessage(), e);
+            throw new RuntimeException("OCR 추출 데이터 fail_type 업데이트 중 오류가 발생했습니다.", e);
+        }
+    }
 }
 

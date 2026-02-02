@@ -821,19 +821,22 @@
             var extractInfo = extractMap[itemCd];
             var ocrFailType = extractInfo ? extractInfo.ocr_fail_type : null;
 
+            // itemValue를 문자열로 변환
+            var itemValueStr = itemValue != null ? String(itemValue) : '';
+
             // 체크박스 생성
             var checkboxHtml = '';
             if (ocrFailType === 'X' || ocrFailType === 'E') {
-                checkboxHtml = '<input type="checkbox" class="ocr-fail-check" data-item-cd="' + itemCd + '" checked>';
+                checkboxHtml = '<input type="checkbox" class="ocr-fail-check" data-item-cd="' + itemCd + '" data-item-value="' + itemValueStr + '" checked>';
             } else {
-                checkboxHtml = '<input type="checkbox" class="ocr-fail-check" data-item-cd="' + itemCd + '">';
+                checkboxHtml = '<input type="checkbox" class="ocr-fail-check" data-item-cd="' + itemCd + '" data-item-value="' + itemValueStr + '">';
             }
 
             // 빈 값 체크
-            var isEmpty = !itemValue ||
-                itemValue.trim() === '' ||
-                itemValue === 'null' ||
-                itemValue === 'undefined';
+            var isEmpty = !itemValueStr ||
+                itemValueStr.trim() === '' ||
+                itemValueStr === 'null' ||
+                itemValueStr === 'undefined';
 
             var statusIcon = isEmpty
                 ? '<i class="fas fa-circle text-danger"></i>'
@@ -841,13 +844,95 @@
 
             html += '<tr>';
             html += '<td>' + itemName + '</td>';
-            html += '<td>' + itemValue + '</td>';
+            html += '<td>' + itemValueStr + '</td>';
             html += '<td class="text-center">' + checkboxHtml + '</td>';
             html += '<td class="text-center">' + statusIcon + '</td>';
             html += '</tr>';
         });
 
         tbody.html(html);
+
+        // 체크박스 이벤트 핸들러 등록
+        $('.ocr-fail-check').off('change').on('change', function() {
+            handleCheckboxChange(this);
+        });
+    }
+
+    /**
+     * 체크박스 변경 이벤트 처리
+     */
+    function handleCheckboxChange(checkbox) {
+        var $checkbox = $(checkbox);
+        var itemCd = $checkbox.data('item-cd');
+        var itemValue = $checkbox.data('item-value');
+        var isChecked = $checkbox.prop('checked');
+
+        // itemValue를 문자열로 변환
+        var itemValueStr = itemValue != null ? String(itemValue) : '';
+
+        // 빈 값 체크
+        var isEmpty = !itemValueStr || 
+            itemValueStr.trim() === '' || 
+            itemValueStr === 'null' || 
+            itemValueStr === 'undefined';
+
+        var ocrFailType = null;
+        if (isChecked) {
+            // 체크된 경우
+            if (isEmpty) {
+                ocrFailType = 'X'; // 빈 값
+            } else {
+                ocrFailType = 'E'; // 값이 있음
+            }
+        } else {
+            // 체크 해제된 경우
+            ocrFailType = null;
+        }
+
+        // OCR 결과 번호 가져오기
+        var ocrRsltNo = currentDocumentDetail ? currentDocumentDetail.ocr_rslt_no : null;
+        if (!ocrRsltNo) {
+            alert('OCR 결과 번호를 찾을 수 없습니다.');
+            // 원래 상태로 되돌리기
+            $checkbox.prop('checked', !isChecked);
+            return;
+        }
+
+        // 서버에 업데이트 요청
+        updateOcrExtractFailType(ocrRsltNo, itemCd, ocrFailType, $checkbox, isChecked);
+    }
+
+    /**
+     * OCR 추출 데이터 fail_type 업데이트
+     */
+    function updateOcrExtractFailType(ocrRsltNo, extractKey, ocrFailType, $checkbox, originalChecked) {
+        var params = {
+            ocr_doc_rslt: ocrRsltNo,
+            extract_key: extractKey,
+            ocr_fail_type: ocrFailType
+        };
+
+        $.ajax({
+            url: '/rf-ocr-verf/api/updateOcrExtractFailType.do',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(params),
+            success: function(response) {
+                if (response.success) {
+                    console.log('fail_type 업데이트 성공:', extractKey, '→', ocrFailType);
+                } else {
+                    alert('업데이트 실패: ' + (response.message || ''));
+                    // 원래 상태로 되돌리기
+                    $checkbox.prop('checked', !originalChecked);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('fail_type 업데이트 오류:', error);
+                alert('업데이트 중 오류가 발생했습니다.');
+                // 원래 상태로 되돌리기
+                $checkbox.prop('checked', !originalChecked);
+            }
+        });
     }
 
 

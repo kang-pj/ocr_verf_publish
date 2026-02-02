@@ -549,6 +549,15 @@
         ORDER BY extract_key
     </select>
     
+    <!-- OCR 추출 데이터 fail_type 업데이트 -->
+    <update id="updateOcrExtractFailType" parameterType="map">
+        UPDATE rfdb.ocr_extract_data
+        SET ocr_fail_type = #{ocr_fail_type},
+            upd_dttm = NOW()
+        WHERE ocr_doc_rslt = #{ocr_doc_rslt}
+        AND extract_key = #{extract_key}
+    </update>
+    
     <!-- OCR 추출 데이터 삭제 -->
     <delete id="deleteOcrExtractData" parameterType="map">
         DELETE FROM rfdb.ocr_extract_data

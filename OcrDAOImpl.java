@@ -180,6 +180,11 @@ public class OcrDAOImpl implements OcrDAO {
     }
 
     @Override
+    public int updateOcrExtractFailType(Map<String, Object> params) {
+        return sqlSession.update("ocr.updateOcrExtractFailType", params);
+    }
+
+    @Override
     public int deleteOcrExtractData(Map<String, Object> params) {
         return sqlSession.delete("ocr.deleteOcrExtractData", params);
     }

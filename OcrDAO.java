@@ -80,6 +80,9 @@ public interface OcrDAO {
     // OCR 추출 데이터 조회
     List<Map<String, Object>> getOcrExtractData(Map<String, Object> params);
     
+    // OCR 추출 데이터 fail_type 업데이트
+    int updateOcrExtractFailType(Map<String, Object> params);
+    
     // OCR 추출 데이터 삭제
     int deleteOcrExtractData(Map<String, Object> params);
 }
