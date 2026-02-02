@@ -73,4 +73,7 @@ public interface OcrService {
     // OCR 추출 데이터 저장 (JSON 파싱 후 저장)
     int saveOcrExtractData(String ocrRsltNo);
 
+    // OCR 추출 데이터 조회
+    List<Map<String, Object>> getOcrExtractData(Map<String, Object> params);
+
 }

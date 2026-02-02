@@ -215,10 +215,19 @@ public class OcrController {
             ocrParams.put("ocr_doc_no", currentOcrDocNo);
             List<OcrInfoVO> ocrResults = ocrService.getOcrResultText(ocrParams);
 
+            // OCR 추출 데이터 조회 (ocr_rslt_no 기반)
+            List<Map<String, Object>> extractData = new ArrayList<>();
+            if (detail != null && detail.getOcr_rslt_no() != null) {
+                Map<String, Object> extractParams = new HashMap<>();
+                extractParams.put("ocr_doc_rslt", detail.getOcr_rslt_no());
+                extractData = ocrService.getOcrExtractData(extractParams);
+            }
+
             result.put("success", true);
             result.put("data", detail);
             result.put("documentList", documentList);
             result.put("ocrResults", ocrResults);
+            result.put("extractData", extractData);
             result.put("ocrDocNoList", expandedOcrDocNoList);
             result.put("imageInfoList", imageInfoList);
             result.put("currentIndex", currentIndex);

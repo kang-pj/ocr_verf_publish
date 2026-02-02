@@ -597,8 +597,8 @@
                     // 서류 목록 표시
                     displayDocumentList(response.documentList || [], docTpCd);
 
-                    // OCR 결과 표시
-                    displayOcrResults(response.ocrResults || []);
+                    // OCR 결과 표시 (extract 데이터와 함께)
+                    displayOcrResults(response.ocrResults || [], response.extractData || []);
 
                     // 복수 이미지 정보 표시 (서버에서 받은 imageInfoList 사용)
                     if (response.imageInfoList && response.imageInfoList.length > 0) {
@@ -780,9 +780,9 @@
 
 
     /**
-     * OCR 결과 표시
+     * OCR 결과 표시 (extract 데이터와 매칭)
      */
-    function displayOcrResults(ocrResults) {
+    function displayOcrResults(ocrResults, extractData) {
         var tbody = $('#ocrResultTable tbody');
 
         if (!tbody.length) {
@@ -791,12 +791,17 @@
         }
 
         if (!ocrResults || ocrResults.length === 0) {
-            tbody.html('<tr><td colspan="3" class="text-center text-muted">OCR 결과가 없습니다.</td></tr>');
+            tbody.html('<tr><td colspan="4" class="text-center text-muted">OCR 결과가 없습니다.</td></tr>');
             return;
         }
 
-        //.log('OCR 결과 데이터:', ocrResults);
-        //console.log('첫 번째 항목:', ocrResults[0]);
+        // extract 데이터를 키로 매핑
+        var extractMap = {};
+        if (extractData && extractData.length > 0) {
+            extractData.forEach(function(extract) {
+                extractMap[extract.extract_key] = extract;
+            });
+        }
 
         var html = '';
 
@@ -808,10 +813,21 @@
                 return;
             }
 
-            var itemName = item.item_nm || item.item_cd || '-';
+            var itemCd = item.item_cd || '';
+            var itemName = item.item_nm || itemCd || '-';
             var itemValue = item.item_value || '';
 
-            //console.log('항목 ' + index + ':', {name: itemName, value: itemValue});
+            // extract 데이터와 매칭
+            var extractInfo = extractMap[itemCd];
+            var ocrFailType = extractInfo ? extractInfo.ocr_fail_type : null;
+
+            // 체크박스 생성
+            var checkboxHtml = '';
+            if (ocrFailType === 'X' || ocrFailType === 'E') {
+                checkboxHtml = '<input type="checkbox" class="ocr-fail-check" data-item-cd="' + itemCd + '" checked>';
+            } else {
+                checkboxHtml = '<input type="checkbox" class="ocr-fail-check" data-item-cd="' + itemCd + '">';
+            }
 
             // 빈 값 체크
             var isEmpty = !itemValue ||
@@ -826,7 +842,7 @@
             html += '<tr>';
             html += '<td>' + itemName + '</td>';
             html += '<td>' + itemValue + '</td>';
-            html += '<td class="text-center">-</td>';
+            html += '<td class="text-center">' + checkboxHtml + '</td>';
             html += '<td class="text-center">' + statusIcon + '</td>';
             html += '</tr>';
         });

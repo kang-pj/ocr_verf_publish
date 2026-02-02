@@ -77,6 +77,9 @@ public interface OcrDAO {
     // OCR 추출 데이터 존재 여부 확인
     int checkOcrExtractDataExists(Map<String, Object> params);
     
+    // OCR 추출 데이터 조회
+    List<Map<String, Object>> getOcrExtractData(Map<String, Object> params);
+    
     // OCR 추출 데이터 삭제
     int deleteOcrExtractData(Map<String, Object> params);
 }

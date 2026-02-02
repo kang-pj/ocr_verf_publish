@@ -529,6 +529,26 @@
         WHERE ocr_doc_rslt = #{ocr_doc_rslt}
     </select>
     
+    <!-- OCR 추출 데이터 조회 -->
+    <select id="getOcrExtractData" parameterType="map" resultType="map">
+        SELECT
+            ctrl_yr,
+            inst_cd,
+            prdt_cd,
+            ctrl_no,
+            ocr_doc_rslt,
+            ocr_doc_no,
+            doc_tp_cd,
+            extract_key,
+            extract_val,
+            ocr_fail_type,
+            TO_CHAR(ins_dttm, 'YYYY-MM-DD HH24:MI:SS') AS ins_dttm,
+            TO_CHAR(upd_dttm, 'YYYY-MM-DD HH24:MI:SS') AS upd_dttm
+        FROM rfdb.ocr_extract_data
+        WHERE ocr_doc_rslt = #{ocr_doc_rslt}
+        ORDER BY extract_key
+    </select>
+    
     <!-- OCR 추출 데이터 삭제 -->
     <delete id="deleteOcrExtractData" parameterType="map">
         DELETE FROM rfdb.ocr_extract_data
