@@ -755,4 +755,102 @@ public class OcrServiceImpl implements OcrService {
         
         return docTypes;
     }
+
+    /**
+     * OCR 결과 번호로 조회
+     */
+    @Override
+    public OcrInfoVO getOcrByRsltNo(Map<String, Object> params) {
+        try {
+            OcrInfoVO result = ocrDAO.getOcrByRsltNo(params);
+            
+            if (result != null) {
+                // cnts 필드에 복호화된 데이터 설정 (서비스에서 후처리 가능)
+                logger.info("OCR 결과 조회 성공 - ocr_rslt_no: {}", params.get("ocr_rslt_no"));
+            } else {
+                logger.warn("OCR 결과를 찾을 수 없음 - ocr_rslt_no: {}", params.get("ocr_rslt_no"));
+            }
+            
+            return result;
+        } catch (Exception e) {
+            logger.error("OCR 결과 조회 실패: {}", e.getMessage(), e);
+            throw new RuntimeException("OCR 결과 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+
+    /**
+     * OCR 추출 데이터 저장 (JSON 파싱 후 저장)
+     */
+    @Override
+    @Transactional
+    public int saveOcrExtractData(String ocrRsltNo) {
+        try {
+            // OCR 결과 조회
+            Map<String, Object> params = new HashMap<>();
+            params.put("ocr_rslt_no", ocrRsltNo);
+            OcrInfoVO ocrInfo = ocrDAO.getOcrByRsltNo(params);
+            
+            if (ocrInfo == null) {
+                logger.warn("OCR 결과를 찾을 수 없음 - ocr_rslt_no: {}", ocrRsltNo);
+                return 0;
+            }
+            
+            String cnts = ocrInfo.getCnts();
+            if (cnts == null || cnts.trim().isEmpty()) {
+                logger.warn("OCR 내용이 비어있음 - ocr_rslt_no: {}", ocrRsltNo);
+                return 0;
+            }
+            
+            // 기존 데이터 존재 여부 확인
+            Map<String, Object> checkParams = new HashMap<>();
+            checkParams.put("ocr_doc_rslt", ocrRsltNo);
+            int existingCount = ocrDAO.checkOcrExtractDataExists(checkParams);
+            
+            if (existingCount > 0) {
+                logger.info("이미 추출 데이터가 존재함 - ocr_rslt_no: {}, 기존 건수: {}", ocrRsltNo, existingCount);
+                return existingCount;
+            }
+            
+            // JSON 파싱
+            net.sf.json.JSONObject jsonObject = net.sf.json.JSONObject.fromObject(cnts);
+            List<Map<String, Object>> dataList = new ArrayList<>();
+            
+            // JSON의 모든 키-값 쌍을 추출
+            @SuppressWarnings("unchecked")
+            java.util.Iterator<String> keys = jsonObject.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                Object value = jsonObject.get(key);
+                
+                Map<String, Object> extractData = new HashMap<>();
+                extractData.put("ctrl_yr", ocrInfo.getCtrl_yr());
+                extractData.put("inst_cd", ocrInfo.getInst_cd());
+                extractData.put("prdt_cd", ocrInfo.getPrdt_cd());
+                extractData.put("ctrl_no", ocrInfo.getCtrl_no());
+                extractData.put("ocr_doc_rslt", ocrRsltNo);
+                extractData.put("ocr_doc_no", ocrInfo.getOcr_doc_no());
+                extractData.put("doc_tp_cd", ocrInfo.getDoc_tp_cd());
+                extractData.put("extract_key", key);
+                extractData.put("extract_val", value != null ? value.toString() : null);
+                extractData.put("ocr_fail_type", null);
+                
+                dataList.add(extractData);
+            }
+            
+            // 배치 저장
+            if (!dataList.isEmpty()) {
+                Map<String, Object> batchParams = new HashMap<>();
+                batchParams.put("dataList", dataList);
+                int result = ocrDAO.insertOcrExtractDataBatch(batchParams);
+                logger.info("OCR 추출 데이터 저장 완료 - ocr_rslt_no: {}, 저장 건수: {}", ocrRsltNo, dataList.size());
+                return result;
+            }
+            
+            return 0;
+        } catch (Exception e) {
+            logger.error("OCR 추출 데이터 저장 실패: {}", e.getMessage(), e);
+            throw new RuntimeException("OCR 추출 데이터 저장 중 오류가 발생했습니다.", e);
+        }
+    }
 }
+

@@ -1204,4 +1204,62 @@ public class OcrController {
         }
     }
 
+    /**
+     * OCR 결과 번호로 조회 (GET) - 자동으로 extract_data 저장
+     */
+    @GetMapping(value = "/api/getOcrByRsltNo.do")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getOcrByRsltNo(@RequestParam("ocr_rslt_no") String ocrRsltNo) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            if (ocrRsltNo == null || ocrRsltNo.isEmpty()) {
+                result.put("success", false);
+                result.put("message", "OCR 결과 번호가 필요합니다.");
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(result);
+            }
+
+            Map<String, Object> params = new HashMap<>();
+            params.put("ocr_rslt_no", ocrRsltNo);
+
+            // OCR 결과 조회
+            OcrInfoVO ocrInfo = ocrService.getOcrByRsltNo(params);
+
+            if (ocrInfo == null) {
+                result.put("success", false);
+                result.put("message", "해당 OCR 결과를 찾을 수 없습니다.");
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(result);
+            }
+
+            // OCR 추출 데이터 자동 저장
+            try {
+                int savedCount = ocrService.saveOcrExtractData(ocrRsltNo);
+                logger.info("OCR 추출 데이터 자동 저장 완료 - ocr_rslt_no: {}, 저장 건수: {}", ocrRsltNo, savedCount);
+            } catch (Exception e) {
+                logger.warn("OCR 추출 데이터 저장 실패 (조회는 성공): {}", e.getMessage());
+            }
+
+            result.put("success", true);
+            result.put("data", ocrInfo);
+            result.put("message", "OCR 결과 조회 성공");
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+
+        } catch (Exception e) {
+            logger.error("OCR 결과 조회 실패: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", "OCR 결과 조회 중 오류가 발생했습니다.");
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
+        }
+    }
+
 }

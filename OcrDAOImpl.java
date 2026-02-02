@@ -158,4 +158,24 @@ public class OcrDAOImpl implements OcrDAO {
     public List<Map<String, Object>> getDocumentTypes(Map<String, Object> params) {
         return sqlSession.selectList("ocr.getDocumentTypes", params);
     }
+
+    @Override
+    public OcrInfoVO getOcrByRsltNo(Map<String, Object> params) {
+        return sqlSession.selectOne("ocr.getOcrByRsltNo", params);
+    }
+
+    @Override
+    public int insertOcrExtractDataBatch(Map<String, Object> params) {
+        return sqlSession.insert("ocr.insertOcrExtractDataBatch", params);
+    }
+
+    @Override
+    public int checkOcrExtractDataExists(Map<String, Object> params) {
+        return sqlSession.selectOne("ocr.checkOcrExtractDataExists", params);
+    }
+
+    @Override
+    public int deleteOcrExtractData(Map<String, Object> params) {
+        return sqlSession.delete("ocr.deleteOcrExtractData", params);
+    }
 }

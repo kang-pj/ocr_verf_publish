@@ -91,6 +91,54 @@ public class OcrInfoVO implements Serializable {
     @Setter
     private String enc_yn;
     
+    @Getter
+    @Setter
+    private String cnts;
+    
+    @Getter
+    @Setter
+    private String ocr_cnts_original;
+    
+    @Getter
+    @Setter
+    private String doc_fl_no;
+    
+    @Getter
+    @Setter
+    private String upd_dttm;
+    
+    @Getter
+    @Setter
+    private String verf_id;
+    
+    @Getter
+    @Setter
+    private String verf_dttm;
+    
+    @Getter
+    @Setter
+    private String use_yn;
+    
+    @Getter
+    @Setter
+    private String doc_fl_ext_no;
+    
+    @Getter
+    @Setter
+    private String eng_title;
+    
+    @Getter
+    @Setter
+    private String save_id;
+    
+    @Getter
+    @Setter
+    private String save_dttm;
+    
+    @Getter
+    @Setter
+    private String replaced;
+    
     public void setIns_dttm(String ins_dttm) {
         this.ins_dttm = ins_dttm;
     }

@@ -457,4 +457,82 @@
         ORDER BY INF.PRDT_CD, INF.DOC_TP_CD
     </select>
     
+    <!-- OCR 결과 번호로 조회 -->
+    <select id="getOcrByRsltNo" parameterType="map" resultType="com.refine.ocr.vo.OcrInfoVO">
+        SELECT
+            ocr_rslt_no,
+            ocr_doc_no,
+            doc_fl_no,
+            ctrl_yr,
+            inst_cd,
+            ctrl_no,
+            prdt_cd,
+            doc_tp_cd,
+            rfdb."pkg_pgcrypto$decrypt"(ocr_cnts) AS cnts,
+            TO_CHAR(ins_dttm, 'YYYY-MM-DD HH24:MI:SS') AS ins_dttm,
+            TO_CHAR(upd_dttm, 'YYYY-MM-DD HH24:MI:SS') AS upd_dttm,
+            verf_id,
+            verf_yn,
+            TO_CHAR(verf_dttm, 'YYYY-MM-DD HH24:MI:SS') AS verf_dttm,
+            use_yn,
+            doc_fl_ext_no,
+            doc_title,
+            sub_title,
+            eng_title,
+            save_yn,
+            save_id,
+            TO_CHAR(save_dttm, 'YYYY-MM-DD HH24:MI:SS') AS save_dttm,
+            replaced,
+            rfdb."pkg_pgcrypto$decrypt"(ocr_cnts_original) AS ocr_cnts_original
+        FROM rfdb.ocr_doc_rslt
+        WHERE ocr_rslt_no = #{ocr_rslt_no}
+    </select>
+    
+    <!-- OCR 추출 데이터 배치 저장 -->
+    <insert id="insertOcrExtractDataBatch" parameterType="map">
+        INSERT INTO rfdb.ocr_extract_data (
+            ctrl_yr,
+            inst_cd,
+            prdt_cd,
+            ctrl_no,
+            ocr_doc_rslt,
+            ocr_doc_no,
+            doc_tp_cd,
+            extract_key,
+            extract_val,
+            ocr_fail_type,
+            ins_dttm,
+            upd_dttm
+        ) VALUES
+        <foreach collection="dataList" item="item" separator=",">
+            (
+                #{item.ctrl_yr},
+                #{item.inst_cd},
+                #{item.prdt_cd},
+                #{item.ctrl_no},
+                #{item.ocr_doc_rslt},
+                #{item.ocr_doc_no},
+                #{item.doc_tp_cd},
+                #{item.extract_key},
+                #{item.extract_val},
+                #{item.ocr_fail_type},
+                NOW(),
+                NOW()
+            )
+        </foreach>
+    </insert>
+    
+    <!-- OCR 추출 데이터 존재 여부 확인 -->
+    <select id="checkOcrExtractDataExists" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM rfdb.ocr_extract_data
+        WHERE ocr_doc_rslt = #{ocr_doc_rslt}
+    </select>
+    
+    <!-- OCR 추출 데이터 삭제 -->
+    <delete id="deleteOcrExtractData" parameterType="map">
+        DELETE FROM rfdb.ocr_extract_data
+        WHERE ocr_doc_rslt = #{ocr_doc_rslt}
+    </delete>
+    
 </mapper>

@@ -67,4 +67,16 @@ public interface OcrDAO {
     
     // 문서 유형 목록 조회
     List<Map<String, Object>> getDocumentTypes(Map<String, Object> params);
+    
+    // OCR 결과 번호로 조회
+    OcrInfoVO getOcrByRsltNo(Map<String, Object> params);
+    
+    // OCR 추출 데이터 배치 저장
+    int insertOcrExtractDataBatch(Map<String, Object> params);
+    
+    // OCR 추출 데이터 존재 여부 확인
+    int checkOcrExtractDataExists(Map<String, Object> params);
+    
+    // OCR 추출 데이터 삭제
+    int deleteOcrExtractData(Map<String, Object> params);
 }

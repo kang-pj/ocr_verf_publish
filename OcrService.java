@@ -67,4 +67,10 @@ public interface OcrService {
     // 여러 이미지 다운로드 및 변환
     List<String> downloadAndConvertImages(String instCd, String prdtCd, List<Map<String, Object>> imageList);
 
+    // OCR 결과 번호로 조회
+    OcrInfoVO getOcrByRsltNo(Map<String, Object> params);
+
+    // OCR 추출 데이터 저장 (JSON 파싱 후 저장)
+    int saveOcrExtractData(String ocrRsltNo);
+
 }
