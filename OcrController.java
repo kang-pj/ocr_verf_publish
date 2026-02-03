@@ -4,6 +4,7 @@ import com.refine.common.code.service.CodeService;
 import com.refine.login.vo.LoginVO;
 import com.refine.ocr.dao.OcrDAO;
 import com.refine.ocr.service.OcrService;
+import com.refine.ocr.service.OcrServiceImpl;
 import com.refine.ocr.vo.OcrInfoVO;
 import com.refine.rf_core.jdbc.routing.ContextHolder;
 import com.refine.util.ApiResponse;
@@ -14,6 +15,7 @@ import org.apache.pdfbox.rendering.PDFRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -158,8 +160,6 @@ public class OcrController {
                 if (docInfo != null && docInfo.getDoc_fl_sav_pth_nm() != null) {
                     String ext = docInfo.getDoc_fl_ext();
                     String fileName = docInfo.getDoc_fl_nm();
-                    
-                    logger.info("OCR_DOC_NO: {}, DOC_FL_NM: {}, EXT: {}", ocrDocNo, fileName, ext);
 
                     if ("pdf".equalsIgnoreCase(ext)) {
                         int pageCount = getPdfPageCount(docInfo.getInst_cd(), docInfo.getPrdt_cd(), docInfo.getDoc_fl_sav_pth_nm());
@@ -214,6 +214,8 @@ public class OcrController {
             Map<String, Object> ocrParams = new HashMap<>();
             ocrParams.put("ocr_doc_no", currentOcrDocNo);
             List<OcrInfoVO> ocrResults = ocrService.getOcrResultText(ocrParams);
+
+
 
             // OCR 추출 데이터 조회 (ocr_rslt_no 기반)
             List<Map<String, Object>> extractData = new ArrayList<>();
@@ -444,6 +446,7 @@ public class OcrController {
                     } else {
                         // imagePath는 클라이언트에서 이미 Base64 인코딩되어 전달됨
                         fileArray = ((OcrServiceImpl) ocrService).downloadImageFromExternalApi(imagePath, instCd, prdtCd, true);
+
                         if (isPdf != null && isPdf) {
                             pdfCache.put(imagePath, fileArray);
                         }
@@ -461,6 +464,7 @@ public class OcrController {
                     logger.error("이미지 로딩 실패 [{}]: {}", imagePath, e.getMessage());
                     // 에러 정보를 포함한 객체를 추가 (클라이언트에서 구분 가능하도록)
                     images.add("ERROR: 파일을 불러올 수 없습니다 - " + e.getMessage());
+                    images.add(imagePath);
                 }
             }
 
@@ -562,7 +566,7 @@ public class OcrController {
             HttpSession session) {
 
         Map<String, Object> result = new HashMap<>();
-        
+
         // 운영 환경에서는 접근 불가
         String dbMode = System.getProperty("DBMODE");
         if ("PROD".equalsIgnoreCase(dbMode) || "REAL".equalsIgnoreCase(dbMode)) {
@@ -570,7 +574,7 @@ public class OcrController {
             result.put("message", "운영 환경에서는 사용할 수 없는 기능입니다.");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
         }
-        
+
         List<Map<String, Object>> uploadedFiles = new ArrayList<>();
         int totalInserted = 0;
         int totalFailed = 0;
@@ -774,8 +778,9 @@ public class OcrController {
         }
     }
 
+
     /**
-     * 파일 다운로드 (단일)
+     * 파일 다운로드
      */
     @GetMapping(value = "/api/downloadFile.do")
     public void downloadFile(
@@ -785,12 +790,14 @@ public class OcrController {
             @RequestParam("file_name") String fileName,
             @RequestParam("ext") String ext,
             javax.servlet.http.HttpServletResponse response) {
-        
+
         try {
             logger.info("파일 다운로드 요청 - 파일명: {}", fileName);
-            
+
+            // 외부 API에서 파일 다운로드
             byte[] fileData = ocrService.downloadImageFromExternalApi(imagePath, instCd, prdtCd);
-            
+
+            // Content-Type 설정
             String contentType;
             if ("pdf".equalsIgnoreCase(ext)) {
                 contentType = "application/pdf";
@@ -803,20 +810,23 @@ public class OcrController {
             } else {
                 contentType = "image/jpeg";
             }
-            
+
+            // 파일명 인코딩 (한글 파일명 지원)
             String encodedFileName = URLEncoder.encode(fileName + "." + ext, "UTF-8").replaceAll("\\+", "%20");
-            
+
+            // 응답 헤더 설정
             response.setContentType(contentType);
             response.setContentLength(fileData.length);
             response.setHeader("Content-Disposition", "attachment; filename=\"" + encodedFileName + "\"");
-            
+
+            // 파일 데이터 쓰기
             java.io.OutputStream out = response.getOutputStream();
             out.write(fileData);
             out.flush();
             out.close();
-            
+
             logger.info("파일 다운로드 완료 - 파일명: {}, 크기: {} bytes", fileName, fileData.length);
-            
+
         } catch (Exception e) {
             logger.error("파일 다운로드 실패: {}", e.getMessage());
             try {
@@ -837,20 +847,16 @@ public class OcrController {
             @RequestParam("prdt_cd") String prdtCd,
             @RequestParam("ctrl_no") String ctrlNo,
             javax.servlet.http.HttpServletResponse response) {
-        
+
         Map<String, Object> params = new HashMap<>();
         params.put("ctrl_yr", ctrlYr);
         params.put("inst_cd", instCd);
         params.put("prdt_cd", prdtCd);
         params.put("ctrl_no", ctrlNo);
-        
-        try {
-            logger.info("전체 파일 다운로드 요청 - 관리번호: {}-{}-{}-{}", ctrlYr, instCd, prdtCd, ctrlNo);
 
+        try {
             // 해당 관리번호의 모든 파일 조회
             List<OcrInfoVO> documentList = ocrService.getAllFilesByCtrlNo(params);
-            
-            logger.info("조회된 파일 개수: {}", documentList != null ? documentList.size() : 0);
 
             if (documentList == null || documentList.isEmpty()) {
                 logger.warn("다운로드할 파일이 없습니다.");
@@ -871,10 +877,6 @@ public class OcrController {
                     String imagePath = doc.getDoc_fl_sav_pth_nm();
                     String docFileName = doc.getDoc_fl_nm();
                     String docExt = doc.getDoc_fl_ext();
-                    String docTpCd = doc.getDoc_tp_cd();
-                    String ocrDocNo = doc.getOcr_doc_no();
-
-                    logger.info("처리 중인 파일: {} (경로: {})", docFileName, imagePath);
 
                     if (imagePath == null || imagePath.isEmpty()) {
                         logger.warn("파일 경로가 없습니다: {}", docFileName);
@@ -882,18 +884,10 @@ public class OcrController {
                     }
 
                     // 외부 API에서 파일 다운로드
-                    logger.info("외부 API 호출 시작: {}", imagePath);
                     byte[] fileData = ocrService.downloadImageFromExternalApi(imagePath, instCd, prdtCd);
-                    logger.info("파일 다운로드 완료: {} bytes", fileData.length);
 
-                    // ZIP 엔트리 파일명 생성 (doc_fl_nm이 없으면 doc_tp_cd + OCR_DOC_NO 사용)
-                    String entryName;
-                    if (docFileName != null && !docFileName.isEmpty()) {
-                        entryName = docFileName + "." + docExt;
-                    } else {
-                        entryName = docTpCd + "_" + ocrDocNo + "." + docExt;
-                    }
-                    
+                    // ZIP 엔트리 추가
+                    String entryName = docFileName + "." + docExt;
                     java.util.zip.ZipEntry zipEntry = new java.util.zip.ZipEntry(entryName);
                     zos.putNextEntry(zipEntry);
                     zos.write(fileData);
@@ -921,6 +915,7 @@ public class OcrController {
             }
         }
     }
+
 
     /**
      * OCR 상태 업데이트 (ocr_yn 변경)
@@ -1271,6 +1266,7 @@ public class OcrController {
         }
     }
 
+
     /**
      * OCR 추출 데이터 fail_type 업데이트
      */
@@ -1331,6 +1327,7 @@ public class OcrController {
         }
     }
 
+
     /**
      * OCR 체크 완료 상태 토글
      */
@@ -1389,5 +1386,4 @@ public class OcrController {
                     .body(result);
         }
     }
-
 }

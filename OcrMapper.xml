@@ -1,41 +1,151 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.refine.ocr.mapper.OcrMapper">
-    
-    <!-- OCR 문서 건수 조회 -->
-    <select id="getOcrDocumentCount" parameterType="map" resultType="int">
-        SELECT COUNT(*)
-        FROM ocr_doc_inf
-        WHERE 1=1
-        <if test="ctrl_yr != null and ctrl_yr != ''">
-            AND ctrl_yr = #{ctrl_yr}
-        </if>
-        <if test="inst_cd != null and inst_cd != ''">
-            AND inst_cd = #{inst_cd}
-        </if>
-        <if test="prdt_cd != null and prdt_cd != ''">
-            AND prdt_cd = #{prdt_cd}
-        </if>
-    </select>
-    
-    <!-- OCR 문서 목록 조회 -->
-    <select id="getOcrDocumentList" parameterType="map" resultType="com.refine.ocr.vo.OcrInfoVO">
+<?xml version="1.0" encoding="UTF-8"?><!--Converted at: Thu Jul 13 09:41:48 KST 2017-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.refine.SQL.ocr">
+
+
+
+
+    <!-- OCR 문서 전체 건수 조회 -->
+    <select id="getOcrDocumentCount" resultType="int">
+        WITH base_data AS (
         SELECT
-            ctrl_yr,
-            inst_cd,
-            prdt_cd,
-            ctrl_no,
-            CONCAT(ctrl_yr, '-', inst_cd, '-', prdt_cd, '-', ctrl_no) AS ctrl_key,
-            doc_tp_cd,
-            ocr_doc_no,
-            doc_fl_nm,
-            doc_fl_sav_pth_nm,
-            doc_fl_ext,
-            ins_dttm,
-            ins_id,
-            enc_yn
+        INF.CTRL_YR,
+        INF.INST_CD,
+        INF.PRDT_CD,
+        INF.CTRL_NO,
+        INF.DOC_TP_CD,
+        MAX(INF.OCR_DOC_NO) AS OCR_DOC_NO,
+        MAX(INF.INS_DTTM) AS INS_DTTM,
+        MAX(INF.OCR_YN) AS OCR_YN,
+        MAX(RSLT.SAVE_YN) AS SAVE_YN,
+        MAX(RSLT.VERF_YN) AS VERF_YN,
+        MIN(NULLIF(NULLIF(RSLT.DOC_TITLE, ''), 'Undefined')) AS DOC_TITLE,
+        MIN(NULLIF(NULLIF(RSLT.SUB_TITLE, ''), 'Undefined')) AS SUB_TITLE
+        FROM RFDB.OCR_DOC_INF INF
+        LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
+        ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+        WHERE 1=1
+        <!-- 기본 검색 조건 -->
+        <if test="ctrl_yr != null">
+            AND INF.CTRL_YR = #{ctrl_yr}
+        </if>
+        <choose>
+            <when test="inst_cd != null and inst_cd instanceof java.util.List">
+                AND INF.INST_CD IN
+                <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="inst_cd != null">
+                AND INF.INST_CD = #{inst_cd}
+            </when>
+        </choose>
+        <choose>
+            <when test="prdt_cd != null and prdt_cd instanceof java.util.List">
+                AND INF.PRDT_CD IN
+                <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="prdt_cd != null">
+                AND INF.PRDT_CD = #{prdt_cd}
+            </when>
+        </choose>
+        <if test="ctrl_no != null">
+            AND INF.CTRL_NO = #{ctrl_no}
+        </if>
+        <!-- 날짜 범위 검색 -->
+        <choose>
+            <when test="ins_dttm_st != null and ins_dttm_en != null">
+                AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
+                AND INF.INS_DTTM &lt; (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
+            </when>
+            <when test="ins_dttm_st != null">
+                AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
+            </when>
+            <when test="ins_dttm_en != null">
+                AND INF.INS_DTTM &lt; (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
+            </when>
+        </choose>
+        GROUP BY
+        INF.CTRL_YR,
+        INF.INST_CD,
+        INF.PRDT_CD,
+        INF.CTRL_NO,
+        INF.DOC_TP_CD
+        ),
+        filtered_data AS (
+        SELECT *
+        FROM base_data
+        WHERE 1=1
+        <!-- 후처리 필터 -->
+        <if test="ocr_yn != null and ocr_yn.size() > 0">
+            AND OCR_YN IN
+            <foreach collection="ocr_yn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="save_yn != null">
+            AND (
+            SAVE_YN IN
+            <foreach collection="save_yn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+            <if test='P01 == "Y"'>
+                OR SAVE_YN IS NULL
+            </if>
+            )
+        </if>
+        <if test="verf_yn != null">
+            AND (
+            VERF_YN IN
+            <foreach collection="verf_yn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+            <if test='P01 == "Y"'>
+                OR VERF_YN IS NULL
+            </if>
+            )
+        </if>
+        <!-- 문서 타입 및 서브타이틀 필터 -->
+        <choose>
+            <when test="doc_tp_cd != null and doc_tp_cd.size() > 0 and sub_title != null">
+                AND (
+                DOC_TP_CD IN
+                <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+                OR SUB_TITLE IN
+                <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+                )
+            </when>
+            <when test="doc_tp_cd != null and doc_tp_cd.size() > 0">
+                AND DOC_TP_CD IN
+                <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="sub_title != null">
+                AND SUB_TITLE IN
+                <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="doc_tp_cd != null and doc_tp_cd.size() == 0">
+                AND DOC_TP_CD = ''
+            </when>
+        </choose>
+        )
+        SELECT COUNT(*) FROM filtered_data
+    </select>
+
+    <!-- OCR 문서 목록 조회 -->
+    <select id="getOcrHisList" parameterType="map" resultType="com.refine.ocr.vo.OcrInfoVO">
+        SELECT *,
+        concat(ctrl_yr,'-',inst_cd,'-',prdt_cd,'-',ctrl_no) as ctrl_key
         FROM ocr_doc_inf
         WHERE 1=1
         <if test="ctrl_yr != null and ctrl_yr != ''">
@@ -55,50 +165,284 @@
             LIMIT #{num} OFFSET #{paging}
         </if>
     </select>
-    
-    <!-- OCR 문서 상세 조회 -->
-    <!-- OCR 문서 상세 조회 (ocr_doc_no 기반) -->
-    <select id="getOcrDocumentDetail" parameterType="map" resultType="com.refine.ocr.vo.OcrInfoVO">
+
+    <!--	OCR 검증 서류 목록-->
+    <select id="getOcrInfo" resultType="OcrInfoVO">
+        WITH base_data AS (
         SELECT
-            INF.OCR_DOC_NO,
-            INF.CTRL_YR,
-            INF.INST_CD,
-            INF.PRDT_CD,
-            INF.CTRL_NO,
-            INF.DOC_TP_CD,
-            INF.DOC_FL_SAV_PTH_NM,
-            INF.DOC_FL_EXT,
-            INF.OCR_YN,
-            TO_CHAR(INF.INS_DTTM, 'YYYY-MM-DD HH24:MI:SS') AS INS_DTTM,
-            RSLT.OCR_RSLT_NO,
-            <if test='type == "original"'>
-                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS_ORIGINAL) AS OCR_CNTS,
-                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS_ORIGINAL)::JSON ->> 'docTitle' AS DOC_TITLE,
-            </if>
-            <if test='type == "modified"'>
-                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
-                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS)::JSON ->> 'docTitle' AS DOC_TITLE,
-            </if>
-            <if test='type == null'>
-                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
-                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS)::JSON ->> 'docTitle' AS DOC_TITLE,
-            </if>
-            RSLT.SAVE_YN,
-            RSLT.SAVE_DTTM,
-            RSLT.VERF_YN,
-            RSLT.VERF_DTTM,
-            RSLT.REPLACED,
-            PKG_PGCRYPTO$DECRYPT(JSN.JSON_VALUE) AS JSON_VALUE
+        CONCAT(INF.ctrl_yr, '-', INF.inst_cd, '-', INF.prdt_cd, '-', INF.ctrl_no) AS ctrl_key,
+        INF.CTRL_YR,
+        INF.INST_CD,
+        INF.PRDT_CD,
+        INF.CTRL_NO,
+        INF.DOC_TP_CD,
+        MAX(INF.OCR_DOC_NO) AS OCR_DOC_NO,
+        MAX(INF.INS_DTTM) AS INS_DTTM,
+        COUNT(INF.OCR_DOC_NO) AS DOC_PAGE,
+        MIN(NULLIF(NULLIF(RSLT.DOC_TITLE, ''), 'Undefined')) AS DOC_TITLE,
+        MIN(NULLIF(NULLIF(RSLT.SUB_TITLE, ''), 'Undefined')) AS SUB_TITLE,
+        MAX(INF.OCR_YN) AS OCR_YN,
+        MAX(RSLT.SAVE_YN) AS SAVE_YN,
+        MAX(RSLT.VERF_YN) AS VERF_YN
         FROM RFDB.OCR_DOC_INF INF
         LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
-            ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+        ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+        WHERE 1=1
+        <!-- 기본 검색 조건 -->
+        <if test="ctrl_yr != null">
+            AND INF.CTRL_YR = #{ctrl_yr}
+        </if>
+        <choose>
+            <when test="inst_cd != null and inst_cd instanceof java.util.List">
+                AND INF.INST_CD IN
+                <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="inst_cd != null">
+                AND INF.INST_CD = #{inst_cd}
+            </when>
+        </choose>
+        <choose>
+            <when test="prdt_cd != null and prdt_cd instanceof java.util.List">
+                AND INF.PRDT_CD IN
+                <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="prdt_cd != null">
+                AND INF.PRDT_CD = #{prdt_cd}
+            </when>
+        </choose>
+        <if test="ctrl_no != null">
+            AND INF.CTRL_NO = #{ctrl_no}
+        </if>
+        <!-- 날짜 범위 검색 -->
+        <choose>
+            <when test="ins_dttm_st != null and ins_dttm_en != null">
+                AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
+                AND INF.INS_DTTM &lt; (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
+            </when>
+            <when test="ins_dttm_st != null">
+                AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
+            </when>
+            <when test="ins_dttm_en != null">
+                AND INF.INS_DTTM &lt; (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
+            </when>
+        </choose>
+        GROUP BY
+        INF.CTRL_YR,
+        INF.INST_CD,
+        INF.PRDT_CD,
+        INF.CTRL_NO,
+        INF.DOC_TP_CD
+        ORDER BY MAX(INF.INS_DTTM)
+        <choose>
+            <when test='sort == "ASC"'>ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>
+        ),
+        filtered_data AS (
+        SELECT *
+        FROM base_data
+        WHERE 1=1
+        <!-- 후처리 필터 -->
+        <if test="ocr_yn != null and ocr_yn.size() > 0">
+            AND OCR_YN IN
+            <foreach collection="ocr_yn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="save_yn != null">
+            AND (
+            SAVE_YN IN
+            <foreach collection="save_yn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+            <if test='P01 == "Y"'>
+                OR SAVE_YN IS NULL
+            </if>
+            )
+        </if>
+        <if test="verf_yn != null">
+            AND (
+            VERF_YN IN
+            <foreach collection="verf_yn" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+            <if test='P01 == "Y"'>
+                OR VERF_YN IS NULL
+            </if>
+            )
+        </if>
+        <!-- 문서 타입 및 서브타이틀 필터 -->
+        <choose>
+            <when test="doc_tp_cd != null and doc_tp_cd.size() > 0 and sub_title != null">
+                AND (
+                DOC_TP_CD IN
+                <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+                OR SUB_TITLE IN
+                <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+                )
+            </when>
+            <when test="doc_tp_cd != null and doc_tp_cd.size() > 0">
+                AND DOC_TP_CD IN
+                <foreach collection="doc_tp_cd" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="sub_title != null">
+                AND SUB_TITLE IN
+                <foreach collection="sub_title" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </when>
+            <when test="doc_tp_cd != null and doc_tp_cd.size() == 0">
+                AND DOC_TP_CD = ''
+            </when>
+        </choose>
+        )
+        SELECT
+        ROW_NUMBER() OVER() AS ROW_NUMBER,
+        COUNT(*) OVER() AS DOC_NUM,
+        *
+        FROM filtered_data
+        <if test="paging != null">
+            LIMIT #{num}::INTEGER
+            OFFSET (#{paging}::INTEGER * #{num}::INTEGER)
+        </if>
+    </select>
+
+
+    <!-- OCR 결과 텍스트 조회 (JSON 파싱) -->
+    <select id="getOcrResultText" resultType="OcrInfoVO">
+        WITH base_doc AS (
+            SELECT
+                INF.OCR_DOC_NO,
+                INF.CTRL_YR,
+                INF.INST_CD,
+                INF.PRDT_CD,
+                INF.CTRL_NO,
+                INF.DOC_TP_CD,
+                PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
+                CASE
+                    WHEN PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS)::TEXT LIKE '[%' THEN 'array'
+            ELSE 'object'
+        END AS JSON_TYPE
+            FROM RFDB.OCR_DOC_INF INF
+            LEFT JOIN RFDB.OCR_DOC_RSLT RSLT ON RSLT.OCR_DOC_NO = INF.OCR_DOC_NO
+            WHERE INF.OCR_DOC_NO = #{ocr_doc_no}
+        LIMIT 1
+        ),
+        json_keys AS (
+        SELECT
+        ROW_NUMBER() OVER() AS JSON_SEQ,
+        json_object_keys(OCR_CNTS::JSON) AS ITEM_CD,
+        OCR_CNTS::JSON AS OCR_CNTS,
+        NULL::TEXT AS ITEM_VALUE_DIRECT
+        FROM base_doc
+        WHERE OCR_CNTS IS NOT NULL AND JSON_TYPE = 'object'
+        UNION ALL
+        SELECT
+        ROW_NUMBER() OVER() AS JSON_SEQ,
+        json_object_keys(elem::JSON) AS ITEM_CD,
+        elem::JSON AS OCR_CNTS,
+        NULL::TEXT AS ITEM_VALUE_DIRECT
+        FROM base_doc
+        CROSS JOIN json_array_elements(OCR_CNTS::JSON) AS elem
+        WHERE OCR_CNTS IS NOT NULL AND JSON_TYPE = 'array' AND jsonb_typeof(elem::JSONB) = 'object'
+        ),
+        json_parsed AS (
+        SELECT
+        json_keys.JSON_SEQ,
+        json_keys.ITEM_CD,
+        COALESCE(json_keys.ITEM_VALUE_DIRECT, json_keys.OCR_CNTS ->> json_keys.ITEM_CD) AS ITEM_VALUE
+        FROM json_keys
+        )
+        SELECT
+            json_parsed.ITEM_CD,
+            json_parsed.ITEM_VALUE,
+            COALESCE(CODI.ITEM_NM, json_parsed.ITEM_CD) AS ITEM_NM
+        FROM json_parsed
+                 LEFT JOIN RFDB.C_OCR_DOC_ITEM CODI ON CODI.ITEM_CD = json_parsed.ITEM_CD AND CODI.USE_YN = 'Y'
+        ORDER BY json_parsed.JSON_SEQ
+    </select>
+
+
+    <!-- OCR 문서 상세 조회 (ocr_doc_no 기반) -->
+    <select id="getOcrDocumentDetail" parameterType="OcrInfoVO" resultType="OcrInfoVO">
+        SELECT
+        INF.OCR_DOC_NO,
+        INF.CTRL_YR,
+        INF.INST_CD,
+        INF.PRDT_CD,
+        INF.CTRL_NO,
+        INF.DOC_TP_CD,
+        INF.DOC_FL_SAV_PTH_NM,
+        COALESCE(HDF.DOC_FL_EXT, INF.DOC_FL_EXT) AS DOC_FL_EXT,
+        INF.DOC_FL_NM AS DOC_FL_NM,
+        INF.OCR_YN,
+        TO_CHAR(INF.INS_DTTM, 'YYYY-MM-DD HH24:MI:SS') AS INS_DTTM,
+        RSLT.OCR_RSLT_NO,
+        <if test='type == "original"'>
+            PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS_ORIGINAL) AS OCR_CNTS,
+        </if>
+        <if test='type == "modified"'>
+            PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
+        </if>
+        <if test='type == null'>
+            PKG_PGCRYPTO$DECRYPT(RSLT.OCR_CNTS) AS OCR_CNTS,
+        </if>
+        RSLT.SAVE_YN,
+        RSLT.SAVE_DTTM,
+        RSLT.VERF_YN,
+        RSLT.VERF_DTTM,
+        RSLT.REPLACED,
+        RSLT.DOC_TITLE,
+        PKG_PGCRYPTO$DECRYPT(JSN.JSON_VALUE) AS JSON_VALUE
+        FROM RFDB.OCR_DOC_INF INF
+        LEFT JOIN RFDB.HUG_DOC_FL HDF
+        ON INF.DOC_FL_SAV_PTH_NM = HDF.DOC_FL_SAV_PTH_NM
+        AND INF.PRDT_CD = HDF.PRDT_CD
+        LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
+        ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
         LEFT JOIN RFDB.OCR_DOC_JSON JSN
-            ON RSLT.OCR_RSLT_NO = JSN.OCR_RSLT_NO
+        ON RSLT.OCR_RSLT_NO = JSN.OCR_RSLT_NO
         WHERE INF.OCR_DOC_NO = #{ocr_doc_no}
-        ORDER BY RSLT.ins_dttm DESC
+        ORDER BY
+        RSLT.ins_dttm DESC
         LIMIT 1
     </select>
-    
+
+    <!-- 특정 서류 타입의 OCR 문서 번호 리스트 조회 -->
+    <select id="getOcrDocNoList" resultType="string">
+        SELECT OCR_DOC_NO
+        FROM RFDB.OCR_DOC_INF
+        WHERE 1=1
+        <if test="ctrl_yr != null">
+            AND CTRL_YR = #{ctrl_yr}
+        </if>
+        <if test="inst_cd != null">
+            AND INST_CD = #{inst_cd}
+        </if>
+        <if test="prdt_cd != null">
+            AND PRDT_CD = #{prdt_cd}
+        </if>
+        <if test="ctrl_no != null">
+            AND CTRL_NO = #{ctrl_no}
+        </if>
+        <if test="doc_tp_cd != null">
+            AND DOC_TP_CD = #{doc_tp_cd}
+        </if>
+        ORDER BY OCR_DOC_NO ASC
+    </select>
+
+
+
     <!-- 관리번호별 서류 목록 조회 -->
     <select id="getDocumentListByCtrlNo" parameterType="map" resultType="com.refine.ocr.vo.OcrInfoVO">
         SELECT
@@ -109,183 +453,74 @@
             MAX(INF.OCR_YN) AS OCR_YN,
             MIN(NULLIF(NULLIF(RSLT.DOC_TITLE, ''), 'Undefined')) AS DOC_TITLE
         FROM RFDB.OCR_DOC_INF INF
-        LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
-            ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+                 LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
+                           ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
         WHERE 1=1
-            AND INF.CTRL_YR = #{ctrl_yr}
-            AND INF.INST_CD = #{inst_cd}
-            AND INF.PRDT_CD = #{prdt_cd}
-            AND INF.CTRL_NO = #{ctrl_no}
+          AND INF.CTRL_YR = #{ctrl_yr}
+          AND INF.INST_CD = #{inst_cd}
+          AND INF.PRDT_CD = #{prdt_cd}
+          AND INF.CTRL_NO = #{ctrl_no}
         GROUP BY INF.INST_CD, INF.PRDT_CD, INF.DOC_TP_CD
         ORDER BY INF.DOC_TP_CD
     </select>
-    
-    <!-- OCR 결과 텍스트 조회 -->
-    <select id="getOcrResultText" parameterType="map" resultType="com.refine.ocr.vo.OcrInfoVO">
-        SELECT *
-        FROM ocr_doc_rslt
-        WHERE ocr_doc_no = #{ocr_doc_no}
-        ORDER BY item_cd
+
+    <!-- 같은 관리번호의 모든 파일 조회 (ZIP 다운로드용) -->
+    <select id="getAllFilesByCtrlNo" resultType="OcrInfoVO">
+        SELECT
+            INF.OCR_DOC_NO,
+            INF.CTRL_YR,
+            INF.INST_CD,
+            INF.PRDT_CD,
+            INF.CTRL_NO,
+            INF.DOC_TP_CD,
+            INF.DOC_FL_SAV_PTH_NM,
+            INF.DOC_FL_NM,
+            INF.DOC_FL_EXT,
+            INF.DOC_FL_NO
+        FROM RFDB.OCR_DOC_INF INF
+        WHERE 1=1
+          AND INF.CTRL_YR = #{ctrl_yr}
+          AND INF.INST_CD = #{inst_cd}
+          AND INF.PRDT_CD = #{prdt_cd}
+          AND INF.CTRL_NO = #{ctrl_no}
+        ORDER BY INF.OCR_TP_CD, INF.OCR_DOC_NO
     </select>
-    
-    <!-- OCR 문서 번호 리스트 조회 -->
-    <select id="getOcrDocNoList" parameterType="map" resultType="String">
-        SELECT ocr_doc_no
-        FROM ocr_doc_inf
-        WHERE ctrl_yr = #{ctrl_yr}
-        AND inst_cd = #{inst_cd}
-        AND prdt_cd = #{prdt_cd}
-        AND ctrl_no = #{ctrl_no}
-        ORDER BY ins_dttm DESC
+
+
+    <!-- 이미지 정보 조회 (암호화 여부 포함) -->
+    <select id="getImageInfo" resultType="OcrInfoVO">
+        SELECT
+            INF.OCR_DOC_NO,
+            INF.DOC_FL_SAV_PTH_NM,
+            INF.DOC_FL_EXT,
+            INF.DOC_FL_NM,
+            COALESCE(RSLT.ENC_YN, 'N') AS ENC_YN,
+            INF.INST_CD,
+            INF.PRDT_CD
+        FROM RFDB.OCR_DOC_INF INF
+                 LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
+                           ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
+        WHERE INF.OCR_DOC_NO = #{ocr_doc_no}
     </select>
-    
-    <!-- 검증 상태 업데이트 -->
-    <update id="updateVerificationStatus" parameterType="map">
-        UPDATE ocr_doc_inf
-        SET vrfy_stat_cd = #{vrfy_stat_cd},
-            upd_dttm = NOW()
-        WHERE ocr_doc_no = #{ocr_doc_no}
-    </update>
-    
-    <!-- OCR 상태 업데이트 -->
-    <update id="updateOcrStatus" parameterType="map">
-        UPDATE ocr_doc_inf
-        SET ocr_yn = #{ocr_yn},
-            upd_dttm = NOW()
-        WHERE ocr_doc_no = #{ocr_doc_no}
-    </update>
-    
-    <!-- 서류 한글명 조회 (프로시저 사용) -->
-    <select id="getDocumentName" parameterType="map" resultType="String">
-        WITH sys_cls AS (
-            SELECT rfdb.get_sys_cls_cd(#{inst_cd}, #{prdt_cd}) AS sys_cls_cd
-        )
-        SELECT 
-            CASE 
-                -- KRH (모바일반환보증/모바일임대보증)
-                WHEN (SELECT sys_cls_cd FROM sys_cls) = 'KRH' THEN
-                    CASE 
-                        -- prdt_cd가 830이면 nv_hug_doc_inf 테이블 (모바일임대보증)
-                        WHEN #{prdt_cd} = '830' THEN
-                            (SELECT doc_nm FROM nv_hug_doc_inf WHERE doc_cd = #{doc_tp_cd} LIMIT 1)
-                        -- prdt_cd가 820이면 hug_doc_inf 테이블 (모바일반환보증)
-                        WHEN #{prdt_cd} = '820' THEN
-                            (SELECT doc_nm FROM hug_doc_inf WHERE doc_cd = #{doc_tp_cd} LIMIT 1)
-                        ELSE NULL
-                    END
-                -- KH, JL (전세보증)
-                WHEN (SELECT sys_cls_cd FROM sys_cls) IN ('KH', 'JL') THEN
-                    (SELECT doc_tp_nm FROM l_doc_tp_inf 
-                     WHERE doc_tp_cd = #{doc_tp_cd} 
-                     AND sys_cls_cd = (SELECT sys_cls_cd FROM sys_cls) 
-                     LIMIT 1)
-                ELSE NULL
-            END AS doc_name
+
+
+    <!-- 상품 분류 코드 조회 -->
+    <select id="getSysClsCd" resultType="String">
+        select prdt_cls_cd2
+        from rfdb.c_prdt
+        where inst_cd = #{instCd}
+          and prdt_cd = #{prdtCd}
     </select>
-    
-    <!-- 서류 한글명 배치 조회 -->
-    <select id="getDocumentNamesBatch" parameterType="map" resultType="map">
-        WITH doc_combinations AS (
-            <foreach collection="docList" item="doc" separator=" UNION ALL ">
-                SELECT #{doc.inst_cd} AS inst_cd, #{doc.prdt_cd} AS prdt_cd, #{doc.doc_tp_cd} AS doc_tp_cd
-            </foreach>
-        ),
-        sys_cls_batch AS (
-            SELECT DISTINCT 
-                inst_cd, 
-                prdt_cd,
-                rfdb.get_sys_cls_cd(inst_cd, prdt_cd) AS sys_cls_cd
-            FROM doc_combinations
-        )
-        SELECT 
-            dc.inst_cd,
-            dc.prdt_cd,
-            dc.doc_tp_cd,
-            CASE 
-                -- KRH (모바일반환보증/모바일임대보증)
-                WHEN scb.sys_cls_cd = 'KRH' THEN
-                    CASE 
-                        -- prdt_cd가 830이면 nv_hug_doc_inf 테이블 (모바일임대보증)
-                        WHEN dc.prdt_cd = '830' THEN
-                            (SELECT doc_nm FROM nv_hug_doc_inf WHERE doc_cd = dc.doc_tp_cd LIMIT 1)
-                        -- prdt_cd가 820이면 hug_doc_inf 테이블 (모바일반환보증)
-                        WHEN dc.prdt_cd = '820' THEN
-                            (SELECT doc_nm FROM hug_doc_inf WHERE doc_cd = dc.doc_tp_cd LIMIT 1)
-                        ELSE NULL
-                    END
-                -- KH, JL (전세보증)
-                WHEN scb.sys_cls_cd IN ('KH', 'JL') THEN
-                    (SELECT doc_tp_nm FROM l_doc_tp_inf 
-                     WHERE doc_tp_cd = dc.doc_tp_cd 
-                     AND sys_cls_cd = scb.sys_cls_cd 
-                     LIMIT 1)
-                ELSE NULL
-            END AS doc_name
-        FROM doc_combinations dc
-        LEFT JOIN sys_cls_batch scb ON dc.inst_cd = scb.inst_cd AND dc.prdt_cd = scb.prdt_cd
-    </select>
-    
-    <!-- 이미지 정보 조회 -->
-    <select id="getImageInfo" parameterType="map" resultType="com.refine.ocr.vo.OcrInfoVO">
-        SELECT *
-        FROM ocr_doc_inf
-        WHERE ocr_doc_no = #{ocr_doc_no}
-    </select>
-    
-    <!-- 상품 분류 조회 (프로시저 사용) -->
-    <select id="getSysClsCd" parameterType="map" resultType="String" statementType="CALLABLE">
-        {call rfdb.get_sys_cls_cd(#{instCd, mode=IN, jdbcType=VARCHAR}, #{prdtCd, mode=IN, jdbcType=VARCHAR})}
-    </select>
-    
-    <!-- 최대 CTRL_NO 조회 -->
+
+
+    <!-- 테스트 최대 CTRL_NO 조회 -->
     <select id="getMaxCtrlNo" parameterType="map" resultType="String">
         SELECT LPAD(MAX(CAST(ctrl_no AS INTEGER))::TEXT, 6, '0')
         FROM ocr_doc_inf
         WHERE inst_cd = #{inst_cd}
-        AND prdt_cd = #{prdt_cd}
+          AND prdt_cd = #{prdt_cd}
     </select>
-    
-    <!-- 사용자별 OCR 문서 번호 조회 -->
-    <select id="getOcrDocNoListByUserId" parameterType="map" resultType="String">
-        SELECT ocr_doc_no
-        FROM ocr_doc_inf
-        WHERE inst_cd = #{inst_cd}
-        AND prdt_cd = #{prdt_cd}
-        AND ins_id = #{ins_id}
-    </select>
-    
-    <!-- 사용자 테스트 파일 경로 리스트 조회 -->
-    <select id="getUserTestFilePathList" parameterType="map" resultType="String">
-        SELECT doc_fl_sav_pth_nm
-        FROM ocr_doc_inf
-        WHERE inst_cd = #{inst_cd}
-        AND prdt_cd = #{prdt_cd}
-        AND ins_id = #{ins_id}
-        AND doc_fl_sav_pth_nm IS NOT NULL
-    </select>
-    
-    <!-- OCR 결과 삭제 -->
-    <delete id="deleteOcrResult" parameterType="map">
-        DELETE FROM ocr_doc_rslt
-        WHERE ocr_doc_no = #{ocr_doc_no}
-    </delete>
-    
-    <!-- OCR 문서 삭제 -->
-    <delete id="deleteOcrDocument" parameterType="map">
-        DELETE FROM ocr_doc_inf
-        WHERE ocr_doc_no = #{ocr_doc_no}
-        AND inst_cd = '99'
-        AND prdt_cd = 'OCR'
-    </delete>
-    
-    <!-- 사용자 테스트 문서 삭제 -->
-    <delete id="deleteUserTestDocuments" parameterType="map">
-        DELETE FROM ocr_doc_inf
-        WHERE inst_cd = #{inst_cd}
-        AND prdt_cd = #{prdt_cd}
-        AND ins_id = #{ins_id}
-    </delete>
-    
+
     <!-- OCR 문서 등록 -->
     <insert id="insertOcrDocument" parameterType="map">
         INSERT INTO ocr_doc_inf (
@@ -307,24 +542,24 @@
             menu_cd,
             priority
         ) SELECT
-            nextval('seq_ocr_doc_no'),
-            nextval('seq_doc_fl_no'),
-            #{ctrl_yr},
-            #{inst_cd},
-            #{prdt_cd},
-            #{ctrl_no},
-            #{doc_tp_cd},
-            #{doc_fl_nm},
-            #{doc_fl_sav_pth_nm},
-            #{doc_fl_ext},
-            NOW(),
-            #{ins_id},
-            NOW(),
-            #{upd_id},
-            #{enc_yn},
-            #{menu_cd},
-            #{priority}
-        WHERE NOT EXISTS (
+              rfdb.get_ocr_fl_seq(),
+              rfdb.get_fl_seq(),
+              #{ctrl_yr},
+              #{inst_cd},
+              #{prdt_cd},
+              #{ctrl_no},
+              #{doc_tp_cd},
+              #{doc_fl_nm},
+              #{doc_fl_sav_pth_nm},
+              #{doc_fl_ext},
+              NOW(),
+              #{ins_id},
+              NOW(),
+              #{upd_id},
+              #{enc_yn},
+              #{menu_cd},
+              'L90'
+            WHERE NOT EXISTS (
             SELECT 1
             FROM ocr_doc_inf
             WHERE ctrl_yr = #{ctrl_yr}
@@ -333,22 +568,132 @@
             AND ctrl_no = #{ctrl_no}
             AND doc_tp_cd = #{doc_tp_cd}
             AND doc_fl_nm = #{doc_fl_nm}
-        )
+            )
     </insert>
-    
+
+    <!-- 사용자별 OCR 문서 번호 조회 -->
+    <select id="getOcrDocNoListByUserId" parameterType="map" resultType="String">
+        SELECT ocr_doc_no
+        FROM ocr_doc_inf
+        WHERE inst_cd = #{inst_cd}
+          AND prdt_cd = #{prdt_cd}
+          AND ins_id = #{ins_id}
+    </select>
+
+    <!-- OCR 결과 삭제 -->
+    <delete id="deleteOcrResult" parameterType="map">
+        DELETE FROM ocr_doc_rslt
+        WHERE ocr_doc_no = #{ocr_doc_no}
+    </delete>
+
+
+    <!-- 사용자 테스트 문서 삭제 -->
+    <delete id="deleteUserTestDocuments" parameterType="map">
+        DELETE FROM ocr_doc_inf
+        WHERE inst_cd = #{inst_cd}
+          AND prdt_cd = #{prdt_cd}
+          AND ins_id = #{ins_id}
+    </delete>
+
+    <!-- 사용자 테스트 파일 경로 리스트 조회 -->
+    <select id="getUserTestFilePathList" parameterType="map" resultType="String">
+        SELECT doc_fl_sav_pth_nm
+        FROM ocr_doc_inf
+        WHERE inst_cd = #{inst_cd}
+          AND prdt_cd = #{prdt_cd}
+          AND ins_id = #{ins_id}
+          AND doc_fl_sav_pth_nm IS NOT NULL
+    </select>
+
+    <!-- OCR 상태 업데이트 -->
+    <update id="updateOcrStatus" parameterType="map">
+        UPDATE ocr_doc_inf
+        SET ocr_yn = #{ocr_yn},
+            upd_dttm = NOW()
+        WHERE ocr_doc_no = #{ocr_doc_no}
+    </update>
+
+    <!-- 서류 한글명 조회 (프로시저 사용) -->
+    <select id="getDocumentName" parameterType="map" resultType="String">
+        WITH sys_cls AS (
+            SELECT rfdb.get_sys_cls_cd(#{inst_cd}, #{prdt_cd}) AS sys_cls_cd
+        )
+        SELECT
+            CASE
+                -- KRH (모바일반환보증/모바일임대보증)
+                WHEN (SELECT sys_cls_cd FROM sys_cls) = 'KRH' THEN
+                    CASE
+                        -- prdt_cd가 830이면 nv_hug_doc_inf 테이블 (모바일임대보증)
+                        WHEN #{prdt_cd} = '830' THEN
+                                (SELECT doc_nm FROM nv_hug_doc_inf WHERE doc_cd = #{doc_tp_cd} LIMIT 1)
+                        -- prdt_cd가 820이면 hug_doc_inf 테이블 (모바일반환보증)
+                        WHEN #{prdt_cd} = '820' THEN
+            (SELECT doc_nm FROM hug_doc_inf WHERE doc_cd = #{doc_tp_cd} LIMIT 1)
+            ELSE NULL
+        END
+                -- KH, JL (전세보증)
+        WHEN (SELECT sys_cls_cd FROM sys_cls) IN ('KH', 'JL') THEN
+                    (SELECT doc_tp_nm FROM l_doc_tp_inf
+                     WHERE doc_tp_cd = #{doc_tp_cd}
+        LIMIT 1)
+        ELSE NULL
+        END AS doc_name
+    </select>
+
+    <!-- 서류 한글명 배치 조회 -->
+    <select id="getDocumentNamesBatch" parameterType="map" resultType="map">
+        WITH doc_combinations AS (
+        <foreach collection="docList" item="doc" separator=" UNION ALL ">
+            SELECT #{doc.inst_cd} AS inst_cd, #{doc.prdt_cd} AS prdt_cd, #{doc.doc_tp_cd} AS doc_tp_cd
+        </foreach>
+        ),
+        sys_cls_batch AS (
+        SELECT DISTINCT
+        inst_cd,
+        prdt_cd,
+        rfdb.get_sys_cls_cd(inst_cd, prdt_cd) AS sys_cls_cd
+        FROM doc_combinations
+        )
+        SELECT
+        dc.inst_cd,
+        dc.prdt_cd,
+        dc.doc_tp_cd,
+        CASE
+        -- KRH (모바일반환보증/모바일임대보증)
+        WHEN scb.sys_cls_cd = 'KRH' THEN
+        CASE
+        -- prdt_cd가 830이면 nv_hug_doc_inf 테이블 (모바일임대보증)
+        WHEN dc.prdt_cd = '830' THEN
+        (SELECT doc_nm FROM nv_hug_doc_inf WHERE doc_cd = dc.doc_tp_cd LIMIT 1)
+        -- prdt_cd가 820이면 hug_doc_inf 테이블 (모바일반환보증)
+        WHEN dc.prdt_cd = '820' THEN
+        (SELECT doc_nm FROM hug_doc_inf WHERE doc_cd = dc.doc_tp_cd LIMIT 1)
+        ELSE NULL
+        END
+        -- KH, JL (전세보증)
+        WHEN scb.sys_cls_cd IN ('KH', 'JL') THEN
+        (SELECT doc_tp_nm FROM l_doc_tp_inf
+        WHERE doc_tp_cd = dc.doc_tp_cd
+        LIMIT 1)
+        ELSE NULL
+        END AS doc_name
+        FROM doc_combinations dc
+        LEFT JOIN sys_cls_batch scb ON dc.inst_cd = scb.inst_cd AND dc.prdt_cd = scb.prdt_cd
+    </select>
+
     <!-- OCR 항목 코드 목록 조회 -->
     <select id="getOcrItemList" parameterType="map" resultType="com.refine.ocr.vo.OcrItemVO">
         SELECT
-            inst_cd,
-            prdt_cd,
-            item_cd,
-            item_nm,
-            item_odr,
-            use_yn,
-            insr_id,
-            TO_CHAR(ins_dttm, 'YYYY-MM-DD HH24:MI:SS') AS ins_dttm,
-            updr_id,
-            TO_CHAR(upd_dttm, 'YYYY-MM-DD HH24:MI:SS') AS upd_dttm
+        inst_cd,
+        prdt_cd,
+        item_cd,
+        item_nm,
+        item_odr,
+        use_yn,
+        insr_id,
+        TO_CHAR(ins_dttm, 'YYYY-MM-DD HH24:MI:SS') AS ins_dttm,
+        updr_id,
+        TO_CHAR(upd_dttm, 'YYYY-MM-DD HH24:MI:SS') AS upd_dttm
         FROM rfdb.c_ocr_doc_item
         WHERE inst_cd = #{inst_cd}
         AND prdt_cd = #{prdt_cd}
@@ -360,7 +705,7 @@
         </if>
         ORDER BY item_odr, item_cd
     </select>
-    
+
     <!-- OCR 항목 코드 건수 조회 -->
     <select id="getOcrItemCount" parameterType="map" resultType="int">
         SELECT COUNT(*)
@@ -374,16 +719,16 @@
             AND use_yn = #{use_yn}
         </if>
     </select>
-    
+
     <!-- OCR 항목 코드 중복 체크 -->
     <select id="checkOcrItemExists" parameterType="map" resultType="int">
         SELECT COUNT(*)
         FROM rfdb.c_ocr_doc_item
         WHERE inst_cd = #{inst_cd}
-        AND prdt_cd = #{prdt_cd}
-        AND item_cd = #{item_cd}
+          AND prdt_cd = #{prdt_cd}
+          AND item_cd = #{item_cd}
     </select>
-    
+
     <!-- OCR 항목 코드 추가 -->
     <insert id="insertOcrItem" parameterType="map">
         INSERT INTO rfdb.c_ocr_doc_item (
@@ -398,19 +743,19 @@
             updr_id,
             upd_dttm
         ) VALUES (
-            #{inst_cd},
-            #{prdt_cd},
-            #{item_cd},
-            #{item_nm},
-            #{item_odr},
-            #{use_yn},
-            #{insr_id},
-            NOW(),
-            #{updr_id},
-            NOW()
-        )
+                     #{inst_cd},
+                     #{prdt_cd},
+                     #{item_cd},
+                     #{item_nm},
+                     #{item_odr},
+                     #{use_yn},
+                     #{insr_id},
+                     NOW(),
+                     #{updr_id},
+                     NOW()
+                 )
     </insert>
-    
+
     <!-- OCR 항목 코드 수정 -->
     <update id="updateOcrItem" parameterType="map">
         UPDATE rfdb.c_ocr_doc_item
@@ -419,10 +764,10 @@
             updr_id = #{updr_id},
             upd_dttm = NOW()
         WHERE inst_cd = #{inst_cd}
-        AND prdt_cd = #{prdt_cd}
-        AND item_cd = #{old_item_cd}
+          AND prdt_cd = #{prdt_cd}
+          AND item_cd = #{old_item_cd}
     </update>
-    
+
     <!-- OCR 항목 코드 삭제 (use_yn 변경) -->
     <update id="deleteOcrItem" parameterType="map">
         UPDATE rfdb.c_ocr_doc_item
@@ -430,10 +775,10 @@
             updr_id = #{updr_id},
             upd_dttm = NOW()
         WHERE inst_cd = #{inst_cd}
-        AND prdt_cd = #{prdt_cd}
-        AND item_cd = #{item_cd}
+          AND prdt_cd = #{prdt_cd}
+          AND item_cd = #{item_cd}
     </update>
-    
+
     <!-- OCR 항목 코드 활성화 (use_yn 변경) -->
     <update id="activateOcrItem" parameterType="map">
         UPDATE rfdb.c_ocr_doc_item
@@ -441,10 +786,11 @@
             updr_id = #{updr_id},
             upd_dttm = NOW()
         WHERE inst_cd = #{inst_cd}
-        AND prdt_cd = #{prdt_cd}
-        AND item_cd = #{item_cd}
+          AND prdt_cd = #{prdt_cd}
+          AND item_cd = #{item_cd}
     </update>
-    
+
+
     <!-- 문서 유형 목록 조회 -->
     <select id="getDocumentTypes" resultType="map">
         SELECT DISTINCT
@@ -456,7 +802,8 @@
         WHERE INF.DOC_TP_CD IS NOT NULL
         ORDER BY INF.PRDT_CD, INF.DOC_TP_CD
     </select>
-    
+
+
     <!-- OCR 결과 번호로 조회 -->
     <select id="getOcrByRsltNo" parameterType="map" resultType="com.refine.ocr.vo.OcrInfoVO">
         SELECT
@@ -487,48 +834,41 @@
         FROM rfdb.ocr_doc_rslt
         WHERE ocr_rslt_no = #{ocr_rslt_no}
     </select>
-    
+
     <!-- OCR 추출 데이터 배치 저장 -->
     <insert id="insertOcrExtractDataBatch" parameterType="map">
         INSERT INTO rfdb.ocr_extract_data (
-            ctrl_yr,
-            inst_cd,
-            prdt_cd,
-            ctrl_no,
-            ocr_doc_rslt,
-            ocr_doc_no,
-            doc_tp_cd,
-            extract_key,
-            extract_val,
-            ocr_fail_type,
-            ins_dttm,
-            upd_dttm
+        ctrl_yr,
+        inst_cd,
+        prdt_cd,
+        ctrl_no,
+        ocr_doc_rslt,
+        ocr_doc_no,
+        doc_tp_cd,
+        extract_key,
+        extract_val,
+        ocr_fail_type,
+        ins_dttm,
+        upd_dttm
         ) VALUES
         <foreach collection="dataList" item="item" separator=",">
             (
-                #{item.ctrl_yr},
-                #{item.inst_cd},
-                #{item.prdt_cd},
-                #{item.ctrl_no},
-                #{item.ocr_doc_rslt},
-                #{item.ocr_doc_no},
-                #{item.doc_tp_cd},
-                #{item.extract_key},
-                rfdb.pkg_pgcrypto$encrypt(#{item.extract_val}),
-                #{item.ocr_fail_type},
-                NOW(),
-                NOW()
+            #{item.ctrl_yr},
+            #{item.inst_cd},
+            #{item.prdt_cd},
+            #{item.ctrl_no},
+            #{item.ocr_doc_rslt},
+            #{item.ocr_doc_no},
+            #{item.doc_tp_cd},
+            #{item.extract_key},
+            rfdb.pkg_pgcrypto$encrypt(#{item.extract_val}),
+            #{item.ocr_fail_type},
+            NOW(),
+            NOW()
             )
         </foreach>
     </insert>
-    
-    <!-- OCR 추출 데이터 존재 여부 확인 -->
-    <select id="checkOcrExtractDataExists" parameterType="map" resultType="int">
-        SELECT COUNT(*)
-        FROM rfdb.ocr_extract_data
-        WHERE ocr_doc_rslt = #{ocr_doc_rslt}
-    </select>
-    
+
     <!-- OCR 추출 데이터 조회 -->
     <select id="getOcrExtractData" parameterType="map" resultType="map">
         SELECT
@@ -548,17 +888,17 @@
         WHERE ocr_doc_rslt = #{ocr_doc_rslt}
         ORDER BY extract_key
     </select>
-    
+
     <!-- OCR 추출 데이터 fail_type 업데이트 -->
     <update id="updateOcrExtractFailType" parameterType="map">
         UPDATE rfdb.ocr_extract_data
         SET ocr_fail_type = #{ocr_fail_type},
-            upd_id = #{upd_id},
-            upd_dttm = NOW()
+            upd_dttm = NOW(),
+            upd_id = #{upd_id}
         WHERE ocr_doc_rslt = #{ocr_doc_rslt}
-        AND extract_key = #{extract_key}
+          AND extract_key = #{extract_key}
     </update>
-    
+
     <!-- OCR 추출 데이터 fail_type INSERT (데이터가 없을 경우) -->
     <insert id="insertOcrExtractFailType" parameterType="map">
         INSERT INTO rfdb.ocr_extract_data (
@@ -570,7 +910,7 @@
             ins_dttm,
             upd_dttm
         )
-        SELECT 
+        SELECT
             #{ocr_doc_rslt},
             #{extract_key},
             #{extract_val},
@@ -578,13 +918,13 @@
             #{upd_id},
             NOW(),
             NOW()
-        WHERE NOT EXISTS (
+            WHERE NOT EXISTS (
             SELECT 1 FROM rfdb.ocr_extract_data
             WHERE ocr_doc_rslt = #{ocr_doc_rslt}
             AND extract_key = #{extract_key}
-        )
+            )
     </insert>
-    
+
     <!-- OCR 체크 완료 상태 추가 -->
     <insert id="insertCheckCompleted" parameterType="map">
         INSERT INTO rfdb.ocr_extract_data (
@@ -595,20 +935,20 @@
             ins_dttm,
             upd_dttm
         )
-        SELECT 
+        SELECT
             #{ocr_rslt_no},
             '__CHECK_COMPLETED__',
             'Y',
             #{upd_id},
             NOW(),
             NOW()
-        WHERE NOT EXISTS (
+            WHERE NOT EXISTS (
             SELECT 1 FROM rfdb.ocr_extract_data
             WHERE ocr_doc_rslt = #{ocr_rslt_no}
             AND extract_key = '__CHECK_COMPLETED__'
-        )
+            )
     </insert>
-    
+
     <!-- OCR 체크 완료 상태 업데이트 -->
     <update id="updateCheckCompleted" parameterType="map">
         UPDATE rfdb.ocr_extract_data
@@ -616,20 +956,20 @@
             upd_id = #{upd_id},
             upd_dttm = NOW()
         WHERE ocr_doc_rslt = #{ocr_rslt_no}
-        AND extract_key = '__CHECK_COMPLETED__'
+          AND extract_key = '__CHECK_COMPLETED__'
     </update>
-    
+
     <!-- OCR 체크 완료 상태 삭제 -->
     <delete id="deleteCheckCompleted" parameterType="map">
         DELETE FROM rfdb.ocr_extract_data
         WHERE ocr_doc_rslt = #{ocr_rslt_no}
-        AND extract_key = '__CHECK_COMPLETED__'
+          AND extract_key = '__CHECK_COMPLETED__'
     </delete>
-    
+
+
     <!-- OCR 추출 데이터 삭제 -->
     <delete id="deleteOcrExtractData" parameterType="map">
         DELETE FROM rfdb.ocr_extract_data
         WHERE ocr_doc_rslt = #{ocr_doc_rslt}
     </delete>
-    
 </mapper>

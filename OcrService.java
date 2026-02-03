@@ -43,7 +43,7 @@ public interface OcrService {
     int updateOcrStatus(Map<String, Object> params);
 
     String getDocumentName(String instCd, String prdtCd, String docTpCd);
-    
+
     Map<String, String> getDocumentNamesBatch(List<OcrInfoVO> docList);
 
     List<com.refine.ocr.vo.OcrItemVO> getOcrItemList(Map<String, Object> params);
