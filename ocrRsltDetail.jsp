@@ -804,6 +804,7 @@
         // extract 데이터를 키로 매핑 및 체크 완료 상태 확인
         var extractMap = {};
         isCheckCompleted = false;
+        var hasExtractData = false; // extract 데이터 존재 여부
         
         if (extractData && extractData.length > 0) {
             extractData.forEach(function(extract) {
@@ -811,6 +812,7 @@
                     isCheckCompleted = (extract.extract_val === 'Y');
                 } else {
                     extractMap[extract.extract_key] = extract;
+                    hasExtractData = true; // 일반 데이터가 있으면 true
                 }
             });
         }
@@ -839,12 +841,16 @@
             // itemValue를 문자열로 변환
             var itemValueStr = itemValue != null ? String(itemValue) : '';
 
-            // 체크박스 생성
+            // 체크박스 생성 - extract 데이터가 있을 때만 표시
             var checkboxHtml = '';
-            if (ocrFailType === 'X' || ocrFailType === 'E') {
-                checkboxHtml = '<input type="checkbox" class="ocr-fail-check" data-item-cd="' + itemCd + '" data-item-value="' + itemValueStr + '" checked>';
+            if (hasExtractData) {
+                if (ocrFailType === 'X' || ocrFailType === 'E') {
+                    checkboxHtml = '<input type="checkbox" class="ocr-fail-check" data-item-cd="' + itemCd + '" data-item-value="' + itemValueStr + '" checked>';
+                } else {
+                    checkboxHtml = '<input type="checkbox" class="ocr-fail-check" data-item-cd="' + itemCd + '" data-item-value="' + itemValueStr + '">';
+                }
             } else {
-                checkboxHtml = '<input type="checkbox" class="ocr-fail-check" data-item-cd="' + itemCd + '" data-item-value="' + itemValueStr + '">';
+                checkboxHtml = '-'; // extract 데이터가 없으면 체크박스 대신 - 표시
             }
 
             // 빈 값 체크
@@ -867,10 +873,12 @@
 
         tbody.html(html);
 
-        // 체크박스 이벤트 핸들러 등록
-        $('.ocr-fail-check').off('change').on('change', function() {
-            handleCheckboxChange(this);
-        });
+        // 체크박스 이벤트 핸들러 등록 (extract 데이터가 있을 때만)
+        if (hasExtractData) {
+            $('.ocr-fail-check').off('change').on('change', function() {
+                handleCheckboxChange(this);
+            });
+        }
     }
 
     /**
@@ -994,7 +1002,14 @@
             ocr_doc_rslt: ocrRsltNo,
             extract_key: extractKey,
             extract_val: extractVal,
-            ocr_fail_type: ocrFailType
+            ocr_fail_type: ocrFailType,
+            // 메타 정보 추가 (INSERT 시 필요)
+            ctrl_yr: currentDocumentDetail.ctrl_yr,
+            inst_cd: currentDocumentDetail.inst_cd,
+            prdt_cd: currentDocumentDetail.prdt_cd,
+            ctrl_no: currentDocumentDetail.ctrl_no,
+            ocr_doc_no: currentDocumentDetail.ocr_doc_no,
+            doc_tp_cd: currentDocumentDetail.doc_tp_cd
         };
 
         $.ajax({
