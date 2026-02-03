@@ -366,8 +366,12 @@
                 <!-- 중앙: OCR 결과 -->
                 <div style="flex: 0.5;">
                     <div class="card shadow mb-4" style="height: 1000px;">
-                        <div class="card-header py-2">
+                        <div class="card-header py-2 d-flex justify-content-between align-items-center">
                             <h6 class="m-0 font-weight-bold text-primary">OCR 결과</h6>
+                            <button type="button" class="btn btn-sm" id="checkCompletedBtn" onclick="toggleCheckCompleted()" style="display: none;">
+                                <i class="fas fa-check-circle"></i>
+                                <span id="checkCompletedText">미확인</span>
+                            </button>
                         </div>
                         <div class="card-body p-2" style="height: calc(100% - 50px); overflow-y: auto;">
                             <table class="table table-sm table-bordered table-hover" id="ocrResultTable">
@@ -441,6 +445,7 @@
     var currentOcrDocNo = null;
     var currentDocumentDetail = null;
     var currentImageInfoList = [];
+    var isCheckCompleted = false; // 체크 완료 상태
 
     // 기관-상품명 매핑
     var organizationMapping = {
@@ -792,16 +797,26 @@
 
         if (!ocrResults || ocrResults.length === 0) {
             tbody.html('<tr><td colspan="4" class="text-center text-muted">OCR 결과가 없습니다.</td></tr>');
+            $('#checkCompletedBtn').hide();
             return;
         }
 
-        // extract 데이터를 키로 매핑
+        // extract 데이터를 키로 매핑 및 체크 완료 상태 확인
         var extractMap = {};
+        isCheckCompleted = false;
+        
         if (extractData && extractData.length > 0) {
             extractData.forEach(function(extract) {
-                extractMap[extract.extract_key] = extract;
+                if (extract.extract_key === '__CHECK_COMPLETED__') {
+                    isCheckCompleted = (extract.extract_val === 'Y');
+                } else {
+                    extractMap[extract.extract_key] = extract;
+                }
             });
         }
+
+        // 체크 완료 버튼 상태 업데이트
+        updateCheckCompletedButton();
 
         var html = '';
 
@@ -898,17 +913,87 @@
             return;
         }
 
-        // 서버에 업데이트 요청
-        updateOcrExtractFailType(ocrRsltNo, itemCd, ocrFailType, $checkbox, isChecked);
+        // 서버에 업데이트 요청 (extract_val 포함)
+        updateOcrExtractFailType(ocrRsltNo, itemCd, ocrFailType, itemValueStr, $checkbox, isChecked);
+        
+        // 체크 시 자동으로 확인 상태로 변경
+        if (isChecked && !isCheckCompleted) {
+            autoSetCheckCompleted(ocrRsltNo);
+        }
+        // 체크 해제 시 다른 체크가 없으면 미확인으로 변경
+        else if (!isChecked && isCheckCompleted) {
+            checkAndRemoveCheckCompleted(ocrRsltNo);
+        }
+    }
+
+    /**
+     * 자동으로 확인 상태로 변경
+     */
+    function autoSetCheckCompleted(ocrRsltNo) {
+        var params = {
+            ocr_rslt_no: ocrRsltNo,
+            action: 'complete'
+        };
+
+        $.ajax({
+            url: '/rf-ocr-verf/api/toggleOcrCheckCompleted.do',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(params),
+            success: function(response) {
+                if (response.success) {
+                    isCheckCompleted = true;
+                    updateCheckCompletedButton();
+                    console.log('자동 확인 완료 처리');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('자동 확인 처리 오류:', error);
+            }
+        });
+    }
+
+    /**
+     * 체크된 항목이 없으면 미확인으로 변경
+     */
+    function checkAndRemoveCheckCompleted(ocrRsltNo) {
+        // 체크된 항목이 있는지 확인
+        var hasChecked = $('.ocr-fail-check:checked').length > 0;
+        
+        if (!hasChecked) {
+            // 체크된 항목이 없으면 미확인으로 변경
+            var params = {
+                ocr_rslt_no: ocrRsltNo,
+                action: 'uncomplete'
+            };
+
+            $.ajax({
+                url: '/rf-ocr-verf/api/toggleOcrCheckCompleted.do',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(params),
+                success: function(response) {
+                    if (response.success) {
+                        isCheckCompleted = false;
+                        updateCheckCompletedButton();
+                        console.log('자동 미확인 처리');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('자동 미확인 처리 오류:', error);
+                }
+            });
+        }
     }
 
     /**
      * OCR 추출 데이터 fail_type 업데이트
      */
-    function updateOcrExtractFailType(ocrRsltNo, extractKey, ocrFailType, $checkbox, originalChecked) {
+    function updateOcrExtractFailType(ocrRsltNo, extractKey, ocrFailType, extractVal, $checkbox, originalChecked) {
         var params = {
             ocr_doc_rslt: ocrRsltNo,
             extract_key: extractKey,
+            extract_val: extractVal,
             ocr_fail_type: ocrFailType
         };
 
@@ -931,6 +1016,67 @@
                 alert('업데이트 중 오류가 발생했습니다.');
                 // 원래 상태로 되돌리기
                 $checkbox.prop('checked', !originalChecked);
+            }
+        });
+    }
+
+    /**
+     * 체크 완료 버튼 상태 업데이트
+     */
+    function updateCheckCompletedButton() {
+        var $btn = $('#checkCompletedBtn');
+        var $text = $('#checkCompletedText');
+        
+        $btn.show();
+        
+        if (isCheckCompleted) {
+            $btn.removeClass('btn-outline-secondary').addClass('btn-success');
+            $text.text('확인');
+        } else {
+            $btn.removeClass('btn-success').addClass('btn-outline-secondary');
+            $text.text('미확인');
+        }
+    }
+
+    /**
+     * 체크 완료 상태 토글
+     */
+    function toggleCheckCompleted() {
+        var ocrRsltNo = currentDocumentDetail ? currentDocumentDetail.ocr_rslt_no : null;
+        if (!ocrRsltNo) {
+            alert('OCR 결과 번호를 찾을 수 없습니다.');
+            return;
+        }
+
+        var action = isCheckCompleted ? 'uncomplete' : 'complete';
+        var confirmMsg = isCheckCompleted ? '미확인으로 변경하시겠습니까?' : '확인 완료 처리하시겠습니까?';
+
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+
+        var params = {
+            ocr_rslt_no: ocrRsltNo,
+            action: action
+        };
+
+        $.ajax({
+            url: '/rf-ocr-verf/api/toggleOcrCheckCompleted.do',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(params),
+            success: function(response) {
+                if (response.success) {
+                    isCheckCompleted = !isCheckCompleted;
+                    updateCheckCompletedButton();
+                    console.log('체크 완료 상태 변경:', isCheckCompleted);
+                } else {
+                    alert('업데이트 실패: ' + (response.message || ''));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('체크 완료 상태 토글 오류:', error);
+                alert('업데이트 중 오류가 발생했습니다.');
             }
         });
     }

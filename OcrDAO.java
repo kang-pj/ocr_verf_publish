@@ -83,6 +83,18 @@ public interface OcrDAO {
     // OCR 추출 데이터 fail_type 업데이트
     int updateOcrExtractFailType(Map<String, Object> params);
     
+    // OCR 추출 데이터 fail_type INSERT
+    int insertOcrExtractFailType(Map<String, Object> params);
+    
+    // OCR 체크 완료 상태 추가
+    int insertCheckCompleted(Map<String, Object> params);
+    
+    // OCR 체크 완료 상태 업데이트
+    int updateCheckCompleted(Map<String, Object> params);
+    
+    // OCR 체크 완료 상태 삭제
+    int deleteCheckCompleted(Map<String, Object> params);
+    
     // OCR 추출 데이터 삭제
     int deleteOcrExtractData(Map<String, Object> params);
 }

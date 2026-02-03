@@ -185,6 +185,26 @@ public class OcrDAOImpl implements OcrDAO {
     }
 
     @Override
+    public int insertOcrExtractFailType(Map<String, Object> params) {
+        return sqlSession.insert("ocr.insertOcrExtractFailType", params);
+    }
+
+    @Override
+    public int insertCheckCompleted(Map<String, Object> params) {
+        return sqlSession.insert("ocr.insertCheckCompleted", params);
+    }
+
+    @Override
+    public int updateCheckCompleted(Map<String, Object> params) {
+        return sqlSession.update("ocr.updateCheckCompleted", params);
+    }
+
+    @Override
+    public int deleteCheckCompleted(Map<String, Object> params) {
+        return sqlSession.delete("ocr.deleteCheckCompleted", params);
+    }
+
+    @Override
     public int deleteOcrExtractData(Map<String, Object> params) {
         return sqlSession.delete("ocr.deleteOcrExtractData", params);
     }

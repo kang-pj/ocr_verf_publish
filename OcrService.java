@@ -79,4 +79,7 @@ public interface OcrService {
     // OCR 추출 데이터 fail_type 업데이트
     int updateOcrExtractFailType(Map<String, Object> params);
 
+    // OCR 체크 완료 상태 토글
+    int toggleOcrCheckCompleted(Map<String, Object> params);
+
 }

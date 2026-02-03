@@ -559,6 +559,73 @@
         AND extract_key = #{extract_key}
     </update>
     
+    <!-- OCR 추출 데이터 fail_type INSERT (데이터가 없을 경우) -->
+    <insert id="insertOcrExtractFailType" parameterType="map">
+        INSERT INTO rfdb.ocr_extract_data (
+            ocr_doc_rslt,
+            extract_key,
+            extract_val,
+            ocr_fail_type,
+            upd_id,
+            ins_dttm,
+            upd_dttm
+        )
+        SELECT 
+            #{ocr_doc_rslt},
+            #{extract_key},
+            #{extract_val},
+            #{ocr_fail_type},
+            #{upd_id},
+            NOW(),
+            NOW()
+        WHERE NOT EXISTS (
+            SELECT 1 FROM rfdb.ocr_extract_data
+            WHERE ocr_doc_rslt = #{ocr_doc_rslt}
+            AND extract_key = #{extract_key}
+        )
+    </insert>
+    
+    <!-- OCR 체크 완료 상태 추가 -->
+    <insert id="insertCheckCompleted" parameterType="map">
+        INSERT INTO rfdb.ocr_extract_data (
+            ocr_doc_rslt,
+            extract_key,
+            extract_val,
+            upd_id,
+            ins_dttm,
+            upd_dttm
+        )
+        SELECT 
+            #{ocr_rslt_no},
+            '__CHECK_COMPLETED__',
+            'Y',
+            #{upd_id},
+            NOW(),
+            NOW()
+        WHERE NOT EXISTS (
+            SELECT 1 FROM rfdb.ocr_extract_data
+            WHERE ocr_doc_rslt = #{ocr_rslt_no}
+            AND extract_key = '__CHECK_COMPLETED__'
+        )
+    </insert>
+    
+    <!-- OCR 체크 완료 상태 업데이트 -->
+    <update id="updateCheckCompleted" parameterType="map">
+        UPDATE rfdb.ocr_extract_data
+        SET extract_val = 'Y',
+            upd_id = #{upd_id},
+            upd_dttm = NOW()
+        WHERE ocr_doc_rslt = #{ocr_rslt_no}
+        AND extract_key = '__CHECK_COMPLETED__'
+    </update>
+    
+    <!-- OCR 체크 완료 상태 삭제 -->
+    <delete id="deleteCheckCompleted" parameterType="map">
+        DELETE FROM rfdb.ocr_extract_data
+        WHERE ocr_doc_rslt = #{ocr_rslt_no}
+        AND extract_key = '__CHECK_COMPLETED__'
+    </delete>
+    
     <!-- OCR 추출 데이터 삭제 -->
     <delete id="deleteOcrExtractData" parameterType="map">
         DELETE FROM rfdb.ocr_extract_data

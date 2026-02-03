@@ -873,10 +873,47 @@ public class OcrServiceImpl implements OcrService {
     @Transactional
     public int updateOcrExtractFailType(Map<String, Object> params) {
         try {
-            return ocrDAO.updateOcrExtractFailType(params);
+            // UPDATE 시도
+            int updateResult = ocrDAO.updateOcrExtractFailType(params);
+            
+            if (updateResult == 0) {
+                // UPDATE 실패 시 (데이터 없음) INSERT 시도
+                logger.info("extract 데이터 없음, INSERT 시도 - key: {}", params.get("extract_key"));
+                return ocrDAO.insertOcrExtractFailType(params);
+            }
+            
+            return updateResult;
         } catch (Exception e) {
             logger.error("OCR 추출 데이터 fail_type 업데이트 실패: {}", e.getMessage(), e);
             throw new RuntimeException("OCR 추출 데이터 fail_type 업데이트 중 오류가 발생했습니다.", e);
+        }
+    }
+
+    /**
+     * OCR 체크 완료 상태 토글
+     */
+    @Override
+    @Transactional
+    public int toggleOcrCheckCompleted(Map<String, Object> params) {
+        try {
+            String action = (String) params.get("action");
+            String ocrRsltNo = (String) params.get("ocr_rslt_no");
+
+            if ("complete".equals(action)) {
+                // 확인 완료: 특별한 키 추가 (INSERT 시도 후 UPDATE)
+                int insertResult = ocrDAO.insertCheckCompleted(params);
+                if (insertResult == 0) {
+                    // INSERT 실패 시 (이미 존재) UPDATE 시도
+                    return ocrDAO.updateCheckCompleted(params);
+                }
+                return insertResult;
+            } else {
+                // 미확인: 특별한 키 삭제
+                return ocrDAO.deleteCheckCompleted(params);
+            }
+        } catch (Exception e) {
+            logger.error("OCR 체크 완료 상태 토글 실패: {}", e.getMessage(), e);
+            throw new RuntimeException("OCR 체크 완료 상태 토글 중 오류가 발생했습니다.", e);
         }
     }
 }
