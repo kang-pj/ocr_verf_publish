@@ -1,4 +1,8 @@
 <%@ page pageEncoding="utf-8" %>
+<%
+    String dbMode = System.getProperty("spring.profiles.active", "dev");
+    boolean isDev = "dev".equals(dbMode) || "local".equals(dbMode);
+%>
 <!doctype html>
 <html lang="ko">
 <head>
@@ -229,6 +233,9 @@
                             <option value="신한전세">신한전세</option>
                             <option value="전세안심보험(카손)">전세안심보험(카손)</option>
                             <option value="하나은행(사전)">하나은행(사전)</option>
+                            <% if (isDev) { %>
+                            <option value="테스트">테스트 (99-OCR)</option>
+                            <% } %>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -459,7 +466,11 @@
             '하나은행(사전)': {
                 inst_cd: ['02'],
                 prdt_cd: ['007', '222', '223', '224', '225']
-            }
+            }<% if (isDev) { %>,
+            '테스트': {
+                inst_cd: ['99'],
+                prdt_cd: ['OCR']
+            }<% } %>
         };
         
         // 날짜 초기화
@@ -546,17 +557,24 @@
                 contentType: 'application/json',
                 data: JSON.stringify(params),
                 success: function(response) {
+                    console.log('통계 조회 응답:', response);
                     if (response.success) {
                         updateSummaryCards(response.summary);
                         updateCharts(response);
                         updateDetailTable(response.detailList, response.totalCount);
                     } else {
-                        alert('통계 조회에 실패했습니다.');
+                        console.error('통계 조회 실패:', response);
+                        alert('통계 조회에 실패했습니다.\n' + 
+                              '오류: ' + (response.message || '') + '\n' +
+                              '상세: ' + (response.errorDetail || ''));
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('통계 조회 오류:', error);
-                    alert('통계 조회 중 오류가 발생했습니다.');
+                    console.error('응답:', xhr.responseText);
+                    alert('통계 조회 중 오류가 발생했습니다.\n' + 
+                          'Status: ' + status + '\n' +
+                          'Error: ' + error);
                 }
             });
         }

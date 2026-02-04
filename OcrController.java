@@ -73,32 +73,63 @@ public class OcrController {
         Map<String, Object> result = new HashMap<>();
 
         try {
+            logger.info("OCR 통계 조회 요청 파라미터: {}", params);
+            
             // 전체 통계
-            Map<String, Object> summary = ocrService.getOcrStatisticsSummary(params);
+            try {
+                Map<String, Object> summary = ocrService.getOcrStatisticsSummary(params);
+                result.put("summary", summary);
+                logger.info("전체 통계 조회 성공");
+            } catch (Exception e) {
+                logger.error("전체 통계 조회 실패", e);
+                throw new RuntimeException("전체 통계 조회 중 오류: " + e.getMessage(), e);
+            }
             
             // 기관별 통계
-            List<Map<String, Object>> organizationStats = ocrService.getOrganizationStatistics(params);
+            try {
+                List<Map<String, Object>> organizationStats = ocrService.getOrganizationStatistics(params);
+                result.put("organizationStats", organizationStats);
+                logger.info("기관별 통계 조회 성공: {} 건", organizationStats != null ? organizationStats.size() : 0);
+            } catch (Exception e) {
+                logger.error("기관별 통계 조회 실패", e);
+                throw new RuntimeException("기관별 통계 조회 중 오류: " + e.getMessage(), e);
+            }
             
             // 서류 유형별 통계
-            List<Map<String, Object>> documentTypeStats = ocrService.getDocumentTypeStatistics(params);
+            try {
+                List<Map<String, Object>> documentTypeStats = ocrService.getDocumentTypeStatistics(params);
+                result.put("documentTypeStats", documentTypeStats);
+                logger.info("서류 유형별 통계 조회 성공: {} 건", documentTypeStats != null ? documentTypeStats.size() : 0);
+            } catch (Exception e) {
+                logger.error("서류 유형별 통계 조회 실패", e);
+                throw new RuntimeException("서류 유형별 통계 조회 중 오류: " + e.getMessage(), e);
+            }
             
             // 상세 목록
-            List<Map<String, Object>> detailList = ocrService.getStatisticsDetailList(params);
-            int totalCount = ocrService.getStatisticsDetailCount(params);
+            try {
+                List<Map<String, Object>> detailList = ocrService.getStatisticsDetailList(params);
+                int totalCount = ocrService.getStatisticsDetailCount(params);
+                result.put("detailList", detailList);
+                result.put("totalCount", totalCount);
+                logger.info("상세 목록 조회 성공: {} 건", totalCount);
+            } catch (Exception e) {
+                logger.error("상세 목록 조회 실패", e);
+                throw new RuntimeException("상세 목록 조회 중 오류: " + e.getMessage(), e);
+            }
 
             result.put("success", true);
-            result.put("summary", summary);
-            result.put("organizationStats", organizationStats);
-            result.put("documentTypeStats", documentTypeStats);
-            result.put("detailList", detailList);
-            result.put("totalCount", totalCount);
-
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
 
         } catch (Exception e) {
-            logger.error("OCR 통계 조회 실패: {}", e.getMessage());
+            logger.error("OCR 통계 조회 실패", e);
+            result.clear();
             result.put("success", false);
-            result.put("message", "통계 조회 중 오류가 발생했습니다.");
+            result.put("message", e.getMessage());
+            result.put("errorType", e.getClass().getSimpleName());
+            if (e.getCause() != null) {
+                result.put("cause", e.getCause().getMessage());
+                result.put("causeType", e.getCause().getClass().getSimpleName());
+            }
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
         }
     }
