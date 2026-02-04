@@ -188,10 +188,7 @@
     <div class="container-fluid">
         <!-- 페이지 헤더 -->
         <div class="page-header d-flex justify-content-between align-items-center">
-            <h4>
-                <i class="fas fa-chart-bar"></i> OCR 검토 통계
-            </h4>
-            <div>
+            <div style="display: none;">
                 <button type="button" class="btn btn-primary btn-sm">
                     <i class="fas fa-download"></i> 엑셀 다운로드
                 </button>
