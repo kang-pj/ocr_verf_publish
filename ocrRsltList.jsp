@@ -278,6 +278,19 @@
                                 <small class="text-muted" id="selectedDocTypeText">전체</small>
                             </div>
                         </div>
+                        <div class="form-row align-items-center mb-3">
+                            <div class="col-auto" style="width: 120px;">
+                                <label class="mb-0">검토 상태</label>
+                            </div>
+                            <div class="col-auto">
+                                <select class="form-control form-control-sm" id="reviewStatusFilter" style="width: 150px;">
+                                    <option value="">전체</option>
+                                    <option value="ALL_COMPLETED">전체 검토 완료</option>
+                                    <option value="PARTIAL_COMPLETED">일부 검토</option>
+                                    <option value="NOT_COMPLETED">미검토</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="form-row">
                             <div class="col-md-12 text-center">
                                 <button type="button" class="btn btn-secondary btn-sm mr-2" id="btnReset">
@@ -411,7 +424,8 @@
                         ins_dttm_st: $('#startDate').val() || null,
                         ins_dttm_en: $('#endDate').val() || null,
                         ocr_yn: $('#verifiedFilter').val() ? [$('#verifiedFilter').val()] : null,
-                        doc_tp_cd: selectedDocTypes.length > 0 ? selectedDocTypes : null
+                        doc_tp_cd: selectedDocTypes.length > 0 ? selectedDocTypes : null,
+                        review_status: $('#reviewStatusFilter').val() || null
                     };
                     return JSON.stringify(params);  // JSON 문자열로 변환
                 },
@@ -581,6 +595,7 @@
             $('.period-btn[data-period="all"]').addClass('active');
             $('input[type="checkbox"]').prop('checked', false);
             $('#verifiedFilter').val('');
+            $('#reviewStatusFilter').val('');
             // 문서 유형 초기화
             selectedDocTypes = [];
             updateDocTypeDisplay();

@@ -26,6 +26,10 @@
         LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
         ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
         WHERE 1=1
+        <!-- 검토 상태 필터 사용 시 OCR 완료된 것만 조회 -->
+        <if test="review_status != null and review_status != ''">
+            AND INF.OCR_YN = 'Y'
+        </if>
         <!-- 기본 검색 조건 -->
         <if test="ctrl_yr != null">
             AND INF.CTRL_YR = #{ctrl_yr}
@@ -138,8 +142,43 @@
                 AND DOC_TP_CD = ''
             </when>
         </choose>
+        ),
+        review_status_calc AS (
+        SELECT
+            fd.CTRL_YR,
+            fd.INST_CD,
+            fd.PRDT_CD,
+            fd.CTRL_NO,
+            fd.DOC_TP_CD,
+            COUNT(DISTINCT inf2.OCR_DOC_NO) FILTER (WHERE inf2.CTRL_YR = fd.CTRL_YR AND inf2.INST_CD = fd.INST_CD AND inf2.PRDT_CD = fd.PRDT_CD AND inf2.CTRL_NO = fd.CTRL_NO) AS total_docs,
+            COUNT(DISTINCT CASE 
+                WHEN e.extract_key = '__CHECK_COMPLETED__' AND e.extract_val = 'Y' 
+                    AND inf2.CTRL_YR = fd.CTRL_YR AND inf2.INST_CD = fd.INST_CD 
+                    AND inf2.PRDT_CD = fd.PRDT_CD AND inf2.CTRL_NO = fd.CTRL_NO
+                THEN r.ocr_doc_no 
+            END) AS completed_docs
+        FROM filtered_data fd
+        CROSS JOIN RFDB.OCR_DOC_INF inf2
+        LEFT JOIN RFDB.OCR_DOC_RSLT r ON inf2.OCR_DOC_NO = r.OCR_DOC_NO
+        LEFT JOIN RFDB.OCR_EXTRACT_DATA e ON r.OCR_RSLT_NO = e.OCR_DOC_RSLT
+        GROUP BY fd.CTRL_YR, fd.INST_CD, fd.PRDT_CD, fd.CTRL_NO, fd.DOC_TP_CD
         )
-        SELECT COUNT(*) FROM filtered_data
+        SELECT COUNT(*) 
+        FROM review_status_calc rs
+        WHERE 1=1
+        <if test="review_status != null and review_status != ''">
+            <choose>
+                <when test='review_status == "ALL_COMPLETED"'>
+                    AND rs.total_docs > 0 AND rs.completed_docs = rs.total_docs
+                </when>
+                <when test='review_status == "PARTIAL_COMPLETED"'>
+                    AND rs.completed_docs > 0 AND rs.completed_docs &lt; rs.total_docs
+                </when>
+                <when test='review_status == "NOT_COMPLETED"'>
+                    AND (rs.completed_docs = 0 OR rs.completed_docs IS NULL)
+                </when>
+            </choose>
+        </if>
     </select>
 
     <!-- OCR 문서 목록 조회 -->
@@ -188,6 +227,10 @@
         LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
         ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
         WHERE 1=1
+        <!-- 검토 상태 필터 사용 시 OCR 완료된 것만 조회 -->
+        <if test="review_status != null and review_status != ''">
+            AND INF.OCR_YN = 'Y'
+        </if>
         <!-- 기본 검색 조건 -->
         <if test="ctrl_yr != null">
             AND INF.CTRL_YR = #{ctrl_yr}
@@ -305,12 +348,70 @@
                 AND DOC_TP_CD = ''
             </when>
         </choose>
+        ),
+        review_status_calc AS (
+        SELECT
+            fd.ctrl_key,
+            fd.CTRL_YR,
+            fd.INST_CD,
+            fd.PRDT_CD,
+            fd.CTRL_NO,
+            fd.DOC_TP_CD,
+            fd.OCR_DOC_NO,
+            fd.INS_DTTM,
+            fd.DOC_PAGE,
+            fd.DOC_TITLE,
+            fd.SUB_TITLE,
+            fd.OCR_YN,
+            fd.SAVE_YN,
+            fd.VERF_YN,
+            COUNT(DISTINCT inf2.OCR_DOC_NO) FILTER (WHERE inf2.CTRL_YR = fd.CTRL_YR AND inf2.INST_CD = fd.INST_CD AND inf2.PRDT_CD = fd.PRDT_CD AND inf2.CTRL_NO = fd.CTRL_NO) AS total_docs,
+            COUNT(DISTINCT CASE 
+                WHEN e.extract_key = '__CHECK_COMPLETED__' AND e.extract_val = 'Y' 
+                    AND inf2.CTRL_YR = fd.CTRL_YR AND inf2.INST_CD = fd.INST_CD 
+                    AND inf2.PRDT_CD = fd.PRDT_CD AND inf2.CTRL_NO = fd.CTRL_NO
+                THEN r.ocr_doc_no 
+            END) AS completed_docs
+        FROM filtered_data fd
+        CROSS JOIN RFDB.OCR_DOC_INF inf2
+        LEFT JOIN RFDB.OCR_DOC_RSLT r ON inf2.OCR_DOC_NO = r.OCR_DOC_NO
+        LEFT JOIN RFDB.OCR_EXTRACT_DATA e ON r.OCR_RSLT_NO = e.OCR_DOC_RSLT
+        GROUP BY fd.ctrl_key, fd.CTRL_YR, fd.INST_CD, fd.PRDT_CD, fd.CTRL_NO, fd.DOC_TP_CD, 
+                 fd.OCR_DOC_NO, fd.INS_DTTM, fd.DOC_PAGE, fd.DOC_TITLE, fd.SUB_TITLE, 
+                 fd.OCR_YN, fd.SAVE_YN, fd.VERF_YN
         )
         SELECT
         ROW_NUMBER() OVER() AS ROW_NUMBER,
         COUNT(*) OVER() AS DOC_NUM,
-        *
-        FROM filtered_data
+        rs.ctrl_key,
+        rs.CTRL_YR,
+        rs.INST_CD,
+        rs.PRDT_CD,
+        rs.CTRL_NO,
+        rs.DOC_TP_CD,
+        rs.OCR_DOC_NO,
+        rs.INS_DTTM,
+        rs.DOC_PAGE,
+        rs.DOC_TITLE,
+        rs.SUB_TITLE,
+        rs.OCR_YN,
+        rs.SAVE_YN,
+        rs.VERF_YN
+        FROM review_status_calc rs
+        WHERE 1=1
+        <if test="review_status != null and review_status != ''">
+            <choose>
+                <when test='review_status == "ALL_COMPLETED"'>
+                    AND rs.total_docs > 0 AND rs.completed_docs = rs.total_docs
+                </when>
+                <when test='review_status == "PARTIAL_COMPLETED"'>
+                    AND rs.completed_docs > 0 AND rs.completed_docs &lt; rs.total_docs
+                </when>
+                <when test='review_status == "NOT_COMPLETED"'>
+                    AND (rs.completed_docs = 0 OR rs.completed_docs IS NULL)
+                </when>
+            </choose>
+        </if>
         <if test="paging != null">
             LIMIT #{num}::INTEGER
             OFFSET (#{paging}::INTEGER * #{num}::INTEGER)
