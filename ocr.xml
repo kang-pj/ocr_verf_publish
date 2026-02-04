@@ -1073,4 +1073,359 @@
         DELETE FROM rfdb.ocr_extract_data
         WHERE ocr_doc_rslt = #{ocr_doc_rslt}
     </delete>
+
+    <!-- ========== OCR 통계 관련 쿼리 ========== -->
+    
+    <!-- 전체 요약 통계 조회 -->
+    <select id="getOcrStatisticsSummary" parameterType="map" resultType="map">
+        WITH extract_stats AS (
+            SELECT
+                e.ocr_fail_type
+            FROM rfdb.ocr_extract_data e
+            INNER JOIN rfdb.ocr_doc_inf inf ON e.ocr_doc_no = inf.ocr_doc_no
+            WHERE 1=1
+            <if test="ctrl_yr != null and ctrl_yr != ''">
+                AND inf.ctrl_yr = #{ctrl_yr}
+            </if>
+            <choose>
+                <when test="inst_cd != null and inst_cd instanceof java.util.List and inst_cd.size() > 0">
+                    AND inf.inst_cd IN
+                    <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="inst_cd != null and !(inst_cd instanceof java.util.List) and inst_cd != ''">
+                    AND inf.inst_cd = #{inst_cd}
+                </when>
+            </choose>
+            <choose>
+                <when test="prdt_cd != null and prdt_cd instanceof java.util.List and prdt_cd.size() > 0">
+                    AND inf.prdt_cd IN
+                    <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="prdt_cd != null and !(prdt_cd instanceof java.util.List) and prdt_cd != ''">
+                    AND inf.prdt_cd = #{prdt_cd}
+                </when>
+            </choose>
+            <if test="doc_tp_cd != null and doc_tp_cd != ''">
+                AND inf.doc_tp_cd = #{doc_tp_cd}
+            </if>
+            <if test="ins_dttm_st != null and ins_dttm_st != ''">
+                AND inf.ins_dttm &gt;= #{ins_dttm_st}::TIMESTAMP
+            </if>
+            <if test="ins_dttm_en != null and ins_dttm_en != ''">
+                AND inf.ins_dttm &lt; (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
+            </if>
+            <if test="fail_type != null and fail_type != ''">
+                <choose>
+                    <when test='fail_type == "E"'>
+                        AND e.ocr_fail_type = 'E'
+                    </when>
+                    <when test='fail_type == "X"'>
+                        AND e.ocr_fail_type = 'X'
+                    </when>
+                </choose>
+            </if>
+        )
+        SELECT
+            COUNT(*) AS total_count,
+            COUNT(CASE WHEN ocr_fail_type IS NULL THEN 1 END) AS normal_count,
+            COUNT(CASE WHEN ocr_fail_type = 'E' THEN 1 END) AS error_count,
+            COUNT(CASE WHEN ocr_fail_type = 'X' THEN 1 END) AS empty_count
+        FROM extract_stats
+    </select>
+
+    <!-- 기관별 통계 조회 -->
+    <select id="getOcrStatisticsByInst" parameterType="map" resultType="map">
+        WITH extract_stats AS (
+            SELECT
+                inf.inst_cd,
+                e.ocr_fail_type
+            FROM rfdb.ocr_extract_data e
+            INNER JOIN rfdb.ocr_doc_inf inf ON e.ocr_doc_no = inf.ocr_doc_no
+            WHERE 1=1
+            <if test="ctrl_yr != null and ctrl_yr != ''">
+                AND inf.ctrl_yr = #{ctrl_yr}
+            </if>
+            <choose>
+                <when test="inst_cd != null and inst_cd instanceof java.util.List and inst_cd.size() > 0">
+                    AND inf.inst_cd IN
+                    <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="inst_cd != null and !(inst_cd instanceof java.util.List) and inst_cd != ''">
+                    AND inf.inst_cd = #{inst_cd}
+                </when>
+            </choose>
+            <choose>
+                <when test="prdt_cd != null and prdt_cd instanceof java.util.List and prdt_cd.size() > 0">
+                    AND inf.prdt_cd IN
+                    <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="prdt_cd != null and !(prdt_cd instanceof java.util.List) and prdt_cd != ''">
+                    AND inf.prdt_cd = #{prdt_cd}
+                </when>
+            </choose>
+            <if test="doc_tp_cd != null and doc_tp_cd != ''">
+                AND inf.doc_tp_cd = #{doc_tp_cd}
+            </if>
+            <if test="ins_dttm_st != null and ins_dttm_st != ''">
+                AND inf.ins_dttm &gt;= #{ins_dttm_st}::TIMESTAMP
+            </if>
+            <if test="ins_dttm_en != null and ins_dttm_en != ''">
+                AND inf.ins_dttm &lt; (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
+            </if>
+            <if test="fail_type != null and fail_type != ''">
+                <choose>
+                    <when test='fail_type == "E"'>
+                        AND e.ocr_fail_type = 'E'
+                    </when>
+                    <when test='fail_type == "X"'>
+                        AND e.ocr_fail_type = 'X'
+                    </when>
+                </choose>
+            </if>
+        )
+        SELECT
+            inst_cd,
+            COUNT(*) AS total_count,
+            COUNT(CASE WHEN ocr_fail_type IS NULL THEN 1 END) AS normal_count,
+            COUNT(CASE WHEN ocr_fail_type = 'E' THEN 1 END) AS error_count,
+            COUNT(CASE WHEN ocr_fail_type = 'X' THEN 1 END) AS empty_count
+        FROM extract_stats
+        GROUP BY inst_cd
+        ORDER BY inst_cd
+    </select>
+
+    <!-- 서류 유형별 통계 조회 -->
+    <select id="getOcrStatisticsByDocType" parameterType="map" resultType="map">
+        WITH extract_stats AS (
+            SELECT
+                inf.doc_tp_cd,
+                e.ocr_fail_type
+            FROM rfdb.ocr_extract_data e
+            INNER JOIN rfdb.ocr_doc_inf inf ON e.ocr_doc_no = inf.ocr_doc_no
+            WHERE 1=1
+            <if test="ctrl_yr != null and ctrl_yr != ''">
+                AND inf.ctrl_yr = #{ctrl_yr}
+            </if>
+            <choose>
+                <when test="inst_cd != null and inst_cd instanceof java.util.List and inst_cd.size() > 0">
+                    AND inf.inst_cd IN
+                    <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="inst_cd != null and !(inst_cd instanceof java.util.List) and inst_cd != ''">
+                    AND inf.inst_cd = #{inst_cd}
+                </when>
+            </choose>
+            <choose>
+                <when test="prdt_cd != null and prdt_cd instanceof java.util.List and prdt_cd.size() > 0">
+                    AND inf.prdt_cd IN
+                    <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="prdt_cd != null and !(prdt_cd instanceof java.util.List) and prdt_cd != ''">
+                    AND inf.prdt_cd = #{prdt_cd}
+                </when>
+            </choose>
+            <if test="doc_tp_cd != null and doc_tp_cd != ''">
+                AND inf.doc_tp_cd = #{doc_tp_cd}
+            </if>
+            <if test="ins_dttm_st != null and ins_dttm_st != ''">
+                AND inf.ins_dttm &gt;= #{ins_dttm_st}::TIMESTAMP
+            </if>
+            <if test="ins_dttm_en != null and ins_dttm_en != ''">
+                AND inf.ins_dttm &lt; (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
+            </if>
+            <if test="fail_type != null and fail_type != ''">
+                <choose>
+                    <when test='fail_type == "E"'>
+                        AND e.ocr_fail_type = 'E'
+                    </when>
+                    <when test='fail_type == "X"'>
+                        AND e.ocr_fail_type = 'X'
+                    </when>
+                </choose>
+            </if>
+        )
+        SELECT
+            doc_tp_cd,
+            COUNT(*) AS total_count,
+            COUNT(CASE WHEN ocr_fail_type IS NULL THEN 1 END) AS normal_count,
+            COUNT(CASE WHEN ocr_fail_type = 'E' THEN 1 END) AS error_count,
+            COUNT(CASE WHEN ocr_fail_type = 'X' THEN 1 END) AS empty_count
+        FROM extract_stats
+        GROUP BY doc_tp_cd
+        ORDER BY doc_tp_cd
+    </select>
+
+    <!-- 상세 목록 조회 -->
+    <select id="getOcrStatisticsDetail" parameterType="map" resultType="map">
+        WITH extract_stats AS (
+            SELECT
+                e.ctrl_yr,
+                e.inst_cd,
+                e.prdt_cd,
+                e.ctrl_no,
+                e.doc_tp_cd,
+                e.ocr_doc_rslt,
+                e.ocr_doc_no,
+                e.ocr_fail_type,
+                inf.ins_dttm
+            FROM rfdb.ocr_extract_data e
+            INNER JOIN rfdb.ocr_doc_inf inf ON e.ocr_doc_no = inf.ocr_doc_no
+            WHERE 1=1
+            <if test="ctrl_yr != null and ctrl_yr != ''">
+                AND e.ctrl_yr = #{ctrl_yr}
+            </if>
+            <choose>
+                <when test="inst_cd != null and inst_cd instanceof java.util.List and inst_cd.size() > 0">
+                    AND e.inst_cd IN
+                    <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="inst_cd != null and !(inst_cd instanceof java.util.List) and inst_cd != ''">
+                    AND e.inst_cd = #{inst_cd}
+                </when>
+            </choose>
+            <choose>
+                <when test="prdt_cd != null and prdt_cd instanceof java.util.List and prdt_cd.size() > 0">
+                    AND e.prdt_cd IN
+                    <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="prdt_cd != null and !(prdt_cd instanceof java.util.List) and prdt_cd != ''">
+                    AND e.prdt_cd = #{prdt_cd}
+                </when>
+            </choose>
+            <if test="doc_tp_cd != null and doc_tp_cd != ''">
+                AND e.doc_tp_cd = #{doc_tp_cd}
+            </if>
+            <if test="ins_dttm_st != null and ins_dttm_st != ''">
+                AND inf.ins_dttm &gt;= #{ins_dttm_st}::TIMESTAMP
+            </if>
+            <if test="ins_dttm_en != null and ins_dttm_en != ''">
+                AND inf.ins_dttm &lt; (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
+            </if>
+            <if test="fail_type != null and fail_type != ''">
+                <choose>
+                    <when test='fail_type == "E"'>
+                        AND e.ocr_fail_type = 'E'
+                    </when>
+                    <when test='fail_type == "X"'>
+                        AND e.ocr_fail_type = 'X'
+                    </when>
+                </choose>
+            </if>
+        ),
+        doc_stats AS (
+            SELECT
+                ctrl_yr,
+                inst_cd,
+                prdt_cd,
+                ctrl_no,
+                doc_tp_cd,
+                ocr_doc_rslt,
+                ocr_doc_no,
+                MAX(ins_dttm) AS ins_dttm,
+                COUNT(*) AS total_count,
+                COUNT(CASE WHEN ocr_fail_type IS NULL THEN 1 END) AS normal_count,
+                COUNT(CASE WHEN ocr_fail_type = 'E' THEN 1 END) AS error_count,
+                COUNT(CASE WHEN ocr_fail_type = 'X' THEN 1 END) AS empty_count
+            FROM extract_stats
+            GROUP BY ctrl_yr, inst_cd, prdt_cd, ctrl_no, doc_tp_cd, ocr_doc_rslt, ocr_doc_no
+        )
+        SELECT
+            ctrl_yr,
+            inst_cd,
+            prdt_cd,
+            ctrl_no,
+            doc_tp_cd,
+            ocr_doc_rslt,
+            ocr_doc_no,
+            TO_CHAR(ins_dttm, 'YYYY-MM-DD HH24:MI:SS') AS ins_dttm,
+            total_count,
+            normal_count,
+            error_count,
+            empty_count
+        FROM doc_stats
+        ORDER BY ins_dttm DESC
+        <if test="paging != null and num != null">
+            LIMIT #{num} OFFSET #{paging}
+        </if>
+    </select>
+
+    <!-- 상세 목록 건수 조회 -->
+    <select id="getOcrStatisticsDetailCount" parameterType="map" resultType="int">
+        WITH extract_stats AS (
+            SELECT
+                e.ctrl_yr,
+                e.inst_cd,
+                e.prdt_cd,
+                e.ctrl_no,
+                e.doc_tp_cd,
+                e.ocr_doc_rslt,
+                e.ocr_doc_no
+            FROM rfdb.ocr_extract_data e
+            INNER JOIN rfdb.ocr_doc_inf inf ON e.ocr_doc_no = inf.ocr_doc_no
+            WHERE 1=1
+            <if test="ctrl_yr != null and ctrl_yr != ''">
+                AND e.ctrl_yr = #{ctrl_yr}
+            </if>
+            <choose>
+                <when test="inst_cd != null and inst_cd instanceof java.util.List and inst_cd.size() > 0">
+                    AND e.inst_cd IN
+                    <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="inst_cd != null and !(inst_cd instanceof java.util.List) and inst_cd != ''">
+                    AND e.inst_cd = #{inst_cd}
+                </when>
+            </choose>
+            <choose>
+                <when test="prdt_cd != null and prdt_cd instanceof java.util.List and prdt_cd.size() > 0">
+                    AND e.prdt_cd IN
+                    <foreach collection="prdt_cd" item="item" open="(" close=")" separator=",">
+                        #{item}
+                    </foreach>
+                </when>
+                <when test="prdt_cd != null and !(prdt_cd instanceof java.util.List) and prdt_cd != ''">
+                    AND e.prdt_cd = #{prdt_cd}
+                </when>
+            </choose>
+            <if test="doc_tp_cd != null and doc_tp_cd != ''">
+                AND e.doc_tp_cd = #{doc_tp_cd}
+            </if>
+            <if test="ins_dttm_st != null and ins_dttm_st != ''">
+                AND inf.ins_dttm &gt;= #{ins_dttm_st}::TIMESTAMP
+            </if>
+            <if test="ins_dttm_en != null and ins_dttm_en != ''">
+                AND inf.ins_dttm &lt; (#{ins_dttm_en} || ' 23:59:59')::TIMESTAMP
+            </if>
+            <if test="fail_type != null and fail_type != ''">
+                <choose>
+                    <when test='fail_type == "E"'>
+                        AND e.ocr_fail_type = 'E'
+                    </when>
+                    <when test='fail_type == "X"'>
+                        AND e.ocr_fail_type = 'X'
+                    </when>
+                </choose>
+            </if>
+        )
+        SELECT COUNT(DISTINCT CONCAT(ctrl_yr, '-', inst_cd, '-', prdt_cd, '-', ctrl_no, '-', doc_tp_cd, '-', ocr_doc_rslt))
+        FROM extract_stats
+    </select>
+
 </mapper>

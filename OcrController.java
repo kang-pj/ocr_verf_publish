@@ -56,6 +56,54 @@ public class OcrController {
     }
 
     /**
+     * OCR 통계 페이지 호출
+     */
+    @RequestMapping(value = "/{site}/ocrStatistics", method = RequestMethod.GET)
+    public String ocrStatistics(@PathVariable("site") String site, Map<String, Object> modelMap, HttpServletRequest request) throws Exception {
+        modelMap.put("site", site);
+        return "ocr/ocrStatistics";
+    }
+
+    /**
+     * OCR 통계 데이터 조회
+     */
+    @PostMapping(value = "/api/getOcrStatistics.do")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getOcrStatistics(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            // 전체 통계
+            Map<String, Object> summary = ocrService.getOcrStatisticsSummary(params);
+            
+            // 기관별 통계
+            List<Map<String, Object>> organizationStats = ocrService.getOrganizationStatistics(params);
+            
+            // 서류 유형별 통계
+            List<Map<String, Object>> documentTypeStats = ocrService.getDocumentTypeStatistics(params);
+            
+            // 상세 목록
+            List<Map<String, Object>> detailList = ocrService.getStatisticsDetailList(params);
+            int totalCount = ocrService.getStatisticsDetailCount(params);
+
+            result.put("success", true);
+            result.put("summary", summary);
+            result.put("organizationStats", organizationStats);
+            result.put("documentTypeStats", documentTypeStats);
+            result.put("detailList", detailList);
+            result.put("totalCount", totalCount);
+
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+
+        } catch (Exception e) {
+            logger.error("OCR 통계 조회 실패: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", "통계 조회 중 오류가 발생했습니다.");
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+        }
+    }
+
+    /**
      * OCR 상세 페이지 호출
      */
     @RequestMapping(value = "/{site}/ocrRsltDetail", method = RequestMethod.GET)

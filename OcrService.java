@@ -81,5 +81,20 @@ public interface OcrService {
 
     // OCR 체크 완료 상태 토글
     int toggleOcrCheckCompleted(Map<String, Object> params);
+    
+    // OCR 통계 - 전체 요약
+    Map<String, Object> getOcrStatisticsSummary(Map<String, Object> params);
+    
+    // OCR 통계 - 기관별
+    List<Map<String, Object>> getOrganizationStatistics(Map<String, Object> params);
+    
+    // OCR 통계 - 서류 유형별
+    List<Map<String, Object>> getDocumentTypeStatistics(Map<String, Object> params);
+    
+    // OCR 통계 - 상세 목록
+    List<Map<String, Object>> getStatisticsDetailList(Map<String, Object> params);
+    
+    // OCR 통계 - 상세 목록 건수
+    int getStatisticsDetailCount(Map<String, Object> params);
 
 }

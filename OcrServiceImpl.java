@@ -950,4 +950,29 @@ public class OcrServiceImpl implements OcrService {
             throw new RuntimeException("OCR 체크 완료 상태 토글 중 오류가 발생했습니다.", e);
         }
     }
+    
+    @Override
+    public Map<String, Object> getOcrStatisticsSummary(Map<String, Object> params) {
+        return ocrDAO.getOcrStatisticsSummary(params);
+    }
+    
+    @Override
+    public List<Map<String, Object>> getOrganizationStatistics(Map<String, Object> params) {
+        return ocrDAO.getOrganizationStatistics(params);
+    }
+    
+    @Override
+    public List<Map<String, Object>> getDocumentTypeStatistics(Map<String, Object> params) {
+        return ocrDAO.getDocumentTypeStatistics(params);
+    }
+    
+    @Override
+    public List<Map<String, Object>> getStatisticsDetailList(Map<String, Object> params) {
+        return ocrDAO.getStatisticsDetailList(params);
+    }
+    
+    @Override
+    public int getStatisticsDetailCount(Map<String, Object> params) {
+        return ocrDAO.getStatisticsDetailCount(params);
+    }
 }
