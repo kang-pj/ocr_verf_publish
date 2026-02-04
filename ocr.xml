@@ -1088,13 +1088,15 @@
                 AND inf.ctrl_yr = #{ctrl_yr}
             </if>
             <choose>
-                <when test="inst_cd != null and inst_cd instanceof java.util.List and inst_cd.size() > 0">
-                    AND inf.inst_cd IN
-                    <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
-                        #{item}
-                    </foreach>
+                <when test="inst_cd != null and inst_cd instanceof java.util.List">
+                    <if test="inst_cd.size() > 0">
+                        AND inf.inst_cd IN
+                        <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                    </if>
                 </when>
-                <when test="inst_cd != null and !(inst_cd instanceof java.util.List) and inst_cd != ''">
+                <when test="inst_cd != null and inst_cd != ''">
                     AND inf.inst_cd = #{inst_cd}
                 </when>
             </choose>
@@ -1150,13 +1152,15 @@
                 AND inf.ctrl_yr = #{ctrl_yr}
             </if>
             <choose>
-                <when test="inst_cd != null and inst_cd instanceof java.util.List and inst_cd.size() > 0">
-                    AND inf.inst_cd IN
-                    <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
-                        #{item}
-                    </foreach>
+                <when test="inst_cd != null and inst_cd instanceof java.util.List">
+                    <if test="inst_cd.size() > 0">
+                        AND inf.inst_cd IN
+                        <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                    </if>
                 </when>
-                <when test="inst_cd != null and !(inst_cd instanceof java.util.List) and inst_cd != ''">
+                <when test="inst_cd != null and inst_cd != ''">
                     AND inf.inst_cd = #{inst_cd}
                 </when>
             </choose>
@@ -1215,13 +1219,15 @@
                 AND inf.ctrl_yr = #{ctrl_yr}
             </if>
             <choose>
-                <when test="inst_cd != null and inst_cd instanceof java.util.List and inst_cd.size() > 0">
-                    AND inf.inst_cd IN
-                    <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
-                        #{item}
-                    </foreach>
+                <when test="inst_cd != null and inst_cd instanceof java.util.List">
+                    <if test="inst_cd.size() > 0">
+                        AND inf.inst_cd IN
+                        <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                    </if>
                 </when>
-                <when test="inst_cd != null and !(inst_cd instanceof java.util.List) and inst_cd != ''">
+                <when test="inst_cd != null and inst_cd != ''">
                     AND inf.inst_cd = #{inst_cd}
                 </when>
             </choose>
@@ -1287,13 +1293,15 @@
                 AND e.ctrl_yr = #{ctrl_yr}
             </if>
             <choose>
-                <when test="inst_cd != null and inst_cd instanceof java.util.List and inst_cd.size() > 0">
-                    AND e.inst_cd IN
-                    <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
-                        #{item}
-                    </foreach>
+                <when test="inst_cd != null and inst_cd instanceof java.util.List">
+                    <if test="inst_cd.size() > 0">
+                        AND e.inst_cd IN
+                        <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                    </if>
                 </when>
-                <when test="inst_cd != null and !(inst_cd instanceof java.util.List) and inst_cd != ''">
+                <when test="inst_cd != null and inst_cd != ''">
                     AND e.inst_cd = #{inst_cd}
                 </when>
             </choose>
@@ -1383,13 +1391,15 @@
                 AND e.ctrl_yr = #{ctrl_yr}
             </if>
             <choose>
-                <when test="inst_cd != null and inst_cd instanceof java.util.List and inst_cd.size() > 0">
-                    AND e.inst_cd IN
-                    <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
-                        #{item}
-                    </foreach>
+                <when test="inst_cd != null and inst_cd instanceof java.util.List">
+                    <if test="inst_cd.size() > 0">
+                        AND e.inst_cd IN
+                        <foreach collection="inst_cd" item="item" open="(" close=")" separator=",">
+                            #{item}
+                        </foreach>
+                    </if>
                 </when>
-                <when test="inst_cd != null and !(inst_cd instanceof java.util.List) and inst_cd != ''">
+                <when test="inst_cd != null and inst_cd != ''">
                     AND e.inst_cd = #{inst_cd}
                 </when>
             </choose>
