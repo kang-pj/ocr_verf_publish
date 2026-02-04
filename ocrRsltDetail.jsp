@@ -1259,21 +1259,33 @@
                                         if (newOcrDocNo !== currentOcrDocNo) {
                                             currentOcrDocNo = newOcrDocNo;
 
-                                            // OCR 결과 조회
+                                            // 문서 상세 정보 조회 (extract 데이터 포함)
+                                            var urlParams = new URLSearchParams(window.location.search);
+                                            var detailParams = {
+                                                ctrl_yr: urlParams.get('ctrl_yr'),
+                                                inst_cd: urlParams.get('inst_cd'),
+                                                prdt_cd: urlParams.get('prdt_cd'),
+                                                ctrl_no: urlParams.get('ctrl_no'),
+                                                doc_tp_cd: urlParams.get('doc_tp_cd'),
+                                                ocr_doc_no: newOcrDocNo
+                                            };
+
                                             $.ajax({
-                                                url: '/rf-ocr-verf/api/getOcrResultText.do',
+                                                url: '/rf-ocr-verf/api/getOcrDocumentDetail.do',
                                                 type: 'POST',
                                                 contentType: 'application/json',
-                                                data: JSON.stringify({
-                                                    ocr_doc_no: newOcrDocNo
-                                                }),
+                                                data: JSON.stringify(detailParams),
                                                 success: function(response) {
                                                     if (response.success && response.data) {
-                                                        displayOcrResults(response.data);
+                                                        // 현재 문서 상세 정보 업데이트
+                                                        currentDocumentDetail = response.data;
+                                                        
+                                                        // OCR 결과와 extract 데이터 함께 표시
+                                                        displayOcrResults(response.ocrResults || [], response.extractData || []);
                                                     }
                                                 },
                                                 error: function(xhr, status, error) {
-                                                    console.error('OCR 결과 조회 실패:', error);
+                                                    console.error('문서 상세 조회 실패:', error);
                                                 }
                                             });
                                         } else {
