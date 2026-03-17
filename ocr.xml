@@ -1084,6 +1084,13 @@
             FROM rfdb.ocr_extract_data e
             INNER JOIN rfdb.ocr_doc_inf inf ON e.ocr_doc_no = inf.ocr_doc_no
             WHERE 1=1
+            AND e.extract_key != '__CHECK_COMPLETED__'
+            AND EXISTS (
+                SELECT 1 FROM rfdb.ocr_extract_data chk
+                WHERE chk.ocr_doc_rslt = e.ocr_doc_rslt
+                AND chk.extract_key = '__CHECK_COMPLETED__'
+                AND chk.extract_val = 'Y'
+            )
             <if test="ctrl_yr != null and ctrl_yr != ''">
                 AND inf.ctrl_yr = #{ctrl_yr}
             </if>
@@ -1148,6 +1155,13 @@
             FROM rfdb.ocr_extract_data e
             INNER JOIN rfdb.ocr_doc_inf inf ON e.ocr_doc_no = inf.ocr_doc_no
             WHERE 1=1
+            AND e.extract_key != '__CHECK_COMPLETED__'
+            AND EXISTS (
+                SELECT 1 FROM rfdb.ocr_extract_data chk
+                WHERE chk.ocr_doc_rslt = e.ocr_doc_rslt
+                AND chk.extract_key = '__CHECK_COMPLETED__'
+                AND chk.extract_val = 'Y'
+            )
             <if test="ctrl_yr != null and ctrl_yr != ''">
                 AND inf.ctrl_yr = #{ctrl_yr}
             </if>
@@ -1215,6 +1229,13 @@
             FROM rfdb.ocr_extract_data e
             INNER JOIN rfdb.ocr_doc_inf inf ON e.ocr_doc_no = inf.ocr_doc_no
             WHERE 1=1
+            AND e.extract_key != '__CHECK_COMPLETED__'
+            AND EXISTS (
+                SELECT 1 FROM rfdb.ocr_extract_data chk
+                WHERE chk.ocr_doc_rslt = e.ocr_doc_rslt
+                AND chk.extract_key = '__CHECK_COMPLETED__'
+                AND chk.extract_val = 'Y'
+            )
             <if test="ctrl_yr != null and ctrl_yr != ''">
                 AND inf.ctrl_yr = #{ctrl_yr}
             </if>
@@ -1289,6 +1310,13 @@
             FROM rfdb.ocr_extract_data e
             INNER JOIN rfdb.ocr_doc_inf inf ON e.ocr_doc_no = inf.ocr_doc_no
             WHERE 1=1
+            AND e.extract_key != '__CHECK_COMPLETED__'
+            AND EXISTS (
+                SELECT 1 FROM rfdb.ocr_extract_data chk
+                WHERE chk.ocr_doc_rslt = e.ocr_doc_rslt
+                AND chk.extract_key = '__CHECK_COMPLETED__'
+                AND chk.extract_val = 'Y'
+            )
             <if test="ctrl_yr != null and ctrl_yr != ''">
                 AND e.ctrl_yr = #{ctrl_yr}
             </if>
@@ -1387,6 +1415,13 @@
             FROM rfdb.ocr_extract_data e
             INNER JOIN rfdb.ocr_doc_inf inf ON e.ocr_doc_no = inf.ocr_doc_no
             WHERE 1=1
+            AND e.extract_key != '__CHECK_COMPLETED__'
+            AND EXISTS (
+                SELECT 1 FROM rfdb.ocr_extract_data chk
+                WHERE chk.ocr_doc_rslt = e.ocr_doc_rslt
+                AND chk.extract_key = '__CHECK_COMPLETED__'
+                AND chk.extract_val = 'Y'
+            )
             <if test="ctrl_yr != null and ctrl_yr != ''">
                 AND e.ctrl_yr = #{ctrl_yr}
             </if>
