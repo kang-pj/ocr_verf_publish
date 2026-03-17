@@ -972,4 +972,17 @@
         DELETE FROM rfdb.ocr_extract_data
         WHERE ocr_doc_rslt = #{ocr_doc_rslt}
     </delete>
+
+    <!-- 배치용: 최근 30분 내 extract 미처리 ocr_rslt_no 조회 -->
+    <select id="getUnprocessedOcrRsltNos" resultType="string">
+        SELECT CAST(r.ocr_rslt_no AS VARCHAR)
+        FROM rfdb.ocr_doc_rslt r
+        WHERE r.ins_dttm >= NOW() - INTERVAL '30 minutes'
+          AND r.ocr_cnts IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM rfdb.ocr_extract_data e
+            WHERE e.ocr_doc_rslt = CAST(r.ocr_rslt_no AS VARCHAR)
+          )
+        ORDER BY r.ins_dttm ASC
+    </select>
 </mapper>

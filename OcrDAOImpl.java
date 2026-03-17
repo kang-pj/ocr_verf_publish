@@ -198,6 +198,11 @@ public class OcrDAOImpl implements OcrDAO {
     public int deleteOcrExtractData(Map<String, Object> params) {
         return sqlSession.delete("ocr.deleteOcrExtractData", params);
     }
+
+    @Override
+    public List<String> getUnprocessedOcrRsltNos() {
+        return sqlSession.selectList("ocr.getUnprocessedOcrRsltNos");
+    }
     
     @Override
     public Map<String, Object> getOcrStatisticsSummary(Map<String, Object> params) {

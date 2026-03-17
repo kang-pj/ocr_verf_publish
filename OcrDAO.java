@@ -94,7 +94,10 @@ public interface OcrDAO {
 
     // OCR 추출 데이터 삭제
     int deleteOcrExtractData(Map<String, Object> params);
-    
+
+    // 배치용: 미처리 ocr_rslt_no 조회
+    List<String> getUnprocessedOcrRsltNos();
+
     // OCR 통계 - 전체 요약
     Map<String, Object> getOcrStatisticsSummary(Map<String, Object> params);
     
