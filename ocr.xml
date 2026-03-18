@@ -150,15 +150,16 @@
             fd.PRDT_CD,
             fd.CTRL_NO,
             fd.DOC_TP_CD,
-            COUNT(DISTINCT inf2.OCR_DOC_NO) FILTER (WHERE inf2.CTRL_YR = fd.CTRL_YR AND inf2.INST_CD = fd.INST_CD AND inf2.PRDT_CD = fd.PRDT_CD AND inf2.CTRL_NO = fd.CTRL_NO) AS total_docs,
+            COUNT(DISTINCT inf2.OCR_DOC_NO) AS total_docs,
             COUNT(DISTINCT CASE 
                 WHEN e.extract_key = '__CHECK_COMPLETED__' AND e.extract_val = 'Y' 
-                    AND inf2.CTRL_YR = fd.CTRL_YR AND inf2.INST_CD = fd.INST_CD 
-                    AND inf2.PRDT_CD = fd.PRDT_CD AND inf2.CTRL_NO = fd.CTRL_NO
                 THEN r.ocr_doc_no 
             END) AS completed_docs
         FROM filtered_data fd
-        CROSS JOIN RFDB.OCR_DOC_INF inf2
+        INNER JOIN RFDB.OCR_DOC_INF inf2
+            ON inf2.CTRL_YR = fd.CTRL_YR AND inf2.INST_CD = fd.INST_CD
+            AND inf2.PRDT_CD = fd.PRDT_CD AND inf2.CTRL_NO = fd.CTRL_NO
+            AND inf2.DOC_TP_CD = fd.DOC_TP_CD
         LEFT JOIN RFDB.OCR_DOC_RSLT r ON inf2.OCR_DOC_NO = r.OCR_DOC_NO
         LEFT JOIN RFDB.OCR_EXTRACT_DATA e ON r.OCR_RSLT_NO = e.OCR_DOC_RSLT
         GROUP BY fd.CTRL_YR, fd.INST_CD, fd.PRDT_CD, fd.CTRL_NO, fd.DOC_TP_CD
@@ -365,15 +366,16 @@
             fd.OCR_YN,
             fd.SAVE_YN,
             fd.VERF_YN,
-            COUNT(DISTINCT inf2.OCR_DOC_NO) FILTER (WHERE inf2.CTRL_YR = fd.CTRL_YR AND inf2.INST_CD = fd.INST_CD AND inf2.PRDT_CD = fd.PRDT_CD AND inf2.CTRL_NO = fd.CTRL_NO) AS total_docs,
+            COUNT(DISTINCT inf2.OCR_DOC_NO) AS total_docs,
             COUNT(DISTINCT CASE 
                 WHEN e.extract_key = '__CHECK_COMPLETED__' AND e.extract_val = 'Y' 
-                    AND inf2.CTRL_YR = fd.CTRL_YR AND inf2.INST_CD = fd.INST_CD 
-                    AND inf2.PRDT_CD = fd.PRDT_CD AND inf2.CTRL_NO = fd.CTRL_NO
                 THEN r.ocr_doc_no 
             END) AS completed_docs
         FROM filtered_data fd
-        CROSS JOIN RFDB.OCR_DOC_INF inf2
+        INNER JOIN RFDB.OCR_DOC_INF inf2
+            ON inf2.CTRL_YR = fd.CTRL_YR AND inf2.INST_CD = fd.INST_CD
+            AND inf2.PRDT_CD = fd.PRDT_CD AND inf2.CTRL_NO = fd.CTRL_NO
+            AND inf2.DOC_TP_CD = fd.DOC_TP_CD
         LEFT JOIN RFDB.OCR_DOC_RSLT r ON inf2.OCR_DOC_NO = r.OCR_DOC_NO
         LEFT JOIN RFDB.OCR_EXTRACT_DATA e ON r.OCR_RSLT_NO = e.OCR_DOC_RSLT
         GROUP BY fd.ctrl_key, fd.CTRL_YR, fd.INST_CD, fd.PRDT_CD, fd.CTRL_NO, fd.DOC_TP_CD, 
