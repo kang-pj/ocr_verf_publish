@@ -959,12 +959,15 @@
           AND extract_key = '__CHECK_COMPLETED__'
     </update>
 
-    <!-- OCR 체크 완료 상태 삭제 -->
-    <delete id="deleteCheckCompleted" parameterType="map">
-        DELETE FROM rfdb.ocr_extract_data
+    <!-- OCR 체크 완료 상태 삭제 (미확인으로 변경) -->
+    <update id="deleteCheckCompleted" parameterType="map">
+        UPDATE rfdb.ocr_extract_data
+        SET extract_val = 'N',
+            upd_id = #{upd_id},
+            upd_dttm = NOW()
         WHERE ocr_doc_rslt = #{ocr_rslt_no}
           AND extract_key = '__CHECK_COMPLETED__'
-    </delete>
+    </update>
 
 
     <!-- OCR 추출 데이터 삭제 -->

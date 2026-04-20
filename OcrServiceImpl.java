@@ -870,6 +870,20 @@ public class OcrServiceImpl implements OcrService {
                 dataList.add(extractData);
             }
 
+            // __CHECK_COMPLETED__ = 'N' 기본값 추가
+            Map<String, Object> checkData = new HashMap<>();
+            checkData.put("ctrl_yr", ocrInfo.getCtrl_yr());
+            checkData.put("inst_cd", ocrInfo.getInst_cd());
+            checkData.put("prdt_cd", ocrInfo.getPrdt_cd());
+            checkData.put("ctrl_no", ocrInfo.getCtrl_no());
+            checkData.put("ocr_doc_rslt", ocrRsltNo);
+            checkData.put("ocr_doc_no", ocrInfo.getOcr_doc_no());
+            checkData.put("doc_tp_cd", ocrInfo.getDoc_tp_cd());
+            checkData.put("extract_key", "__CHECK_COMPLETED__");
+            checkData.put("extract_val", "N");
+            checkData.put("ocr_fail_type", null);
+            dataList.add(checkData);
+
             // 배치 저장
             if (!dataList.isEmpty()) {
                 Map<String, Object> batchParams = new HashMap<>();

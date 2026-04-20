@@ -191,7 +191,7 @@ public class OcrDAOImpl implements OcrDAO {
 
     @Override
     public int deleteCheckCompleted(Map<String, Object> params) {
-        return sqlSession.delete("ocr.deleteCheckCompleted", params);
+        return sqlSession.update("ocr.deleteCheckCompleted", params);
     }
 
     @Override
