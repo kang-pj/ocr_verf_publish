@@ -231,10 +231,9 @@
                             </div>
                             <div class="col-auto">
                                 <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-outline-secondary period-btn active" data-period="all">전체</button>
-                                    <button type="button" class="btn btn-outline-secondary period-btn" data-period="today">오늘</button>
-                                    <button type="button" class="btn btn-outline-secondary period-btn" data-period="month">1개월</button>
-                                    <button type="button" class="btn btn-outline-secondary period-btn" data-period="3month">3개월</button>
+                                    <button type="button" class="btn btn-outline-secondary period-btn active" data-period="today">오늘</button>
+                                    <button type="button" class="btn btn-outline-secondary period-btn" data-period="yesterday">어제</button>
+                                    <button type="button" class="btn btn-outline-secondary period-btn" data-period="week">1주일</button>
                                 </div>
                             </div>
                         </div>
@@ -388,6 +387,12 @@
     var docTypeMapping = {}; // 문서 유형 코드 -> 한글명 매핑
 
     $(document).ready(function() {
+        // 초기 날짜 세팅 (오늘)
+        var today = new Date();
+        var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+        $('#startDate').val(todayStr);
+        $('#endDate').val(todayStr);
+
         // ========================================
         // DataTable 초기화 (Server-Side Processing)
         // ========================================
@@ -592,7 +597,7 @@
         $('#btnReset').on('click', function() {
             $('#searchManagementNo').val('');
             $('.period-btn').removeClass('active');
-            $('.period-btn[data-period="all"]').addClass('active');
+            $('.period-btn[data-period="today"]').addClass('active');
             $('input[type="checkbox"]').prop('checked', false);
             $('#verifiedFilter').val('');
             $('#reviewStatusFilter').val('');
@@ -769,19 +774,16 @@
         var endDate = new Date();
 
         switch(period) {
-            case 'all':
-                $('#startDate').val('');
-                $('#endDate').val('');
-                return;
             case 'today':
                 startDate = today;
                 endDate = today;
                 break;
-            case 'month':
-                startDate.setMonth(today.getMonth() - 1);
+            case 'yesterday':
+                startDate.setDate(today.getDate() - 1);
+                endDate.setDate(today.getDate() - 1);
                 break;
-            case '3month':
-                startDate.setMonth(today.getMonth() - 3);
+            case 'week':
+                startDate.setDate(today.getDate() - 7);
                 break;
         }
 
