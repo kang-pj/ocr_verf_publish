@@ -185,6 +185,43 @@
             opacity: 1 !important;
             margin-right: 8px;
         }
+        /* DataTables 기본 processing 숨김 */
+        .dataTables_processing {
+            display: none !important;
+        }
+        /* 커스텀 로딩 오버레이 */
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #loadingOverlay.active {
+            display: flex;
+        }
+        #loadingOverlay .spinner {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 10px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        #loadingOverlay .text {
+            color: #fff;
+            font-size: 1rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <script type="text/javascript">
@@ -196,7 +233,8 @@
     });*/
 </script>
 <body id="page-top">
-<div id="wrapper">
+<div id="loadingOverlay"><div class="spinner"></div><div class="text">처리중...</div></div>
+<div id="wrapper"></div>
     <!-- Content Wrapper -->
     <div id="content-wrapper" class="d-flex flex-column">
         <div id="content">
@@ -551,6 +589,15 @@
                     }
                 }
             ]
+        });
+
+        // 로딩 오버레이 제어
+        $('#ocrResultTable').on('processing.dt', function(e, settings, processing) {
+            if (processing) {
+                $('#loadingOverlay').addClass('active');
+            } else {
+                $('#loadingOverlay').removeClass('active');
+            }
         });
 
         // 검증여부 필터 추가
