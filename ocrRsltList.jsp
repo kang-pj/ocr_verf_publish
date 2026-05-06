@@ -185,9 +185,13 @@
             opacity: 1 !important;
             margin-right: 8px;
         }
-        /* DataTables 기본 processing 숨김 */
+        /* DataTables 기본 processing 완전 숨김 */
         .dataTables_processing {
             display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
         }
         /* 커스텀 로딩 오버레이 */
         #loadingOverlay {
@@ -197,8 +201,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: 9999;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 99999;
             flex-direction: column;
             justify-content: center;
             align-items: center;
@@ -207,17 +211,19 @@
             display: flex;
         }
         #loadingOverlay .spinner {
-            width: 40px;
-            height: 40px;
-            margin-bottom: 10px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
+            width: 44px;
+            height: 44px;
+            margin-bottom: 14px;
+            border: 4px solid rgba(255, 255, 255, 0.25);
             border-top-color: #fff;
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            animation: spin 0.7s linear infinite;
         }
         #loadingOverlay .text {
             color: #fff;
-            font-size: 1rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
         }
         @keyframes spin {
             to { transform: rotate(360deg); }
@@ -233,8 +239,11 @@
     });*/
 </script>
 <body id="page-top">
-<div id="loadingOverlay"><div class="spinner"></div><div class="text">처리중...</div></div>
-<div id="wrapper"></div>
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="text">처리중...</div>
+</div>
+<div id="wrapper">
     <!-- Content Wrapper -->
     <div id="content-wrapper" class="d-flex flex-column">
         <div id="content">
@@ -591,13 +600,12 @@
             ]
         });
 
-        // 로딩 오버레이 제어
-        $('#ocrResultTable').on('processing.dt', function(e, settings, processing) {
-            if (processing) {
-                $('#loadingOverlay').addClass('active');
-            } else {
-                $('#loadingOverlay').removeClass('active');
-            }
+        // 로딩 오버레이 제어 - ajax 전후로 직접 제어
+        $('#ocrResultTable').on('preXhr.dt', function() {
+            $('#loadingOverlay').addClass('active');
+        });
+        $('#ocrResultTable').on('xhr.dt', function() {
+            $('#loadingOverlay').removeClass('active');
         });
 
         // 검증여부 필터 추가

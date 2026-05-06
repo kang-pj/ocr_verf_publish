@@ -26,11 +26,9 @@
         LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
         ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
         WHERE 1=1
-        <!-- 검토 상태 필터 사용 시 OCR 완료된 것만 조회 -->
         <if test="review_status != null and review_status != ''">
             AND INF.OCR_YN = 'Y'
         </if>
-        <!-- 기본 검색 조건 -->
         <if test="ctrl_yr != null">
             AND INF.CTRL_YR = #{ctrl_yr}
         </if>
@@ -59,7 +57,6 @@
         <if test="ctrl_no != null">
             AND INF.CTRL_NO = #{ctrl_no}
         </if>
-        <!-- 날짜 범위 검색 -->
         <choose>
             <when test="ins_dttm_st != null and ins_dttm_en != null">
                 AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
@@ -83,7 +80,6 @@
         SELECT *
         FROM base_data
         WHERE 1=1
-        <!-- 후처리 필터 -->
         <if test="ocr_yn != null and ocr_yn.size() > 0">
             AND OCR_YN IN
             <foreach collection="ocr_yn" item="item" open="(" close=")" separator=",">
@@ -112,7 +108,6 @@
             </if>
             )
         </if>
-        <!-- 문서 타입 및 서브타이틀 필터 -->
         <choose>
             <when test="doc_tp_cd != null and doc_tp_cd.size() > 0 and sub_title != null">
                 AND (
@@ -142,8 +137,14 @@
                 AND DOC_TP_CD = ''
             </when>
         </choose>
-        ),
-        review_status_calc AS (
+        )
+        <!-- review_status 필터 없으면 filtered_data에서 바로 COUNT -->
+        <if test="review_status == null or review_status == ''">
+        SELECT COUNT(*) FROM filtered_data
+        </if>
+        <!-- review_status 필터 있으면 review_status_calc 조인 후 COUNT -->
+        <if test="review_status != null and review_status != ''">
+        , review_status_calc AS (
         SELECT
             fd.CTRL_YR,
             fd.INST_CD,
@@ -167,7 +168,6 @@
         SELECT COUNT(*) 
         FROM review_status_calc rs
         WHERE 1=1
-        <if test="review_status != null and review_status != ''">
             <choose>
                 <when test='review_status == "ALL_COMPLETED"'>
                     AND rs.total_docs > 0 AND rs.completed_docs = rs.total_docs
@@ -228,11 +228,9 @@
         LEFT JOIN RFDB.OCR_DOC_RSLT RSLT
         ON INF.OCR_DOC_NO = RSLT.OCR_DOC_NO
         WHERE 1=1
-        <!-- 검토 상태 필터 사용 시 OCR 완료된 것만 조회 -->
         <if test="review_status != null and review_status != ''">
             AND INF.OCR_YN = 'Y'
         </if>
-        <!-- 기본 검색 조건 -->
         <if test="ctrl_yr != null">
             AND INF.CTRL_YR = #{ctrl_yr}
         </if>
@@ -261,7 +259,6 @@
         <if test="ctrl_no != null">
             AND INF.CTRL_NO = #{ctrl_no}
         </if>
-        <!-- 날짜 범위 검색 -->
         <choose>
             <when test="ins_dttm_st != null and ins_dttm_en != null">
                 AND INF.INS_DTTM &gt;= #{ins_dttm_st}::TIMESTAMP
@@ -280,17 +277,11 @@
         INF.PRDT_CD,
         INF.CTRL_NO,
         INF.DOC_TP_CD
-        ORDER BY MAX(INF.INS_DTTM)
-        <choose>
-            <when test='sort == "ASC"'>ASC</when>
-            <otherwise>DESC</otherwise>
-        </choose>
         ),
         filtered_data AS (
         SELECT *
         FROM base_data
         WHERE 1=1
-        <!-- 후처리 필터 -->
         <if test="ocr_yn != null and ocr_yn.size() > 0">
             AND OCR_YN IN
             <foreach collection="ocr_yn" item="item" open="(" close=")" separator=",">
@@ -319,7 +310,6 @@
             </if>
             )
         </if>
-        <!-- 문서 타입 및 서브타이틀 필터 -->
         <choose>
             <when test="doc_tp_cd != null and doc_tp_cd.size() > 0 and sub_title != null">
                 AND (
@@ -349,8 +339,39 @@
                 AND DOC_TP_CD = ''
             </when>
         </choose>
-        ),
-        review_status_calc AS (
+        )
+        <!-- review_status 필터 없으면 filtered_data에서 바로 페이징 -->
+        <if test="review_status == null or review_status == ''">
+        SELECT
+        ROW_NUMBER() OVER() AS ROW_NUMBER,
+        fd.ctrl_key,
+        fd.CTRL_YR,
+        fd.INST_CD,
+        fd.PRDT_CD,
+        fd.CTRL_NO,
+        fd.DOC_TP_CD,
+        fd.OCR_DOC_NO,
+        fd.INS_DTTM,
+        fd.DOC_PAGE,
+        fd.DOC_TITLE,
+        fd.SUB_TITLE,
+        fd.OCR_YN,
+        fd.SAVE_YN,
+        fd.VERF_YN
+        FROM filtered_data fd
+        ORDER BY fd.INS_DTTM
+        <choose>
+            <when test='sort == "ASC"'>ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>
+        <if test="paging != null">
+            LIMIT #{num}::INTEGER
+            OFFSET (#{paging}::INTEGER * #{num}::INTEGER)
+        </if>
+        </if>
+        <!-- review_status 필터 있으면 review_status_calc 조인 후 페이징 -->
+        <if test="review_status != null and review_status != ''">
+        , review_status_calc AS (
         SELECT
             fd.ctrl_key,
             fd.CTRL_YR,
@@ -384,7 +405,6 @@
         )
         SELECT
         ROW_NUMBER() OVER() AS ROW_NUMBER,
-        COUNT(*) OVER() AS DOC_NUM,
         rs.ctrl_key,
         rs.CTRL_YR,
         rs.INST_CD,
@@ -401,7 +421,6 @@
         rs.VERF_YN
         FROM review_status_calc rs
         WHERE 1=1
-        <if test="review_status != null and review_status != ''">
             <choose>
                 <when test='review_status == "ALL_COMPLETED"'>
                     AND rs.total_docs > 0 AND rs.completed_docs = rs.total_docs
@@ -413,10 +432,15 @@
                     AND (rs.completed_docs = 0 OR rs.completed_docs IS NULL)
                 </when>
             </choose>
-        </if>
+        ORDER BY rs.INS_DTTM
+        <choose>
+            <when test='sort == "ASC"'>ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>
         <if test="paging != null">
             LIMIT #{num}::INTEGER
             OFFSET (#{paging}::INTEGER * #{num}::INTEGER)
+        </if>
         </if>
     </select>
 
